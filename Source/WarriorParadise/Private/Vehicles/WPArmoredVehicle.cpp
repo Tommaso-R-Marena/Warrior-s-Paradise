@@ -854,6 +854,24 @@ void AWPArmoredVehicle::Tick(float DeltaSeconds)
         }
     }
 
+    if (const AWPLightVehicle* Vehicle = Cast<AWPLightVehicle>(Target))
+    {
+        if (Vehicle->IsDestroyed())
+        {
+            CurrentTarget.Reset();
+            return;
+        }
+    }
+
+    if (const AWPGunEmplacement* Gun = Cast<AWPGunEmplacement>(Target))
+    {
+        if (Gun->IsDestroyed())
+        {
+            CurrentTarget.Reset();
+            return;
+        }
+    }
+
     const FVector TargetLocation = GetTargetAimPoint(Target);
     FVector ToTarget = TargetLocation - GetActorLocation();
     const float Distance = ToTarget.Size();
