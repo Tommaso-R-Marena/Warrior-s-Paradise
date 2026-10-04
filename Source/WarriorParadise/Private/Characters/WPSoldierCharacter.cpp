@@ -10,7 +10,7 @@
 
 AWPSoldierCharacter::AWPSoldierCharacter()
 {
-    PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bCanEverTick = true;
 
     GetCapsuleComponent()->InitCapsuleSize(42.0f, 94.0f);
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
@@ -24,6 +24,7 @@ AWPSoldierCharacter::AWPSoldierCharacter()
     FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
     FirstPersonCamera->SetupAttachment(GetCapsuleComponent());
     FirstPersonCamera->SetRelativeLocation(FVector(-8.0f, 0.0f, 68.0f));
+    FirstPersonCamera->SetFieldOfView(HipFOV);
     FirstPersonCamera->bUsePawnControlRotation = true;
 
     HealthComponent = CreateDefaultSubobject<UWPHealthComponent>(TEXT("HealthComponent"));
@@ -37,7 +38,7 @@ AWPSoldierCharacter::AWPSoldierCharacter()
     ViewWeaponBody->SetOnlyOwnerSee(true);
     ViewWeaponBody->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     ViewWeaponBody->CastShadow = false;
-    ViewWeaponBody->SetRelativeLocation(FVector(45.0f, 18.0f, -18.0f));
+    ViewWeaponBody->SetRelativeLocation(HipBodyLocation);
     ViewWeaponBody->SetRelativeScale3D(FVector(0.45f, 0.08f, 0.09f));
     if (CubeAsset.Succeeded())
     {
@@ -49,7 +50,7 @@ AWPSoldierCharacter::AWPSoldierCharacter()
     ViewWeaponBarrel->SetOnlyOwnerSee(true);
     ViewWeaponBarrel->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     ViewWeaponBarrel->CastShadow = false;
-    ViewWeaponBarrel->SetRelativeLocation(FVector(82.0f, 18.0f, -15.0f));
+    ViewWeaponBarrel->SetRelativeLocation(HipBarrelLocation);
     ViewWeaponBarrel->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));
     ViewWeaponBarrel->SetRelativeScale3D(FVector(0.035f, 0.035f, 0.42f));
     if (CylinderAsset.Succeeded())
@@ -63,7 +64,42 @@ void AWPSoldierCharacter::BeginPlay()
     Super::BeginPlay();
 
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+    FirstPersonCamera->SetFieldOfView(HipFOV);
+
     HealthComponent->OnDeath.AddDynamic(this, &AWPSoldierCharacter::HandleDeath);
+    WeaponComponent->OnShotFired.AddDynamic(this, &AWPSoldierCharacter::HandleShotFired);
+}
+
+void AWPSoldierCharacter::Tick(float DeltaSeconds)
+{
+    Super::Tick(DeltaSeconds);
+
+    if (!IsPlayerControlled())
+    {
+        return;
+    }
+
+    const float TargetFOV = bAiming ? AimFOV : HipFOV;
+    FirstPersonCamera->SetFieldOfView(FMath::FInterpTo(
+        FirstPersonCamera->FieldOfView,
+        TargetFOV,
+        DeltaSeconds,
+        AimInterpSpeed));
+
+    const FVector BodyTarget = bAiming ? AimBodyLocation : HipBodyLocation;
+    const FVector BarrelTarget = bAiming ? AimBarrelLocation : HipBarrelLocation;
+
+    ViewWeaponBody->SetRelativeLocation(FMath::VInterpTo(
+        ViewWeaponBody->GetRelativeLocation(),
+        BodyTarget,
+        DeltaSeconds,
+        AimInterpSpeed));
+
+    ViewWeaponBarrel->SetRelativeLocation(FMath::VInterpTo(
+        ViewWeaponBarrel->GetRelativeLocation(),
+        BarrelTarget,
+        DeltaSeconds,
+        AimInterpSpeed));
 }
 
 void AWPSoldierCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -84,6 +120,8 @@ void AWPSoldierCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
     PlayerInputComponent->BindAction(TEXT("Sprint"), IE_Released, this, &AWPSoldierCharacter::StopSprint);
     PlayerInputComponent->BindAction(TEXT("Crouch"), IE_Pressed, this, &AWPSoldierCharacter::StartCrouch);
     PlayerInputComponent->BindAction(TEXT("Crouch"), IE_Released, this, &AWPSoldierCharacter::StopCrouch);
+    PlayerInputComponent->BindAction(TEXT("Aim"), IE_Pressed, this, &AWPSoldierCharacter::StartAim);
+    PlayerInputComponent->BindAction(TEXT("Aim"), IE_Released, this, &AWPSoldierCharacter::StopAim);
 }
 
 void AWPSoldierCharacter::MoveForward(float Value)
@@ -114,6 +152,7 @@ void AWPSoldierCharacter::LookUp(float Value)
 
 void AWPSoldierCharacter::StartSprint()
 {
+    StopAim();
     GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
 }
 
@@ -132,8 +171,37 @@ void AWPSoldierCharacter::StopCrouch()
     UnCrouch();
 }
 
+void AWPSoldierCharacter::StartAim()
+{
+    if (!IsPlayerControlled() || HealthComponent->IsDead() || WeaponComponent->IsReloading())
+    {
+        return;
+    }
+
+    bAiming = true;
+    WeaponComponent->SetAiming(true);
+}
+
+void AWPSoldierCharacter::StopAim()
+{
+    bAiming = false;
+    WeaponComponent->SetAiming(false);
+}
+
+void AWPSoldierCharacter::HandleShotFired(float RecoilPitch, float RecoilYaw)
+{
+    if (!IsPlayerControlled() || HealthComponent->IsDead())
+    {
+        return;
+    }
+
+    AddControllerPitchInput(-RecoilPitch);
+    AddControllerYawInput(RecoilYaw);
+}
+
 void AWPSoldierCharacter::HandleDeath()
 {
+    StopAim();
     WeaponComponent->StopFire();
     GetCharacterMovement()->DisableMovement();
 
