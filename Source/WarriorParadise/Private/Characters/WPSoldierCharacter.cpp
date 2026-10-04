@@ -2,6 +2,7 @@
 #include "Camera/CameraComponent.h"
 #include "Combat/WPFragGrenade.h"
 #include "Combat/WPHealthComponent.h"
+#include "Combat/WPSmokeGrenade.h"
 #include "Combat/WPSuppressionComponent.h"
 #include "Combat/WPWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -40,6 +41,7 @@ AWPSoldierCharacter::AWPSoldierCharacter()
     SuppressionComponent = CreateDefaultSubobject<UWPSuppressionComponent>(TEXT("SuppressionComponent"));
 
     GrenadeClass = AWPFragGrenade::StaticClass();
+    SmokeGrenadeClass = AWPSmokeGrenade::StaticClass();
 
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeAsset(TEXT("/Engine/BasicShapes/Cube.Cube"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderAsset(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -197,6 +199,42 @@ bool AWPSoldierCharacter::ThrowGrenadeAt(const FVector& TargetLocation)
     return false;
 }
 
+bool AWPSoldierCharacter::ThrowSmokeGrenadeAt(const FVector& TargetLocation)
+{
+    if (!GetWorld() ||
+        !SmokeGrenadeClass ||
+        SmokeGrenadesRemaining <= 0 ||
+        !IsCombatCapable())
+    {
+        return false;
+    }
+
+    const FVector Start = GetActorLocation() + FVector(0.0f, 0.0f, BaseEyeHeight - 12.0f);
+    const FVector ToTarget = TargetLocation - Start;
+    const float HorizontalDistance = FVector(ToTarget.X, ToTarget.Y, 0.0f).Size();
+
+    FVector LaunchVelocity = ToTarget.GetSafeNormal() * (GrenadeThrowSpeed * 0.9f);
+    LaunchVelocity.Z += FMath::Clamp(390.0f + HorizontalDistance * 0.09f, 390.0f, 700.0f);
+
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.Owner = this;
+    SpawnParameters.Instigator = this;
+    SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    if (AWPSmokeGrenade* Grenade = GetWorld()->SpawnActor<AWPSmokeGrenade>(
+        SmokeGrenadeClass,
+        Start + GetActorForwardVector() * 45.0f,
+        LaunchVelocity.Rotation(),
+        SpawnParameters))
+    {
+        Grenade->InitializeSmokeGrenade(LaunchVelocity);
+        --SmokeGrenadesRemaining;
+        return true;
+    }
+
+    return false;
+}
+
 bool AWPSoldierCharacter::TryReviveSoldier(AWPSoldierCharacter* Target)
 {
     if (!Target ||
@@ -327,6 +365,7 @@ void AWPSoldierCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
     PlayerInputComponent->BindAction(TEXT("Aim"), IE_Pressed, this, &AWPSoldierCharacter::StartAim);
     PlayerInputComponent->BindAction(TEXT("Aim"), IE_Released, this, &AWPSoldierCharacter::StopAim);
     PlayerInputComponent->BindAction(TEXT("ThrowGrenade"), IE_Pressed, this, &AWPSoldierCharacter::ThrowGrenadeInput);
+    PlayerInputComponent->BindAction(TEXT("ThrowSmoke"), IE_Pressed, this, &AWPSoldierCharacter::ThrowSmokeGrenadeInput);
     PlayerInputComponent->BindAction(TEXT("Interact"), IE_Pressed, this, &AWPSoldierCharacter::InteractInput);
     PlayerInputComponent->BindAction(TEXT("SquadFollow"), IE_Pressed, this, &AWPSoldierCharacter::IssueFollowOrder);
     PlayerInputComponent->BindAction(TEXT("SquadAttack"), IE_Pressed, this, &AWPSoldierCharacter::IssueAttackOrder);
@@ -426,6 +465,15 @@ void AWPSoldierCharacter::ThrowGrenadeInput()
     if (GetViewTarget(TargetLocation, 6500.0f))
     {
         ThrowGrenadeAt(TargetLocation);
+    }
+}
+
+void AWPSoldierCharacter::ThrowSmokeGrenadeInput()
+{
+    FVector TargetLocation;
+    if (GetViewTarget(TargetLocation, 6000.0f))
+    {
+        ThrowSmokeGrenadeAt(TargetLocation);
     }
 }
 
