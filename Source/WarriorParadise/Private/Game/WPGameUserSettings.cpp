@@ -48,6 +48,15 @@ void UWPGameUserSettings::EnsureInitialHardwareBenchmark()
     if (!bHasRunInitialHardwareBenchmark)
     {
         RunAutoBenchmark();
+        return;
+    }
+
+    // Custom render-feature overrides (especially Minimal) are runtime
+    // console-variable state, so re-apply a saved manual preset after
+    // settings have been loaded on a new process.
+    if (GraphicsPreset != EWPGraphicsPreset::Auto)
+    {
+        ApplyGraphicsPreset(GraphicsPreset, false);
     }
 }
 
