@@ -14,6 +14,14 @@
     {
       "Name": "PythonScriptPlugin",
       "Enabled": true
+    },
+    {
+      "Name": "Niagara",
+      "Enabled": true
+    },
+    {
+      "Name": "PoseSearch",
+      "Enabled": true
     }
   ]
 }
