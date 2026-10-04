@@ -1,6 +1,7 @@
 #include "Game/WPCombatGameMode.h"
 #include "AI/WPEnemySoldier.h"
 #include "Characters/WPSoldierCharacter.h"
+#include "Combat/WPSuppressionComponent.h"
 #include "Game/WPBattlefieldDirector.h"
 #include "Game/WPGameUserSettings.h"
 #include "Game/WPPlayerController.h"
@@ -97,6 +98,41 @@ void AWPCombatGameMode::StartHeadlessSmokeTest()
         Director->GetRemainingEnemies() > 0 &&
         Director->GetActiveObjectiveNumber() > 0;
 
+    AWPSoldierCharacter* Player = Cast<AWPSoldierCharacter>(
+        UGameplayStatics::GetPlayerCharacter(this, 0));
+
+    if (Player && Player->GetSuppressionComponent())
+    {
+        UWPSuppressionComponent* Suppression =
+            Player->GetSuppressionComponent();
+
+        Suppression->ClearSuppression();
+        const bool bStartedSteady =
+            Suppression->GetSuppressionState() ==
+            EWPSuppressionState::Steady;
+
+        Suppression->AddSuppression(40.0f);
+        const bool bBecamePressured =
+            Suppression->GetSuppressionState() ==
+            EWPSuppressionState::Pressured;
+
+        Suppression->AddSuppression(40.0f);
+        const bool bBecamePinned =
+            Suppression->GetSuppressionState() ==
+            EWPSuppressionState::Pinned;
+
+        Suppression->ClearSuppression();
+        const bool bRecoveredSteady =
+            Suppression->GetSuppressionState() ==
+            EWPSuppressionState::Steady;
+
+        bHeadlessSuppressionStateValid =
+            bStartedSteady &&
+            bBecamePressured &&
+            bBecamePinned &&
+            bRecoveredSteady;
+    }
+
     const float Duration =
         WPRuntimeMode::GetHeadlessSmokeDurationSeconds();
 
@@ -104,9 +140,10 @@ void AWPCombatGameMode::StartHeadlessSmokeTest()
         LogTemp,
         Display,
         TEXT(
-            "WP_HEADLESS_SMOKE START initial=%s duration=%.1f "
-            "friendly=%d enemies=%d objective=%d"),
+            "WP_HEADLESS_SMOKE START initial=%s suppression=%s "
+            "duration=%.1f friendly=%d enemies=%d objective=%d"),
         bHeadlessSmokeInitialStateValid ? TEXT("PASS") : TEXT("FAIL"),
+        bHeadlessSuppressionStateValid ? TEXT("PASS") : TEXT("FAIL"),
         Duration,
         Director ? Director->GetFriendlySoldiersAlive() : -1,
         Director ? Director->GetRemainingEnemies() : -1,
@@ -134,6 +171,7 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
 
     const bool bPassed =
         bHeadlessSmokeInitialStateValid &&
+        bHeadlessSuppressionStateValid &&
         bRuntimeStateValid;
 
     UE_LOG(
