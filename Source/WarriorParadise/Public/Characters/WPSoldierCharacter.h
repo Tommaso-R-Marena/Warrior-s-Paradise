@@ -8,6 +8,7 @@
 class UCameraComponent;
 class UStaticMeshComponent;
 class UWPHealthComponent;
+class UWPSuppressionComponent;
 class UWPWeaponComponent;
 
 UCLASS()
@@ -28,6 +29,9 @@ public:
     UWPWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
 
     UFUNCTION(BlueprintPure, Category="Combat")
+    UWPSuppressionComponent* GetSuppressionComponent() const { return SuppressionComponent; }
+
+    UFUNCTION(BlueprintPure, Category="Combat")
     EWPCombatTeam GetCombatTeam() const { return CombatTeam; }
 
     UFUNCTION(BlueprintCallable, Category="Combat")
@@ -44,6 +48,9 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat")
     TObjectPtr<UWPWeaponComponent> WeaponComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat")
+    TObjectPtr<UWPSuppressionComponent> SuppressionComponent;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat")
     EWPCombatTeam CombatTeam = EWPCombatTeam::Allies;
