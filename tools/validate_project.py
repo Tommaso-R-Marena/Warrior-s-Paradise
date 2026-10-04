@@ -44,15 +44,26 @@ REQUIRED = [
     "Source/WarriorParadise/Public/UI/WPCombatHUD.h",
     "Source/WarriorParadise/Public/World/WPDestructibleCover.h",
     "Source/WarriorParadise/Private/World/WPDestructibleCover.cpp",
+    "Source/WarriorParadise/Public/World/WPGunEmplacement.h",
+    "Source/WarriorParadise/Private/World/WPGunEmplacement.cpp",
+    "Source/WarriorParadise/Public/Vehicles/WPAirBomb.h",
+    "Source/WarriorParadise/Private/Vehicles/WPAirBomb.cpp",
+    "Source/WarriorParadise/Public/Vehicles/WPAirSupportAircraft.h",
+    "Source/WarriorParadise/Private/Vehicles/WPAirSupportAircraft.cpp",
     "Source/WarriorParadise/Public/Vehicles/WPArmoredVehicle.h",
     "Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp",
+    "Source/WarriorParadise/Public/Vehicles/WPLightVehicle.h",
+    "Source/WarriorParadise/Private/Vehicles/WPLightVehicle.cpp",
     "Source/WarriorParadise/Public/Vehicles/WPTankShell.h",
     "Source/WarriorParadise/Private/Vehicles/WPTankShell.cpp",
+    "Source/WarriorParadise/Public/Presentation/WPAirSupportVisualProfile.h",
     "Source/WarriorParadise/Public/Presentation/WPBattlePresentationSet.h",
+    "Source/WarriorParadise/Public/Presentation/WPEmplacementVisualProfile.h",
     "Source/WarriorParadise/Public/Presentation/WPExplosionPresentationProfile.h",
     "Source/WarriorParadise/Public/Presentation/WPEnvironmentVisualProfile.h",
     "Source/WarriorParadise/Public/Presentation/WPInfantryLoadoutProfile.h",
     "Source/WarriorParadise/Public/Presentation/WPInfantryVisualProfile.h",
+    "Source/WarriorParadise/Public/Presentation/WPLightVehicleVisualProfile.h",
     "Source/WarriorParadise/Public/Presentation/WPSmokePresentationProfile.h",
     "Source/WarriorParadise/Public/Presentation/WPSoldierPresentationComponent.h",
     "Source/WarriorParadise/Private/Presentation/WPSoldierPresentationComponent.cpp",
@@ -239,6 +250,8 @@ def validate_asset_catalog() -> tuple[int, int, int]:
         "fab_free_mp40",
         "fab_free_lee_enfield_mkiii",
         "fab_free_ppsh41_lowpoly",
+        "fab_free_military_field_truck",
+        "opengameart_ww2_airplane_rigged",
     }
 
     missing_manual = required_manual - seen_ids
@@ -305,6 +318,7 @@ def main() -> None:
         "SquadAttack",
         "SquadHold",
         "CallArtillery",
+        "CallAirSupport",
     ):
         require_text("Config/DefaultInput.ini", f'ActionName="{action}"')
 
@@ -327,6 +341,10 @@ def main() -> None:
         ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "ApplyVisualProfile"),
         ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "GetWeaponPresentationTransform"),
         ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "GetSmokePresentation"),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "AWPGunEmplacement"),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "AWPArmoredVehicle"),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "AWPLightVehicle"),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "RequestAirSupport"),
         ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "SoldierPresentationComponent"),
         ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "SetAccuracyMultiplier"),
         ("Source/WarriorParadise/Private/Combat/WPHealthComponent.cpp", "EnterDownedState"),
@@ -355,6 +373,13 @@ def main() -> None:
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnBuildingVisual"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnEnterableBuilding"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "GetSmokePresentation"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnInitialCombinedArms"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnDefensiveEmplacements"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnLightVehicle"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnGunEmplacement"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnAirSupport"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "RequestAirSupport"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "ScheduleAmbientFlyby"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "WP_Surface_Wood"),
         ("Source/WarriorParadise/Private/Game/WPCaptureObjective.cpp", "bContested ="),
         ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "DefaultPawnClass = AWPEnemySoldier::StaticClass()"),
@@ -367,6 +392,21 @@ def main() -> None:
         ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "CannonMuzzleFlash"),
         ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "HandleTankShellImpact"),
         ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "DestructionEffect"),
+        ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "EWPArmorShellType::ArmorPiercing"),
+        ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "DamageSubsystem"),
+        ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "AmmoRackCatastrophicDamage"),
+        ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "TryEnter"),
+        ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "PlayerFireCannon"),
+        ("Source/WarriorParadise/Private/Vehicles/WPLightVehicle.cpp", "EmbarkNearbySquad"),
+        ("Source/WarriorParadise/Private/Vehicles/WPLightVehicle.cpp", "FirePlayerMachineGun"),
+        ("Source/WarriorParadise/Private/Vehicles/WPLightVehicle.cpp", "FindBestTarget"),
+        ("Source/WarriorParadise/Private/Vehicles/WPAirSupportAircraft.cpp", "InitializeMission"),
+        ("Source/WarriorParadise/Private/Vehicles/WPAirSupportAircraft.cpp", "FireStrafeRound"),
+        ("Source/WarriorParadise/Private/Vehicles/WPAirSupportAircraft.cpp", "DropBomb"),
+        ("Source/WarriorParadise/Private/Vehicles/WPAirBomb.cpp", "Explode"),
+        ("Source/WarriorParadise/Private/World/WPGunEmplacement.cpp", "TryUse"),
+        ("Source/WarriorParadise/Private/World/WPGunEmplacement.cpp", "AntiTankGun"),
+        ("Source/WarriorParadise/Private/World/WPGunEmplacement.cpp", "FireAt"),
         ("Source/WarriorParadise/Private/Vehicles/WPTankShell.cpp", "DirectArmorDamage"),
         ("Source/WarriorParadise/Private/Presentation/WPWeaponPresentationComponent.cpp", "SpawnSystemAtLocation"),
         ("Source/WarriorParadise/Private/Presentation/WPWeaponPresentationComponent.cpp", "PlaySoundAtLocation"),
@@ -383,11 +423,20 @@ def main() -> None:
         ("Content/Python/wp_setup_free_profiles.py", "WPSmokePresentationProfile"),
         ("Content/Python/wp_setup_free_profiles.py", "WPSoldierPresentationProfile"),
         ("Content/Python/wp_setup_free_profiles.py", "configure_vehicle_presentation"),
+        ("Content/Python/wp_setup_free_profiles.py", "WPLightVehicleVisualProfile"),
+        ("Content/Python/wp_setup_free_profiles.py", "WPEmplacementVisualProfile"),
+        ("Content/Python/wp_setup_free_profiles.py", "WPAirSupportVisualProfile"),
+        ("Content/Python/wp_setup_free_profiles.py", "allied_transport"),
+        ("Content/Python/wp_setup_free_profiles.py", "allied_aircraft"),
         ("Content/Python/wp_setup_free_profiles.py", "tracer_effect"),
         ("tools/assets/bootstrap_free_assets.py", "safe_extract_zip"),
         ("tools/assets/bootstrap_free_assets.py", "asset-lock.json"),
         ("tools/build_local.ps1", "WarriorParadiseEditor"),
         ("tools/setup_free_content.ps1", "UnrealEditor-Cmd.exe"),
+        ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "DrawTankReadout"),
+        ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "DrawVehicleReadout"),
+        ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "DrawEmplacementReadout"),
+        ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "GetAirSupportCooldownRemaining"),
     )
 
     for relative_path, expected in contracts:
@@ -404,7 +453,7 @@ def main() -> None:
                 fail(f"{marker} marker found in {path.relative_to(ROOT)}")
         source_checked += 1
 
-    if source_checked < 56:
+    if source_checked < 67:
         fail(f"unexpectedly small source tree: {source_checked} source files")
 
     python_checked = validate_python()
@@ -417,7 +466,9 @@ def main() -> None:
         f"{manual_free} curated manual/free sources; gameplay, presentation, "
         "asset licensing, import, materials, motion-matching, smoke, soldier "
         "feedback, tracers, decals, surface impacts, enterable buildings, "
-        "spatial-audio, destruction, squad, support and armor contracts checked)."
+        "crewable tanks, subsystem armor damage, transports, armored cars, "
+        "emplacements, scripted air support, battlefield ambience, spatial-audio, "
+        "destruction, squad and support contracts checked)."
     )
 
 
