@@ -1209,34 +1209,36 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         bTargetVisible &&
         HasClearFireLaneTo(Target);
 
-    if (!bClearFireLane &&
-        bPulseFiring)
+    if (bTargetVisible &&
+        !bClearFireLane)
     {
-        GetWeaponComponent()->StopFire();
-        bPulseFiring = false;
         bHasHeldFireForFriendly = true;
-    }
 
-    if (!bClearFireLane &&
-        bTargetVisible &&
-        !bAtCover &&
-        !bPinned &&
-        TacticalPosture !=
-            EWPAITacticalPosture::Maneuver)
-    {
-        FVector LaneShift(
-            -FlatDirection.Y,
-            FlatDirection.X,
-            0.0f);
-
-        if ((GetUniqueID() & 1U) != 0U)
+        if (bPulseFiring)
         {
-            LaneShift *= -1.0f;
+            GetWeaponComponent()->StopFire();
+            bPulseFiring = false;
         }
 
-        AddMovementInput(
-            LaneShift,
-            FireLaneShiftStrength);
+        if (!bAtCover &&
+            !bPinned &&
+            TacticalPosture !=
+                EWPAITacticalPosture::Maneuver)
+        {
+            FVector LaneShift(
+                -FlatDirection.Y,
+                FlatDirection.X,
+                0.0f);
+
+            if ((GetUniqueID() & 1U) != 0U)
+            {
+                LaneShift *= -1.0f;
+            }
+
+            AddMovementInput(
+                LaneShift,
+                FireLaneShiftStrength);
+        }
     }
 
     if (!bPinned)
