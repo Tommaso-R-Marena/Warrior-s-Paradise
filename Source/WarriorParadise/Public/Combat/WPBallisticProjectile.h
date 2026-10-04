@@ -10,6 +10,15 @@ class UPrimitiveComponent;
 class USphereComponent;
 class UProjectileMovementComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+    FWPProjectileImpactSignature,
+    FVector,
+    ImpactLocation,
+    FVector,
+    ImpactNormal,
+    AActor*,
+    HitActor);
+
 UCLASS()
 class WARRIORPARADISE_API AWPBallisticProjectile : public AActor
 {
@@ -19,6 +28,9 @@ public:
     AWPBallisticProjectile();
 
     virtual void Tick(float DeltaSeconds) override;
+
+    UPROPERTY(BlueprintAssignable, Category="Projectile|Presentation")
+    FWPProjectileImpactSignature OnImpact;
 
     void InitializeProjectile(
         const FVector& Direction,
