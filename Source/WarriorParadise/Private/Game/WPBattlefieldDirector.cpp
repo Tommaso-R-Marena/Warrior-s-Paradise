@@ -19,6 +19,11 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "Materials/MaterialInterface.h"
+#include "Presentation/WPBattlePresentationSet.h"
+#include "Presentation/WPEnvironmentVisualProfile.h"
+#include "Presentation/WPInfantryLoadoutProfile.h"
+#include "Presentation/WPVehicleVisualProfile.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Vehicles/WPArmoredVehicle.h"
@@ -34,6 +39,11 @@ AWPBattlefieldDirector::AWPBattlefieldDirector()
     ArtilleryStrikeClass = AWPArtilleryStrike::StaticClass();
     ArmoredVehicleClass = AWPArmoredVehicle::StaticClass();
 
+    BattlePresentationSetAsset = TSoftObjectPtr<UWPBattlePresentationSet>(
+        FSoftObjectPath(TEXT(
+            "/Game/WarriorParadise/Profiles/"
+            "DA_WP_BattlePresentation_Free.DA_WP_BattlePresentation_Free")));
+
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeAsset(TEXT("/Engine/BasicShapes/Cube.Cube"));
     if (CubeAsset.Succeeded())
     {
@@ -45,6 +55,11 @@ void AWPBattlefieldDirector::BeginPlay()
 {
     Super::BeginPlay();
 
+    BattlePresentationSet = BattlePresentationSetAsset.LoadSynchronous();
+    EnvironmentVisualProfile = BattlePresentationSet
+        ? BattlePresentationSet->Environment
+        : nullptr;
+
     BuildBattlefield();
     BuildCoverPoints();
 
@@ -55,6 +70,15 @@ void AWPBattlefieldDirector::BeginPlay()
     {
         Player->SetCombatTeam(EWPCombatTeam::Allies);
         Player->SetSoldierRole(EWPSoldierRole::Rifleman);
+
+        if (BattlePresentationSet)
+        {
+            Player->SetLoadoutProfile(
+                BattlePresentationSet->GetInfantryLoadout(
+                    EWPCombatTeam::Allies,
+                    EWPSoldierRole::Rifleman));
+        }
+
         Player->GetHealthComponent()->SetCanBeDowned(true);
 
         const FRotator StartRotation(0.0f, -90.0f, 0.0f);
@@ -363,10 +387,24 @@ bool AWPBattlefieldDirector::RequestArtillery(
     return false;
 }
 
+UMaterialInterface* AWPBattlefieldDirector::ResolveSurfaceMaterial(
+    EWPEnvironmentSurface Surface) const
+{
+    if (!EnvironmentVisualProfile)
+    {
+        return nullptr;
+    }
+
+    return EnvironmentVisualProfile
+        ->GetMaterial(Surface)
+        .LoadSynchronous();
+}
+
 void AWPBattlefieldDirector::SpawnBox(
     const FVector& Location,
     const FVector& Scale,
-    const FRotator& Rotation)
+    const FRotator& Rotation,
+    EWPEnvironmentSurface Surface)
 {
     if (!GetWorld() || !CubeMesh)
     {
@@ -384,6 +422,12 @@ void AWPBattlefieldDirector::SpawnBox(
     MeshComponent->SetStaticMesh(CubeMesh);
     MeshComponent->SetCollisionProfileName(TEXT("BlockAll"));
     MeshComponent->SetCastShadow(true);
+
+    if (UMaterialInterface* Material = ResolveSurfaceMaterial(Surface))
+    {
+        MeshComponent->SetMaterial(0, Material);
+    }
+
     Box->SetActorScale3D(Scale);
 
     const bool bThinHorizontalCover =
@@ -399,7 +443,8 @@ void AWPBattlefieldDirector::SpawnBox(
 void AWPBattlefieldDirector::SpawnDestructibleCover(
     const FVector& Location,
     const FVector& Scale,
-    float Health)
+    float Health,
+    EWPEnvironmentSurface Surface)
 {
     if (!GetWorld())
     {
@@ -412,6 +457,11 @@ void AWPBattlefieldDirector::SpawnDestructibleCover(
         FRotator::ZeroRotator))
     {
         Cover->ConfigureCover(Scale, Health);
+
+        if (UMaterialInterface* Material = ResolveSurfaceMaterial(Surface))
+        {
+            Cover->ApplyMaterial(Material);
+        }
     }
 }
 
@@ -422,29 +472,111 @@ void AWPBattlefieldDirector::BuildBattlefield()
         return;
     }
 
-    SpawnBox(FVector(0.0f, 0.0f, -30.0f), FVector(60.0f, 60.0f, 0.6f));
+    SpawnBox(
+        FVector(0.0f, 0.0f, -30.0f),
+        FVector(60.0f, 60.0f, 0.6f),
+        FRotator::ZeroRotator,
+        EWPEnvironmentSurface::Ground);
 
-    SpawnBox(FVector(-1750.0f, -500.0f, 280.0f), FVector(7.0f, 5.0f, 3.4f));
-    SpawnBox(FVector(1650.0f, -1450.0f, 320.0f), FVector(8.0f, 6.0f, 3.8f));
-    SpawnBox(FVector(-1900.0f, -2550.0f, 260.0f), FVector(6.5f, 5.0f, 3.2f));
-    SpawnBox(FVector(1850.0f, -3300.0f, 300.0f), FVector(7.5f, 5.5f, 3.6f));
+    SpawnBox(
+        FVector(-1750.0f, -500.0f, 280.0f),
+        FVector(7.0f, 5.0f, 3.4f),
+        FRotator::ZeroRotator,
+        EWPEnvironmentSurface::Plaster);
 
-    SpawnBox(FVector(-600.0f, 850.0f, 60.0f), FVector(4.0f, 0.5f, 0.8f), FRotator(0.0f, 8.0f, 0.0f));
-    SpawnBox(FVector(650.0f, -1100.0f, 60.0f), FVector(3.5f, 0.5f, 0.8f), FRotator(0.0f, -12.0f, 0.0f));
-    SpawnBox(FVector(-850.0f, -2850.0f, 55.0f), FVector(5.0f, 0.45f, 0.7f));
-    SpawnBox(FVector(900.0f, -3900.0f, 55.0f), FVector(4.5f, 0.45f, 0.7f));
+    SpawnBox(
+        FVector(1650.0f, -1450.0f, 320.0f),
+        FVector(8.0f, 6.0f, 3.8f),
+        FRotator::ZeroRotator,
+        EWPEnvironmentSurface::Brick);
 
-    SpawnDestructibleCover(FVector(-300.0f, 450.0f, 70.0f), FVector(1.4f, 0.55f, 0.75f), 150.0f);
-    SpawnDestructibleCover(FVector(320.0f, 300.0f, 70.0f), FVector(1.2f, 0.65f, 0.75f), 150.0f);
-    SpawnDestructibleCover(FVector(-350.0f, -1650.0f, 80.0f), FVector(1.6f, 0.7f, 0.85f), 190.0f);
-    SpawnDestructibleCover(FVector(450.0f, -2050.0f, 80.0f), FVector(1.5f, 0.65f, 0.85f), 190.0f);
-    SpawnDestructibleCover(FVector(-500.0f, -3300.0f, 80.0f), FVector(1.7f, 0.7f, 0.85f), 210.0f);
-    SpawnDestructibleCover(FVector(450.0f, -3650.0f, 80.0f), FVector(1.6f, 0.7f, 0.85f), 210.0f);
+    SpawnBox(
+        FVector(-1900.0f, -2550.0f, 260.0f),
+        FVector(6.5f, 5.0f, 3.2f),
+        FRotator::ZeroRotator,
+        EWPEnvironmentSurface::Stone);
 
-    SpawnBox(FVector(-5900.0f, 0.0f, 250.0f), FVector(1.0f, 60.0f, 3.0f));
-    SpawnBox(FVector(5900.0f, 0.0f, 250.0f), FVector(1.0f, 60.0f, 3.0f));
-    SpawnBox(FVector(0.0f, -5900.0f, 250.0f), FVector(60.0f, 1.0f, 3.0f));
-    SpawnBox(FVector(0.0f, 5900.0f, 250.0f), FVector(60.0f, 1.0f, 3.0f));
+    SpawnBox(
+        FVector(1850.0f, -3300.0f, 300.0f),
+        FVector(7.5f, 5.5f, 3.6f),
+        FRotator::ZeroRotator,
+        EWPEnvironmentSurface::Plaster);
+
+    SpawnBox(
+        FVector(-600.0f, 850.0f, 60.0f),
+        FVector(4.0f, 0.5f, 0.8f),
+        FRotator(0.0f, 8.0f, 0.0f),
+        EWPEnvironmentSurface::Wood);
+
+    SpawnBox(
+        FVector(650.0f, -1100.0f, 60.0f),
+        FVector(3.5f, 0.5f, 0.8f),
+        FRotator(0.0f, -12.0f, 0.0f),
+        EWPEnvironmentSurface::Stone);
+
+    SpawnBox(
+        FVector(-850.0f, -2850.0f, 55.0f),
+        FVector(5.0f, 0.45f, 0.7f),
+        FRotator::ZeroRotator,
+        EWPEnvironmentSurface::Wood);
+
+    SpawnBox(
+        FVector(900.0f, -3900.0f, 55.0f),
+        FVector(4.5f, 0.45f, 0.7f),
+        FRotator::ZeroRotator,
+        EWPEnvironmentSurface::Stone);
+
+    SpawnDestructibleCover(
+        FVector(-300.0f, 450.0f, 70.0f),
+        FVector(1.4f, 0.55f, 0.75f),
+        150.0f,
+        EWPEnvironmentSurface::Wood);
+    SpawnDestructibleCover(
+        FVector(320.0f, 300.0f, 70.0f),
+        FVector(1.2f, 0.65f, 0.75f),
+        150.0f,
+        EWPEnvironmentSurface::Wood);
+    SpawnDestructibleCover(
+        FVector(-350.0f, -1650.0f, 80.0f),
+        FVector(1.6f, 0.7f, 0.85f),
+        190.0f,
+        EWPEnvironmentSurface::Stone);
+    SpawnDestructibleCover(
+        FVector(450.0f, -2050.0f, 80.0f),
+        FVector(1.5f, 0.65f, 0.85f),
+        190.0f,
+        EWPEnvironmentSurface::Wood);
+    SpawnDestructibleCover(
+        FVector(-500.0f, -3300.0f, 80.0f),
+        FVector(1.7f, 0.7f, 0.85f),
+        210.0f,
+        EWPEnvironmentSurface::Stone);
+    SpawnDestructibleCover(
+        FVector(450.0f, -3650.0f, 80.0f),
+        FVector(1.6f, 0.7f, 0.85f),
+        210.0f,
+        EWPEnvironmentSurface::Wood);
+
+    SpawnBox(
+        FVector(-5900.0f, 0.0f, 250.0f),
+        FVector(1.0f, 60.0f, 3.0f),
+        FRotator::ZeroRotator,
+        EWPEnvironmentSurface::Concrete);
+    SpawnBox(
+        FVector(5900.0f, 0.0f, 250.0f),
+        FVector(1.0f, 60.0f, 3.0f),
+        FRotator::ZeroRotator,
+        EWPEnvironmentSurface::Concrete);
+    SpawnBox(
+        FVector(0.0f, -5900.0f, 250.0f),
+        FVector(60.0f, 1.0f, 3.0f),
+        FRotator::ZeroRotator,
+        EWPEnvironmentSurface::Concrete);
+    SpawnBox(
+        FVector(0.0f, 5900.0f, 250.0f),
+        FVector(60.0f, 1.0f, 3.0f),
+        FRotator::ZeroRotator,
+        EWPEnvironmentSurface::Concrete);
 
     ADirectionalLight* Sun = GetWorld()->SpawnActor<ADirectionalLight>(
         FVector::ZeroVector,
@@ -569,6 +701,15 @@ AWPSoldierCharacter* AWPBattlefieldDirector::SpawnFriendlySoldier(
 
     Soldier->SetCombatTeam(EWPCombatTeam::Allies);
     Soldier->SetSoldierRole(Role);
+
+    if (BattlePresentationSet)
+    {
+        Soldier->SetLoadoutProfile(
+            BattlePresentationSet->GetInfantryLoadout(
+                EWPCombatTeam::Allies,
+                Role));
+    }
+
     Soldier->FinishSpawning(SpawnTransform);
 
     FriendlySquad.Add(Soldier);
@@ -869,8 +1010,20 @@ void AWPBattlefieldDirector::SpawnEnemyGroup(int32 Count, bool bResetEnemyCounte
             nullptr,
             ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn))
         {
+            const EWPSoldierRole Role =
+                EnemyRoles[Index % UE_ARRAY_COUNT(EnemyRoles)];
+
             Enemy->SetCombatTeam(EWPCombatTeam::Axis);
-            Enemy->SetSoldierRole(EnemyRoles[Index % UE_ARRAY_COUNT(EnemyRoles)]);
+            Enemy->SetSoldierRole(Role);
+
+            if (BattlePresentationSet)
+            {
+                Enemy->SetLoadoutProfile(
+                    BattlePresentationSet->GetInfantryLoadout(
+                        EWPCombatTeam::Axis,
+                        Role));
+            }
+
             Enemy->FinishSpawning(SpawnTransform);
             ++RemainingEnemies;
             --AxisTickets;
@@ -1025,6 +1178,13 @@ AWPArmoredVehicle* AWPBattlefieldDirector::SpawnArmoredVehicle(
     }
 
     Vehicle->SetCombatTeam(Team);
+
+    if (BattlePresentationSet)
+    {
+        Vehicle->SetVisualProfile(
+            BattlePresentationSet->GetVehicleVisual(Team));
+    }
+
     Vehicle->FinishSpawning(SpawnTransform);
 
     if (Team == EWPCombatTeam::Axis)
