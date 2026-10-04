@@ -23,6 +23,7 @@
 #include "Materials/MaterialInterface.h"
 #include "Presentation/WPBattlePresentationSet.h"
 #include "Presentation/WPEnvironmentVisualProfile.h"
+#include "Presentation/WPExplosionPresentationProfile.h"
 #include "Presentation/WPInfantryLoadoutProfile.h"
 #include "Presentation/WPVehicleVisualProfile.h"
 #include "TimerManager.h"
@@ -152,6 +153,22 @@ int32 AWPBattlefieldDirector::GetActiveObjectiveAxisPresence() const
         Objectives[ActiveObjectiveIndex]
         ? Objectives[ActiveObjectiveIndex]->GetAxisPresence()
         : 0;
+}
+
+UWPExplosionPresentationProfile*
+AWPBattlefieldDirector::GetFragExplosionPresentation() const
+{
+    return BattlePresentationSet
+        ? BattlePresentationSet->GetFragExplosion()
+        : nullptr;
+}
+
+UWPExplosionPresentationProfile*
+AWPBattlefieldDirector::GetArtilleryExplosionPresentation() const
+{
+    return BattlePresentationSet
+        ? BattlePresentationSet->GetArtilleryExplosion()
+        : nullptr;
 }
 
 float AWPBattlefieldDirector::GetArtilleryCooldownRemaining() const
@@ -380,6 +397,8 @@ bool AWPBattlefieldDirector::RequestArtillery(
         TargetLocation,
         FRotator::ZeroRotator))
     {
+        Strike->SetPresentationProfile(
+            GetArtilleryExplosionPresentation());
         Strike->InitializeStrike(TargetLocation, EWPCombatTeam::Allies);
         --ArtilleryCharges;
         NextArtilleryAvailableTime = GetWorld()->GetTimeSeconds() + ArtilleryCooldownSeconds;
