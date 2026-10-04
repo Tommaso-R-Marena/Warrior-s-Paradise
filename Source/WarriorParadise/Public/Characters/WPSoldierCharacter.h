@@ -9,8 +9,10 @@ class AWPBattlefieldDirector;
 class AWPFragGrenade;
 class AWPSmokeGrenade;
 class UCameraComponent;
+class USkeletalMeshComponent;
 class UStaticMeshComponent;
 class UWPHealthComponent;
+class UWPInfantryVisualProfile;
 class UWPSuppressionComponent;
 class UWPWeaponComponent;
 
@@ -53,6 +55,12 @@ public:
 
     UFUNCTION(BlueprintPure, Category="Combat")
     bool IsCombatCapable() const;
+
+    UFUNCTION(BlueprintPure, Category="Presentation")
+    bool HasProductionVisuals() const { return bProductionVisualsActive; }
+
+    UFUNCTION(BlueprintCallable, Category="Presentation")
+    void ApplyVisualProfile();
 
     UFUNCTION(BlueprintPure, Category="Combat")
     int32 GetGrenadesRemaining() const { return GrenadesRemaining; }
@@ -123,7 +131,16 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat")
     EWPSoldierRole SoldierRole = EWPSoldierRole::Rifleman;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Presentation", meta=(AllowPrivateAccess="true"))
+    TObjectPtr<UWPInfantryVisualProfile> VisualProfile;
+
 private:
+    UPROPERTY(VisibleAnywhere, Category="View")
+    TObjectPtr<USkeletalMeshComponent> FirstPersonArms;
+
+    UPROPERTY(VisibleAnywhere, Category="View")
+    TObjectPtr<USkeletalMeshComponent> FirstPersonWeapon;
+
     UPROPERTY(VisibleAnywhere, Category="View")
     TObjectPtr<UStaticMeshComponent> ViewWeaponBody;
 
@@ -229,6 +246,7 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="View")
     float AimInterpSpeed = 12.0f;
 
+    bool bProductionVisualsActive = false;
     bool bAiming = false;
     bool bSprinting = false;
     bool bProne = false;
