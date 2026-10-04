@@ -7,6 +7,8 @@
 #include "Engine/Engine.h"
 #include "Game/WPBattlefieldDirector.h"
 #include "Kismet/GameplayStatics.h"
+#include "Vehicles/WPLightVehicle.h"
+#include "World/WPGunEmplacement.h"
 
 namespace
 {
@@ -53,21 +55,50 @@ void AWPCombatHUD::DrawHUD()
     const float Width = Canvas->SizeX;
     const float Height = Canvas->SizeY;
 
-    AWPSoldierCharacter* Soldier = Cast<AWPSoldierCharacter>(
-        UGameplayStatics::GetPlayerCharacter(this, 0));
+    APawn* PlayerPawn =
+        UGameplayStatics::GetPlayerPawn(this, 0);
 
-    const bool bDrawCrosshair =
-        Soldier &&
-        Soldier->IsCombatCapable() &&
-        Soldier->GetWeaponComponent() &&
-        !Soldier->GetWeaponComponent()->IsAiming();
+    AWPSoldierCharacter* Soldier =
+        Cast<AWPSoldierCharacter>(PlayerPawn);
 
-    if (bDrawCrosshair)
+    if (Soldier)
     {
-        DrawCrosshair(Width * 0.5f, Height * 0.5f);
+        const bool bDrawCrosshair =
+            Soldier->IsCombatCapable() &&
+            Soldier->GetWeaponComponent() &&
+            !Soldier->GetWeaponComponent()->IsAiming();
+
+        if (bDrawCrosshair)
+        {
+            DrawCrosshair(Width * 0.5f, Height * 0.5f);
+        }
+
+        DrawCombatReadout(Width, Height);
+        return;
     }
 
-    DrawCombatReadout(Width, Height);
+    if (AWPLightVehicle* Vehicle =
+        Cast<AWPLightVehicle>(PlayerPawn))
+    {
+        if (Vehicle->GetVehicleType() ==
+            EWPLightVehicleType::ArmoredCar)
+        {
+            DrawCrosshair(
+                Width * 0.5f,
+                Height * 0.5f);
+        }
+
+        DrawVehicleReadout(Width, Height);
+        return;
+    }
+
+    if (Cast<AWPGunEmplacement>(PlayerPawn))
+    {
+        DrawCrosshair(
+            Width * 0.5f,
+            Height * 0.5f);
+        DrawEmplacementReadout(Width, Height);
+    }
 }
 
 void AWPCombatHUD::DrawCrosshair(float CenterX, float CenterY)
@@ -190,11 +221,24 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
                 TEXT("ARTILLERY %d   READY"),
                 Director->GetArtilleryCharges());
 
+        const float AirCooldown =
+            Director->GetAirSupportCooldownRemaining();
+
+        const FString AirText = AirCooldown > 0.0f
+            ? FString::Printf(
+                TEXT("AIR %d READY %.0fs"),
+                Director->GetAirSupportCharges(),
+                AirCooldown)
+            : FString::Printf(
+                TEXT("AIR %d READY"),
+                Director->GetAirSupportCharges());
+
         DrawText(
             FString::Printf(
-                TEXT("SQUAD %s   %s"),
+                TEXT("SQUAD %s   %s   %s"),
                 SquadOrderLabel(Director->GetSquadOrder()),
-                *ArtilleryText),
+                *ArtilleryText,
+                *AirText),
             FLinearColor(0.78f, 0.88f, 1.0f, 1.0f),
             28.0f,
             48.0f,
@@ -292,11 +336,99 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
     }
 
     DrawText(
-        TEXT("X SWITCH  1 FOLLOW  2 ATTACK  3 HOLD  Z PRONE  F MELEE  V BANDAGE  G FRAG  H SMOKE  E REVIVE  T ARTILLERY"),
+        TEXT("X SWITCH  1 FOLLOW  2 ATTACK  3 HOLD  E USE/REVIVE  T ARTILLERY  Y AIR  Z PRONE  F MELEE  V BANDAGE  G FRAG  H SMOKE"),
         FLinearColor(0.78f, 0.78f, 0.74f, 0.85f),
         Width * 0.5f - 260.0f,
         Height - 28.0f,
         GEngine->GetSmallFont(),
         0.9f,
+        false);
+}
+
+
+void AWPCombatHUD::DrawVehicleReadout(
+    float Width,
+    float Height)
+{
+    AWPLightVehicle* Vehicle =
+        Cast<AWPLightVehicle>(
+            UGameplayStatics::GetPlayerPawn(this, 0));
+
+    if (!Vehicle || !GEngine)
+    {
+        return;
+    }
+
+    const TCHAR* VehicleLabel =
+        Vehicle->GetVehicleType() ==
+            EWPLightVehicleType::ArmoredCar
+            ? TEXT("ARMORED CAR")
+            : TEXT("TRANSPORT");
+
+    DrawText(
+        FString::Printf(
+            TEXT("%s   HULL %03d"),
+            VehicleLabel,
+            FMath::RoundToInt(
+                Vehicle->GetHealthNormalized() * 100.0f)),
+        FLinearColor::White,
+        28.0f,
+        Height - 58.0f,
+        GEngine->GetMediumFont(),
+        1.0f,
+        false);
+
+    DrawText(
+        Vehicle->GetVehicleType() ==
+                EWPLightVehicleType::ArmoredCar
+            ? TEXT("W/S DRIVE   MOUSE STEER   FIRE MG   E DISEMBARK")
+            : TEXT("W/S DRIVE   MOUSE STEER   E DISEMBARK SQUAD"),
+        FLinearColor(0.78f, 0.88f, 1.0f, 1.0f),
+        Width * 0.5f - 210.0f,
+        Height - 28.0f,
+        GEngine->GetSmallFont(),
+        0.95f,
+        false);
+}
+
+void AWPCombatHUD::DrawEmplacementReadout(
+    float Width,
+    float Height)
+{
+    AWPGunEmplacement* Emplacement =
+        Cast<AWPGunEmplacement>(
+            UGameplayStatics::GetPlayerPawn(this, 0));
+
+    if (!Emplacement || !GEngine)
+    {
+        return;
+    }
+
+    const TCHAR* GunLabel =
+        Emplacement->GetEmplacementType() ==
+            EWPEmplacementType::AntiTankGun
+            ? TEXT("ANTI-TANK GUN")
+            : TEXT("HEAVY MACHINE GUN");
+
+    DrawText(
+        FString::Printf(
+            TEXT("%s   CONDITION %03d"),
+            GunLabel,
+            FMath::RoundToInt(
+                Emplacement->GetHealthNormalized() * 100.0f)),
+        FLinearColor::White,
+        28.0f,
+        Height - 58.0f,
+        GEngine->GetMediumFont(),
+        1.0f,
+        false);
+
+    DrawText(
+        TEXT("MOUSE AIM   HOLD FIRE   E LEAVE EMPLACEMENT"),
+        FLinearColor(0.78f, 0.88f, 1.0f, 1.0f),
+        Width * 0.5f - 190.0f,
+        Height - 28.0f,
+        GEngine->GetSmallFont(),
+        0.95f,
         false);
 }
