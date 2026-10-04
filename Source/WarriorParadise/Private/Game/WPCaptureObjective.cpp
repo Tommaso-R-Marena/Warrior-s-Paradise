@@ -60,8 +60,8 @@ void AWPCaptureObjective::Tick(float DeltaSeconds)
         return;
     }
 
-    int32 AlliedPresence = 0;
-    int32 AxisPresence = 0;
+    AlliedPresence = 0;
+    AxisPresence = 0;
     const float RadiusSquared = FMath::Square(CaptureRadius);
 
     for (TActorIterator<AWPSoldierCharacter> It(GetWorld()); It; ++It)
@@ -87,6 +87,7 @@ void AWPCaptureObjective::Tick(float DeltaSeconds)
         }
     }
 
+    bContested = AlliedPresence > 0 && AxisPresence > 0;
     const int32 Advantage = AlliedPresence - AxisPresence;
     if (Advantage > 0)
     {
@@ -143,10 +144,24 @@ void AWPCaptureObjective::UpdatePresentation()
         return;
     }
 
+    const int32 Percent = FMath::RoundToInt(CaptureProgress * 100.0f);
+
+    if (bContested)
+    {
+        BeaconLight->SetLightColor(FLinearColor(0.92f, 0.18f, 0.10f));
+        BeaconLight->SetIntensity(6800.0f);
+        ObjectiveLabel->SetText(FText::FromString(
+            FString::Printf(
+                TEXT("CONTESTED %d   A%d / X%d"),
+                ObjectiveIndex + 1,
+                AlliedPresence,
+                AxisPresence)));
+        ObjectiveLabel->SetTextRenderColor(FColor(245, 95, 70));
+        return;
+    }
+
     BeaconLight->SetLightColor(FLinearColor(0.95f, 0.64f, 0.12f));
     BeaconLight->SetIntensity(5500.0f);
-
-    const int32 Percent = FMath::RoundToInt(CaptureProgress * 100.0f);
     ObjectiveLabel->SetText(FText::FromString(
         FString::Printf(TEXT("CAPTURE %d   %d%%"), ObjectiveIndex + 1, Percent)));
     ObjectiveLabel->SetTextRenderColor(FColor(240, 210, 100));
