@@ -548,7 +548,33 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
     const float Time = GetWorld()->GetTimeSeconds();
 
-    if (GetSoldierRole() == EWPSoldierRole::Medic && Time >= NextSupportSearchTime)
+    UWPSuppressionComponent* SuppressionComponent =
+        GetSuppressionComponent();
+    const float Suppression = SuppressionComponent
+        ? SuppressionComponent->GetNormalizedSuppression()
+        : 0.0f;
+    const EWPSuppressionState SuppressionState = SuppressionComponent
+        ? SuppressionComponent->GetSuppressionState()
+        : EWPSuppressionState::Steady;
+    const bool bPinned =
+        SuppressionState == EWPSuppressionState::Pinned;
+    const bool bPressured =
+        SuppressionState != EWPSuppressionState::Steady;
+
+    if (UWPWeaponComponent* Weapon = GetWeaponComponent())
+    {
+        const float SuppressionAccuracy =
+            bPinned
+                ? FMath::Lerp(2.2f, 3.25f, Suppression)
+                : FMath::Lerp(1.0f, 2.15f, Suppression);
+
+        Weapon->SetAccuracyMultiplier(
+            SuppressionAccuracy);
+    }
+
+    if (!bPinned &&
+        GetSoldierRole() == EWPSoldierRole::Medic &&
+        Time >= NextSupportSearchTime)
     {
         NextSupportSearchTime = Time + 0.35f;
         if (HandleMedicSupport())
@@ -573,7 +599,7 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         GetWeaponComponent()->StopFire();
         bPulseFiring = false;
 
-        if (HandleEngineerSupport())
+        if (!bPinned && HandleEngineerSupport())
         {
             return;
         }
@@ -655,9 +681,6 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
     const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
     const float Distance = ToTarget.Size();
-    const float Suppression = GetSuppressionComponent()
-        ? GetSuppressionComponent()->GetNormalizedSuppression()
-        : 0.0f;
     const float HealthNormalized = GetHealthComponent()->GetHealthNormalized();
     const FVector FlatDirection = FVector(ToTarget.X, ToTarget.Y, 0.0f).GetSafeNormal();
 
@@ -679,12 +702,16 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
     }
 
     const bool bWantsCover =
+        bPressured ||
         Suppression >= CoverTriggerSuppression ||
         HealthNormalized <= 0.45f;
 
     if (bWantsCover && Time >= NextCoverSearchTime)
     {
-        NextCoverSearchTime = Time + 1.1f + FMath::FRandRange(0.0f, 0.4f);
+        NextCoverSearchTime =
+            Time +
+            (bPinned ? 0.35f : 1.1f) +
+            FMath::FRandRange(0.0f, bPinned ? 0.15f : 0.4f);
 
         AWPCoverPoint* BetterCover = FindBestCover(Target);
         if (BetterCover && BetterCover != CurrentCover.Get() && BetterCover->TryReserve(this))
@@ -702,8 +729,20 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
         if (!bAtCover)
         {
-            MoveTacticallyToward(Cover->GetActorLocation(), FMath::Lerp(0.95f, 0.7f, Suppression));
+            MoveTacticallyToward(
+                Cover->GetActorLocation(),
+                bPinned
+                    ? 1.0f
+                    : FMath::Lerp(0.95f, 0.7f, Suppression));
         }
+    }
+    else if (bPinned)
+    {
+        // If no reservable cover exists, break contact instead of
+        // standing in the open trading accurate fire.
+        MoveTacticallyToward(
+            GetActorLocation() - FlatDirection * 650.0f,
+            0.72f);
     }
     else if (Distance > DesiredRange)
     {
@@ -740,7 +779,16 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
             FMath::Sin(Time * 0.85f + static_cast<float>(GetUniqueID())) * StrafeStrength);
     }
 
-    HandleGrenadeOpportunity(Target, Distance);
+    if (!bPinned)
+    {
+        HandleGrenadeOpportunity(Target, Distance);
+    }
+
+    if (bPinned && !bAtCover && bPulseFiring)
+    {
+        GetWeaponComponent()->StopFire();
+        bPulseFiring = false;
+    }
 
     if (bPulseFiring && Time >= StopFireTime)
     {
@@ -750,16 +798,24 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
     if (Time >= NextDecisionTime)
     {
-        NextDecisionTime = Time + FMath::FRandRange(0.32f, 0.72f);
+        NextDecisionTime =
+            Time +
+            (bPinned
+                ? FMath::FRandRange(0.65f, 1.10f)
+                : FMath::FRandRange(0.32f, 0.72f));
 
         const float CoverConfidence = bAtCover ? 1.12f : 1.0f;
-        const float FireChance = FMath::Clamp(
-            FMath::Lerp(1.0f, 0.28f, Suppression) * CoverConfidence,
-            0.05f,
-            1.0f);
+        const float FireChance = bPinned
+            ? (bAtCover ? 0.10f : 0.0f)
+            : FMath::Clamp(
+                FMath::Lerp(1.0f, 0.28f, Suppression) *
+                    CoverConfidence,
+                0.05f,
+                1.0f);
 
         if (Distance <= MaximumEngagementRange &&
             bTargetVisible &&
+            FireChance > 0.0f &&
             FMath::FRand() <= FireChance)
         {
             GetWeaponComponent()->StartFire();
@@ -768,7 +824,8 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         }
     }
 
-    if (GetSoldierRole() == EWPSoldierRole::Engineer &&
+    if (!bPinned &&
+        GetSoldierRole() == EWPSoldierRole::Engineer &&
         Distance > 1300.0f &&
         Time >= NextSupportSearchTime)
     {
