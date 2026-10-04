@@ -5,9 +5,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
-#include "Game/WPBattlefieldDirector.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 
 AWPEnemySoldier::AWPEnemySoldier()
@@ -66,8 +64,6 @@ void AWPEnemySoldier::BeginPlay()
         GetWeaponComponent()->Configure(9.0f, 360.0f, 4.2f);
         GetCharacterMovement()->MaxWalkSpeed = 315.0f;
     }
-
-    GetHealthComponent()->OnDeath.AddDynamic(this, &AWPEnemySoldier::HandleSoldierDeath);
 }
 
 AWPSoldierCharacter* AWPEnemySoldier::FindBestTarget() const
@@ -141,6 +137,11 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
+    if (IsPlayerControlled())
+    {
+        return;
+    }
+
     if (GetHealthComponent()->IsDead() || !GetWorld())
     {
         return;
@@ -212,16 +213,5 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
             bPulseFiring = true;
             StopFireTime = Time + FirePulseSeconds;
         }
-    }
-}
-
-void AWPEnemySoldier::HandleSoldierDeath()
-{
-    GetWeaponComponent()->StopFire();
-
-    if (AWPBattlefieldDirector* Director = Cast<AWPBattlefieldDirector>(
-        UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass())))
-    {
-        Director->NotifySoldierKilled(this);
     }
 }
