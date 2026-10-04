@@ -266,6 +266,7 @@ void UWPWeaponPresentationComponent::HandleProjectileImpact(
     enum class ELocalImpactSurface : uint8
     {
         Generic,
+        Dirt,
         Wood,
         Stone,
         Metal,
@@ -284,6 +285,10 @@ void UWPWeaponPresentationComponent::HandleProjectileImpact(
                  HitActor->ActorHasTag(TEXT("WP_Surface_Metal")))
         {
             Surface = ELocalImpactSurface::Metal;
+        }
+        else if (HitActor->ActorHasTag(TEXT("WP_Surface_Dirt")))
+        {
+            Surface = ELocalImpactSurface::Dirt;
         }
         else if (HitActor->ActorHasTag(TEXT("WP_Surface_Wood")))
         {
@@ -306,6 +311,21 @@ void UWPWeaponPresentationComponent::HandleProjectileImpact(
 
     switch (Surface)
     {
+        case ELocalImpactSurface::Dirt:
+            if (!PresentationProfile->DirtImpact.IsNull())
+            {
+                Effect = PresentationProfile->DirtImpact;
+            }
+            if (!PresentationProfile->DirtImpactSound.IsNull())
+            {
+                ImpactSound = PresentationProfile->DirtImpactSound;
+            }
+            if (!PresentationProfile->DirtImpactDecal.IsNull())
+            {
+                ImpactDecal = PresentationProfile->DirtImpactDecal;
+            }
+            break;
+
         case ELocalImpactSurface::Wood:
             if (!PresentationProfile->WoodImpact.IsNull())
             {
