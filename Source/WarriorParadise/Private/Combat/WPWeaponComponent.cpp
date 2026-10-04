@@ -30,7 +30,7 @@ void UWPWeaponComponent::BeginPlay()
 void UWPWeaponComponent::Configure(float InDamage, float InRoundsPerMinute, float InSpreadDegrees)
 {
     Damage = FMath::Max(1.0f, InDamage);
-    RoundsPerMinute = FMath::Max(60.0f, InRoundsPerMinute);
+    RoundsPerMinute = FMath::Max(30.0f, InRoundsPerMinute);
     HipSpreadDegrees = FMath::Max(0.0f, InSpreadDegrees);
     AimSpreadDegrees = FMath::Min(
         HipSpreadDegrees,
