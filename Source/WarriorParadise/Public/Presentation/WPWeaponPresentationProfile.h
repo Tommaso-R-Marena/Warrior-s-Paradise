@@ -4,6 +4,7 @@
 #include "Engine/DataAsset.h"
 #include "WPWeaponPresentationProfile.generated.h"
 
+class UMaterialInterface;
 class UNiagaraSystem;
 class USoundBase;
 class USoundAttenuation;
@@ -19,6 +20,9 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX")
     TSoftObjectPtr<UNiagaraSystem> BulletImpact;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX")
+    TSoftObjectPtr<UNiagaraSystem> TracerEffect;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX|Impact")
     TSoftObjectPtr<UNiagaraSystem> WoodImpact;
@@ -61,6 +65,24 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Impact")
     TSoftObjectPtr<USoundBase> FleshImpactSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Decals")
+    TSoftObjectPtr<UMaterialInterface> GenericImpactDecal;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Decals")
+    TSoftObjectPtr<UMaterialInterface> WoodImpactDecal;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Decals")
+    TSoftObjectPtr<UMaterialInterface> StoneImpactDecal;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Decals")
+    TSoftObjectPtr<UMaterialInterface> MetalImpactDecal;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Decals")
+    FVector ImpactDecalSize = FVector(4.0f, 8.0f, 8.0f);
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Decals", meta=(ClampMin="0.0"))
+    float ImpactDecalLifeSeconds = 45.0f;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio")
     TSoftObjectPtr<USoundAttenuation> Attenuation;
