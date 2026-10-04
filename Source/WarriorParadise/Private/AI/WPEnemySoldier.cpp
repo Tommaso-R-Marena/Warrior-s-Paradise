@@ -96,6 +96,13 @@ void AWPEnemySoldier::BeginPlay()
             break;
     }
 
+    if (HasProductionVisuals())
+    {
+        TorsoVisual->SetVisibility(false, true);
+        HeadVisual->SetVisibility(false, true);
+        RifleVisual->SetVisibility(false, true);
+    }
+
     NextGrenadeTime = GetWorld()
         ? GetWorld()->GetTimeSeconds() + FMath::FRandRange(5.0f, 10.0f)
         : 5.0f;
