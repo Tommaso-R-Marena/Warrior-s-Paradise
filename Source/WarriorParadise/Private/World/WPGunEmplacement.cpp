@@ -212,6 +212,7 @@ bool AWPGunEmplacement::TryUse(AWPSoldierCharacter* Soldier)
     Soldier->GetWeaponComponent()->StopFire();
     Soldier->SetActorHiddenInGame(true);
     Soldier->SetActorEnableCollision(false);
+    Soldier->SetActorTickEnabled(false);
     Soldier->GetCharacterMovement()->DisableMovement();
 
     PlayerController->Possess(this);
@@ -235,6 +236,7 @@ void AWPGunEmplacement::ExitEmplacement()
     PlayerController->Possess(Soldier);
     Soldier->SetActorHiddenInGame(false);
     Soldier->SetActorEnableCollision(true);
+    Soldier->SetActorTickEnabled(true);
     Soldier->SetActorLocation(
         GetActorLocation() -
             GetActorForwardVector() * 130.0f +
