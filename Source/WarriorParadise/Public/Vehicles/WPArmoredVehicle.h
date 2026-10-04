@@ -7,7 +7,9 @@
 
 class AWPBattlefieldDirector;
 class AWPTankShell;
+class AWPSoldierCharacter;
 class UBoxComponent;
+class UCameraComponent;
 class UFloatingPawnMovement;
 class UStaticMeshComponent;
 class UWPVehicleVisualProfile;
@@ -36,6 +38,7 @@ public:
     AWPArmoredVehicle();
 
     virtual void Tick(float DeltaSeconds) override;
+    virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
     virtual UPawnMovementComponent* GetMovementComponent() const override;
 
     UFUNCTION(BlueprintCallable, Category="Vehicle")
@@ -49,6 +52,18 @@ public:
 
     UFUNCTION(BlueprintPure, Category="Vehicle")
     bool IsDestroyed() const { return bDestroyed; }
+
+    UFUNCTION(BlueprintPure, Category="Vehicle")
+    bool IsOccupied() const { return CrewSoldier.IsValid(); }
+
+    UFUNCTION(BlueprintCallable, Category="Vehicle")
+    bool TryEnter(AWPSoldierCharacter* Soldier);
+
+    UFUNCTION(BlueprintCallable, Category="Vehicle")
+    void ExitVehicle();
+
+    UFUNCTION(BlueprintPure, Category="Vehicle|Combat")
+    EWPArmorShellType GetSelectedShellType() const { return SelectedShellType; }
 
     UFUNCTION(BlueprintPure, Category="Vehicle|Presentation")
     bool HasProductionVisuals() const { return bProductionVisualsActive; }
@@ -112,6 +127,9 @@ private:
     UPROPERTY(VisibleAnywhere, Category="Vehicle")
     TObjectPtr<UFloatingPawnMovement> Movement;
 
+    UPROPERTY(VisibleAnywhere, Category="Vehicle")
+    TObjectPtr<UCameraComponent> CrewCamera;
+
     UPROPERTY(EditDefaultsOnly, Category="Vehicle|Presentation")
     TObjectPtr<UWPVehicleVisualProfile> VisualProfile;
 
@@ -171,17 +189,38 @@ private:
 
     float NextCannonTime = 0.0f;
     float NextMachineGunTime = 0.0f;
+    float PlayerTurretYaw = 0.0f;
+    float PlayerGunPitch = 0.0f;
+    bool bPlayerMachineGunFiring = false;
+    EWPArmorShellType SelectedShellType = EWPArmorShellType::ArmorPiercing;
     float NextTargetScanTime = 0.0f;
     bool bDestroyed = false;
     bool bProductionVisualsActive = false;
     TWeakObjectPtr<AActor> CurrentTarget;
+    TWeakObjectPtr<AWPSoldierCharacter> CrewSoldier;
     TWeakObjectPtr<AWPBattlefieldDirector> BattlefieldDirector;
 
     AActor* FindBestTarget() const;
     bool HasLineOfSightTo(const AActor* Target) const;
     FVector GetTargetAimPoint(const AActor* Target) const;
     void FireCannon(AActor* Target);
+    void FireCannonAt(
+        const FVector& TargetLocation,
+        EWPArmorShellType ShellType);
     void FireMachineGun(AActor* Target);
+    void FireMachineGunAt(const FVector& TargetLocation);
+
+    void MoveForwardInput(float Value);
+    void TurnHullInput(float Value);
+    void TurnTurretInput(float Value);
+    void PitchGunInput(float Value);
+    void PlayerFireCannon();
+    void StartPlayerMachineGun();
+    void StopPlayerMachineGun();
+    void ToggleShellType();
+    void InteractInput();
+    FVector GetPlayerAimPoint(float RangeCm) const;
+    void RestoreCrewSoldier(bool bEmergency);
     void DamageSubsystem(
         EWPVehicleSubsystem Subsystem,
         float Damage);
