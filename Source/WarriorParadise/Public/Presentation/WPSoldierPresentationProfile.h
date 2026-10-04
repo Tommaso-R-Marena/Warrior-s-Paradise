@@ -42,6 +42,21 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio")
     TSoftObjectPtr<USoundBase> BandageCompleteSound;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Movement")
+    TSoftObjectPtr<USoundBase> FootstepDirt;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Movement")
+    TSoftObjectPtr<USoundBase> FootstepWood;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Movement")
+    TSoftObjectPtr<USoundBase> FootstepStone;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Movement")
+    TSoftObjectPtr<USoundBase> FootstepMetal;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Movement")
+    TSoftObjectPtr<USoundBase> CrawlSound;
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio")
     TSoftObjectPtr<USoundAttenuation> Attenuation;
 
@@ -77,4 +92,19 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio", meta=(ClampMin="0.0"))
     float PainSoundCooldown = 0.35f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Movement", meta=(ClampMin="0.0"))
+    float FootstepVolume = 0.58f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Movement", meta=(ClampMin="20.0"))
+    float WalkStepDistanceCm = 118.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Movement", meta=(ClampMin="20.0"))
+    float SprintStepDistanceCm = 145.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Movement", meta=(ClampMin="20.0"))
+    float CrouchStepDistanceCm = 92.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Movement", meta=(ClampMin="20.0"))
+    float CrawlSoundDistanceCm = 78.0f;
 };
