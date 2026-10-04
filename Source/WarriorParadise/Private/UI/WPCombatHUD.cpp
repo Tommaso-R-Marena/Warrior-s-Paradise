@@ -8,6 +8,39 @@
 #include "Game/WPBattlefieldDirector.h"
 #include "Kismet/GameplayStatics.h"
 
+namespace
+{
+const TCHAR* RoleLabel(EWPSoldierRole Role)
+{
+    switch (Role)
+    {
+        case EWPSoldierRole::Assault:
+            return TEXT("ASSAULT");
+        case EWPSoldierRole::Medic:
+            return TEXT("MEDIC");
+        case EWPSoldierRole::Engineer:
+            return TEXT("ENGINEER");
+        case EWPSoldierRole::Rifleman:
+        default:
+            return TEXT("RIFLEMAN");
+    }
+}
+
+const TCHAR* SquadOrderLabel(EWPSquadOrder Order)
+{
+    switch (Order)
+    {
+        case EWPSquadOrder::Follow:
+            return TEXT("FOLLOW");
+        case EWPSquadOrder::HoldPosition:
+            return TEXT("HOLD");
+        case EWPSquadOrder::AttackObjective:
+        default:
+            return TEXT("ATTACK");
+    }
+}
+}
+
 void AWPCombatHUD::DrawHUD()
 {
     Super::DrawHUD();
@@ -37,7 +70,9 @@ void AWPCombatHUD::DrawCrosshair(float CenterX, float CenterY)
 
 void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
 {
-    AWPSoldierCharacter* Soldier = Cast<AWPSoldierCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+    AWPSoldierCharacter* Soldier = Cast<AWPSoldierCharacter>(
+        UGameplayStatics::GetPlayerCharacter(this, 0));
+
     if (!Soldier || !GEngine)
     {
         return;
@@ -50,11 +85,15 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
     const int32 CurrentAmmo = Weapon ? Weapon->GetAmmoInMagazine() : 0;
     const int32 Reserve = Weapon ? Weapon->GetReserveAmmo() : 0;
     const int32 SuppressionPercent = Soldier->GetSuppressionComponent()
-        ? FMath::RoundToInt(Soldier->GetSuppressionComponent()->GetNormalizedSuppression() * 100.0f)
+        ? FMath::RoundToInt(
+            Soldier->GetSuppressionComponent()->GetNormalizedSuppression() * 100.0f)
         : 0;
 
     DrawText(
-        FString::Printf(TEXT("CONDITION  %03d"), CurrentHealth),
+        FString::Printf(
+            TEXT("%s   CONDITION %03d"),
+            RoleLabel(Soldier->GetSoldierRole()),
+            CurrentHealth),
         FLinearColor::White,
         28.0f,
         Height - 58.0f,
@@ -75,27 +114,57 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
     }
 
     DrawText(
-        FString::Printf(TEXT("%02d / %03d"), CurrentAmmo, Reserve),
+        FString::Printf(
+            TEXT("%02d / %03d   GRENADES %d"),
+            CurrentAmmo,
+            Reserve,
+            Soldier->GetGrenadesRemaining()),
         FLinearColor::White,
-        Width - 150.0f,
+        Width - 245.0f,
         Height - 58.0f,
         GEngine->GetMediumFont(),
         1.0f,
         false);
 
-    if (const AWPBattlefieldDirector* Director = Cast<AWPBattlefieldDirector>(
-        UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass())))
+    const AWPBattlefieldDirector* Director = Cast<AWPBattlefieldDirector>(
+        UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass()));
+
+    if (Director)
     {
         DrawText(
             FString::Printf(
-                TEXT("WAVE %d    HOSTILES %d    SQUAD %d    SCORE %d"),
+                TEXT("WAVE %d   HOSTILES %d   SQUAD %d   RESERVES A:%d X:%d   SCORE %d"),
                 Director->GetWave(),
                 Director->GetRemainingEnemies(),
                 Director->GetFriendlySoldiersAlive(),
+                Director->GetAlliedTickets(),
+                Director->GetAxisTickets(),
                 Director->GetScore()),
             FLinearColor::White,
             28.0f,
             24.0f,
+            GEngine->GetSmallFont(),
+            1.0f,
+            false);
+
+        const float Cooldown = Director->GetArtilleryCooldownRemaining();
+        const FString ArtilleryText = Cooldown > 0.0f
+            ? FString::Printf(
+                TEXT("ARTILLERY %d   READY %.0fs"),
+                Director->GetArtilleryCharges(),
+                Cooldown)
+            : FString::Printf(
+                TEXT("ARTILLERY %d   READY"),
+                Director->GetArtilleryCharges());
+
+        DrawText(
+            FString::Printf(
+                TEXT("SQUAD %s   %s"),
+                SquadOrderLabel(Director->GetSquadOrder()),
+                *ArtilleryText),
+            FLinearColor(0.78f, 0.88f, 1.0f, 1.0f),
+            28.0f,
+            48.0f,
             GEngine->GetSmallFont(),
             1.0f,
             false);
@@ -111,20 +180,35 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
                 1.35f,
                 false);
         }
+        else if (Director->IsBattleLost())
+        {
+            DrawText(
+                TEXT("BATTLE LOST"),
+                FLinearColor(0.92f, 0.18f, 0.12f, 1.0f),
+                Width * 0.5f - 100.0f,
+                Height * 0.28f,
+                GEngine->GetLargeFont(),
+                1.35f,
+                false);
+        }
         else if (Director->IsFinalCounterattack())
         {
             DrawText(
-                FString::Printf(TEXT("HOLD THE VILLAGE   ENEMY REMAINING %d"), Director->GetRemainingEnemies()),
+                FString::Printf(
+                    TEXT("HOLD THE VILLAGE   ENEMY REMAINING %d"),
+                    Director->GetRemainingEnemies()),
                 FLinearColor(1.0f, 0.64f, 0.16f, 1.0f),
                 Width * 0.5f - 180.0f,
-                52.0f,
+                72.0f,
                 GEngine->GetMediumFont(),
                 1.0f,
                 false);
         }
         else
         {
-            const int32 ProgressPercent = FMath::RoundToInt(Director->GetActiveObjectiveProgress() * 100.0f);
+            const int32 ProgressPercent = FMath::RoundToInt(
+                Director->GetActiveObjectiveProgress() * 100.0f);
+
             DrawText(
                 FString::Printf(
                     TEXT("OBJECTIVE %d   CAPTURE %d%%"),
@@ -132,14 +216,27 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
                     ProgressPercent),
                 FLinearColor(1.0f, 0.82f, 0.28f, 1.0f),
                 Width * 0.5f - 110.0f,
-                52.0f,
+                72.0f,
                 GEngine->GetMediumFont(),
                 1.0f,
                 false);
         }
     }
 
-    if (Health && Health->IsDead())
+    if (Health && Health->IsDowned())
+    {
+        DrawText(
+            FString::Printf(
+                TEXT("DOWNED   BLEEDOUT %.1fs   WAIT FOR MEDIC"),
+                Health->GetBleedoutRemaining()),
+            FLinearColor(1.0f, 0.42f, 0.12f, 1.0f),
+            Width * 0.5f - 190.0f,
+            Height * 0.40f,
+            GEngine->GetLargeFont(),
+            1.1f,
+            false);
+    }
+    else if (Health && Health->IsDead())
     {
         DrawText(
             TEXT("KILLED IN ACTION"),
@@ -150,4 +247,13 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
             1.2f,
             false);
     }
+
+    DrawText(
+        TEXT("1 FOLLOW   2 ATTACK   3 HOLD   G GRENADE   E REVIVE   T ARTILLERY"),
+        FLinearColor(0.78f, 0.78f, 0.74f, 0.85f),
+        Width * 0.5f - 260.0f,
+        Height - 28.0f,
+        GEngine->GetSmallFont(),
+        0.9f,
+        false);
 }
