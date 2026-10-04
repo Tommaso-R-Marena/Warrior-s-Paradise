@@ -54,6 +54,15 @@ public:
     UFUNCTION(BlueprintPure, Category="Combat")
     int32 GetGrenadesRemaining() const { return GrenadesRemaining; }
 
+    UFUNCTION(BlueprintPure, Category="Movement")
+    float GetStaminaNormalized() const
+    {
+        return MaxStamina > 0.0f ? Stamina / MaxStamina : 0.0f;
+    }
+
+    UFUNCTION(BlueprintPure, Category="Movement")
+    bool IsSprinting() const { return bSprinting; }
+
     UFUNCTION(BlueprintCallable, Category="Combat")
     bool ThrowGrenadeAt(const FVector& TargetLocation);
 
@@ -106,6 +115,24 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="Movement")
     float SprintSpeed = 690.0f;
 
+    UPROPERTY(EditDefaultsOnly, Category="Movement|Stamina", meta=(ClampMin="1.0"))
+    float MaxStamina = 100.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Movement|Stamina", meta=(ClampMin="0.0"))
+    float SprintDrainPerSecond = 24.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Movement|Stamina", meta=(ClampMin="0.0"))
+    float StaminaRegenPerSecond = 19.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Movement|Stamina", meta=(ClampMin="0.0"))
+    float StaminaRegenDelay = 0.8f;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Movement|Stamina")
+    float Stamina = 100.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="View|Sway", meta=(ClampMin="0.0"))
+    float BaseWeaponSwayCm = 2.4f;
+
     UPROPERTY(EditDefaultsOnly, Category="View")
     float HipFOV = 78.0f;
 
@@ -116,6 +143,8 @@ private:
     float AimInterpSpeed = 12.0f;
 
     bool bAiming = false;
+    bool bSprinting = false;
+    float LastSprintActivityTime = -1000.0f;
 
     const FVector HipBodyLocation = FVector(45.0f, 18.0f, -18.0f);
     const FVector AimBodyLocation = FVector(45.0f, 0.0f, -12.5f);
