@@ -656,6 +656,18 @@ def main() -> None:
         "WPEnvironmentVisualProfile",
     )
 
+    village_building = find_asset(
+        unreal.StaticMesh,
+        ("rural", "cabin"),
+        ("cabin",),
+        ("village", "house"),
+        ("house",),
+        ("building",),
+    )
+
+    if village_building:
+        set_prop(environment, "village_building_mesh", village_building)
+
     tree_mesh = find_asset(
         unreal.StaticMesh,
         ("foliage_tree",),
