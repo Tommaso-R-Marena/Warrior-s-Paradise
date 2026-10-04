@@ -138,6 +138,9 @@ private:
     void DestroyVehicle();
 
     UFUNCTION()
+    void HandleTankShellImpact(FVector ImpactLocation);
+
+    UFUNCTION()
     void HandleTakeAnyDamage(
         AActor* DamagedActor,
         float Damage,
