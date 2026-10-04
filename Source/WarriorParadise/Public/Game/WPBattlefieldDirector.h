@@ -18,6 +18,7 @@ class UMaterialInterface;
 class UStaticMesh;
 class UWPBattlePresentationSet;
 class UWPExplosionPresentationProfile;
+class UWPSmokePresentationProfile;
 
 UCLASS()
 class WARRIORPARADISE_API AWPBattlefieldDirector : public AActor
@@ -124,6 +125,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category="Battle|Presentation")
     UWPExplosionPresentationProfile* GetArtilleryExplosionPresentation() const;
+
+    UFUNCTION(BlueprintPure, Category="Battle|Presentation")
+    UWPSmokePresentationProfile* GetSmokePresentation() const;
 
 protected:
     virtual void BeginPlay() override;
