@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "WPDestructibleCover.generated.h"
 
+class UMaterialInterface;
 class UStaticMesh;
 class UStaticMeshComponent;
 
@@ -22,6 +23,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Destruction")
     void ConfigureCover(const FVector& InScale, float InMaxHealth = 180.0f);
+
+    UFUNCTION(BlueprintCallable, Category="Destruction|Presentation")
+    void ApplyMaterial(UMaterialInterface* Material);
 
     UFUNCTION(BlueprintPure, Category="Destruction")
     float GetHealthNormalized() const
