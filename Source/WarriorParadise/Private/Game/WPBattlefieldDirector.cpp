@@ -1,5 +1,7 @@
 #include "Game/WPBattlefieldDirector.h"
 #include "AI/WPEnemySoldier.h"
+#include "Characters/WPSoldierCharacter.h"
+#include "Combat/WPCombatTypes.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/LightComponent.h"
 #include "Components/SkyLightComponent.h"
@@ -10,6 +12,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
+#include "Game/WPCaptureObjective.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Controller.h"
 #include "Kismet/GameplayStatics.h"
@@ -19,7 +22,8 @@
 AWPBattlefieldDirector::AWPBattlefieldDirector()
 {
     PrimaryActorTick.bCanEverTick = false;
-    EnemyClass = AWPEnemySoldier::StaticClass();
+    AISoldierClass = AWPEnemySoldier::StaticClass();
+    ObjectiveClass = AWPCaptureObjective::StaticClass();
 
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeAsset(TEXT("/Engine/BasicShapes/Cube.Cube"));
     if (CubeAsset.Succeeded())
@@ -34,8 +38,11 @@ void AWPBattlefieldDirector::BeginPlay()
 
     BuildBattlefield();
 
-    if (ACharacter* Player = UGameplayStatics::GetPlayerCharacter(this, 0))
+    if (AWPSoldierCharacter* Player = Cast<AWPSoldierCharacter>(
+        UGameplayStatics::GetPlayerCharacter(this, 0)))
     {
+        Player->SetCombatTeam(EWPCombatTeam::Allies);
+
         const FRotator StartRotation(0.0f, -90.0f, 0.0f);
         Player->SetActorLocationAndRotation(
             FVector(0.0f, 3200.0f, 140.0f),
@@ -50,7 +57,24 @@ void AWPBattlefieldDirector::BeginPlay()
         }
     }
 
+    BuildObjectives();
+    SpawnFriendlySquad();
     SpawnWave();
+}
+
+int32 AWPBattlefieldDirector::GetActiveObjectiveNumber() const
+{
+    return Objectives.IsValidIndex(ActiveObjectiveIndex) ? ActiveObjectiveIndex + 1 : 0;
+}
+
+float AWPBattlefieldDirector::GetActiveObjectiveProgress() const
+{
+    if (Objectives.IsValidIndex(ActiveObjectiveIndex) && Objectives[ActiveObjectiveIndex])
+    {
+        return Objectives[ActiveObjectiveIndex]->GetCaptureProgress();
+    }
+
+    return bBattleWon ? 1.0f : 0.0f;
 }
 
 void AWPBattlefieldDirector::SpawnBox(const FVector& Location, const FVector& Scale, const FRotator& Rotation)
@@ -88,9 +112,9 @@ void AWPBattlefieldDirector::BuildBattlefield()
     SpawnBox(FVector(-1900.0f, -2550.0f, 260.0f), FVector(6.5f, 5.0f, 3.2f));
     SpawnBox(FVector(1850.0f, -3300.0f, 300.0f), FVector(7.5f, 5.5f, 3.6f));
 
-    SpawnBox(FVector(-600.0f, -1200.0f, 60.0f), FVector(4.0f, 0.5f, 0.8f), FRotator(0.0f, 8.0f, 0.0f));
-    SpawnBox(FVector(650.0f, -1900.0f, 60.0f), FVector(3.5f, 0.5f, 0.8f), FRotator(0.0f, -12.0f, 0.0f));
-    SpawnBox(FVector(-850.0f, -3150.0f, 55.0f), FVector(5.0f, 0.45f, 0.7f));
+    SpawnBox(FVector(-600.0f, 850.0f, 60.0f), FVector(4.0f, 0.5f, 0.8f), FRotator(0.0f, 8.0f, 0.0f));
+    SpawnBox(FVector(650.0f, -1100.0f, 60.0f), FVector(3.5f, 0.5f, 0.8f), FRotator(0.0f, -12.0f, 0.0f));
+    SpawnBox(FVector(-850.0f, -2850.0f, 55.0f), FVector(5.0f, 0.45f, 0.7f));
     SpawnBox(FVector(900.0f, -3900.0f, 55.0f), FVector(4.5f, 0.45f, 0.7f));
 
     SpawnBox(FVector(-5900.0f, 0.0f, 250.0f), FVector(1.0f, 60.0f, 3.0f));
@@ -126,9 +150,81 @@ void AWPBattlefieldDirector::BuildBattlefield()
     }
 }
 
+void AWPBattlefieldDirector::BuildObjectives()
+{
+    if (!GetWorld() || !ObjectiveClass)
+    {
+        return;
+    }
+
+    static const FVector ObjectiveLocations[] =
+    {
+        FVector(0.0f, 1050.0f, 40.0f),
+        FVector(100.0f, -1250.0f, 40.0f),
+        FVector(-150.0f, -3550.0f, 40.0f)
+    };
+
+    for (int32 Index = 0; Index < UE_ARRAY_COUNT(ObjectiveLocations); ++Index)
+    {
+        if (AWPCaptureObjective* Objective = GetWorld()->SpawnActor<AWPCaptureObjective>(
+            ObjectiveClass,
+            ObjectiveLocations[Index],
+            FRotator::ZeroRotator))
+        {
+            Objective->InitializeObjective(Index);
+            Objective->SetObjectiveActive(Index == 0);
+            Objective->OnCaptured.AddDynamic(this, &AWPBattlefieldDirector::HandleObjectiveCaptured);
+            Objectives.Add(Objective);
+        }
+    }
+}
+
+void AWPBattlefieldDirector::SpawnFriendlySquad()
+{
+    if (!GetWorld() || !AISoldierClass)
+    {
+        return;
+    }
+
+    static const FVector Offsets[] =
+    {
+        FVector(-260.0f, 80.0f, 0.0f),
+        FVector(260.0f, 80.0f, 0.0f),
+        FVector(-420.0f, 280.0f, 0.0f),
+        FVector(420.0f, 280.0f, 0.0f),
+        FVector(0.0f, 430.0f, 0.0f)
+    };
+
+    FriendlySoldiersAlive = 0;
+
+    for (const FVector& Offset : Offsets)
+    {
+        const FTransform SpawnTransform(
+            FRotator(0.0f, -90.0f, 0.0f),
+            FVector(0.0f, 2850.0f, 120.0f) + Offset);
+
+        if (AWPEnemySoldier* Soldier = GetWorld()->SpawnActorDeferred<AWPEnemySoldier>(
+            AISoldierClass,
+            SpawnTransform,
+            nullptr,
+            nullptr,
+            ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn))
+        {
+            Soldier->SetCombatTeam(EWPCombatTeam::Allies);
+            Soldier->FinishSpawning(SpawnTransform);
+            ++FriendlySoldiersAlive;
+        }
+    }
+}
+
 void AWPBattlefieldDirector::SpawnWave()
 {
-    if (!GetWorld() || !EnemyClass)
+    SpawnEnemyGroup(FMath::Min(6 + Wave * 2, 20), true);
+}
+
+void AWPBattlefieldDirector::SpawnEnemyGroup(int32 Count, bool bResetEnemyCounter)
+{
+    if (!GetWorld() || !AISoldierClass || Count <= 0)
     {
         return;
     }
@@ -142,14 +238,16 @@ void AWPBattlefieldDirector::SpawnWave()
         FVector(2200.0f, -4200.0f, 120.0f),
         FVector(-3100.0f, -3000.0f, 120.0f),
         FVector(3100.0f, -3000.0f, 120.0f),
-        FVector(-3600.0f, -1200.0f, 120.0f),
-        FVector(3600.0f, -1200.0f, 120.0f)
+        FVector(-3600.0f, -900.0f, 120.0f),
+        FVector(3600.0f, -900.0f, 120.0f)
     };
 
-    const int32 DesiredCount = FMath::Min(5 + Wave * 2, 18);
-    RemainingEnemies = 0;
+    if (bResetEnemyCounter)
+    {
+        RemainingEnemies = 0;
+    }
 
-    for (int32 Index = 0; Index < DesiredCount; ++Index)
+    for (int32 Index = 0; Index < Count; ++Index)
     {
         const FVector Base = SpawnPoints[Index % UE_ARRAY_COUNT(SpawnPoints)];
         const FVector Jitter(
@@ -157,38 +255,98 @@ void AWPBattlefieldDirector::SpawnWave()
             FMath::FRandRange(-240.0f, 240.0f),
             0.0f);
 
-        const FTransform SpawnTransform(FRotator::ZeroRotator, Base + Jitter);
+        const FTransform SpawnTransform(
+            FRotator(0.0f, 90.0f, 0.0f),
+            Base + Jitter);
+
         if (AWPEnemySoldier* Enemy = GetWorld()->SpawnActorDeferred<AWPEnemySoldier>(
-            EnemyClass,
+            AISoldierClass,
             SpawnTransform,
             nullptr,
             nullptr,
             ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn))
         {
+            Enemy->SetCombatTeam(EWPCombatTeam::Axis);
             Enemy->FinishSpawning(SpawnTransform);
             ++RemainingEnemies;
         }
     }
 }
 
-void AWPBattlefieldDirector::NotifyEnemyKilled(AActor* Enemy)
+void AWPBattlefieldDirector::NotifySoldierKilled(AWPSoldierCharacter* Soldier)
 {
+    if (!Soldier)
+    {
+        return;
+    }
+
+    if (Soldier->GetCombatTeam() == EWPCombatTeam::Allies)
+    {
+        FriendlySoldiersAlive = FMath::Max(0, FriendlySoldiersAlive - 1);
+        return;
+    }
+
     RemainingEnemies = FMath::Max(0, RemainingEnemies - 1);
     Score += 100;
 
-    if (RemainingEnemies == 0 && GetWorld())
+    if (RemainingEnemies > 0 || !GetWorld())
     {
-        GetWorld()->GetTimerManager().SetTimer(
-            NextWaveTimer,
-            this,
-            &AWPBattlefieldDirector::SpawnNextWave,
-            InterWaveDelay,
-            false);
+        return;
+    }
+
+    if (bFinalCounterattack)
+    {
+        bBattleWon = true;
+        return;
+    }
+
+    GetWorld()->GetTimerManager().SetTimer(
+        NextWaveTimer,
+        this,
+        &AWPBattlefieldDirector::SpawnNextWave,
+        InterWaveDelay,
+        false);
+}
+
+void AWPBattlefieldDirector::HandleObjectiveCaptured(AWPCaptureObjective* Objective)
+{
+    if (!Objective ||
+        !Objectives.IsValidIndex(ActiveObjectiveIndex) ||
+        Objectives[ActiveObjectiveIndex] != Objective ||
+        !GetWorld())
+    {
+        return;
+    }
+
+    GetWorld()->GetTimerManager().ClearTimer(NextWaveTimer);
+    Score += 750;
+
+    if (ActiveObjectiveIndex + 1 < Objectives.Num())
+    {
+        ++ActiveObjectiveIndex;
+        Objectives[ActiveObjectiveIndex]->SetObjectiveActive(true);
+        ++Wave;
+        SpawnEnemyGroup(4 + ActiveObjectiveIndex * 2, false);
+        return;
+    }
+
+    bFinalCounterattack = true;
+    ++Wave;
+    SpawnEnemyGroup(12, false);
+
+    if (RemainingEnemies == 0)
+    {
+        bBattleWon = true;
     }
 }
 
 void AWPBattlefieldDirector::SpawnNextWave()
 {
+    if (bBattleWon || bFinalCounterattack)
+    {
+        return;
+    }
+
     ++Wave;
     SpawnWave();
 }
