@@ -52,6 +52,7 @@ void AWPBallisticProjectile::InitializeProjectile(
     MaximumTravelCm = FMath::Max(1000.0f, InMaximumTravelCm);
     InstigatorController = InInstigatorController;
     ProjectileTeam = InTeam;
+    PenetrationsRemaining = MaximumPenetrations;
 
     Movement->InitialSpeed = Speed;
     Movement->MaxSpeed = Speed;
@@ -120,6 +121,56 @@ void AWPBallisticProjectile::ApplyNearMissSuppression()
     }
 }
 
+float AWPBallisticProjectile::GetHitLocationMultiplier(const FHitResult& Hit) const
+{
+    const FString Bone = Hit.BoneName.ToString().ToLower();
+
+    if (Bone.Contains(TEXT("head")) ||
+        Bone.Contains(TEXT("neck")))
+    {
+        return 1.85f;
+    }
+
+    if (Bone.Contains(TEXT("upperarm")) ||
+        Bone.Contains(TEXT("lowerarm")) ||
+        Bone.Contains(TEXT("hand")))
+    {
+        return 0.72f;
+    }
+
+    if (Bone.Contains(TEXT("thigh")) ||
+        Bone.Contains(TEXT("calf")) ||
+        Bone.Contains(TEXT("foot")))
+    {
+        return 0.68f;
+    }
+
+    return 1.0f;
+}
+
+bool AWPBallisticProjectile::TryPenetrate(AActor* OtherActor, const FHitResult& Hit)
+{
+    if (!OtherActor ||
+        PenetrationsRemaining <= 0 ||
+        !OtherActor->ActorHasTag(TEXT("WP_Penetrable")) ||
+        !Movement)
+    {
+        return false;
+    }
+
+    const FVector IncomingVelocity = Movement->Velocity;
+    const FVector Direction = IncomingVelocity.GetSafeNormal();
+
+    --PenetrationsRemaining;
+    Damage *= PenetrationDamageRetention;
+
+    Collision->IgnoreActorWhenMoving(OtherActor, true);
+    SetActorLocation(Hit.ImpactPoint + Direction * 28.0f, false, nullptr, ETeleportType::TeleportPhysics);
+    Movement->Velocity = IncomingVelocity * PenetrationVelocityRetention;
+
+    return true;
+}
+
 void AWPBallisticProjectile::HandleHit(
     UPrimitiveComponent* HitComponent,
     AActor* OtherActor,
@@ -144,6 +195,24 @@ void AWPBallisticProjectile::HandleHit(
         {
             Suppression->AddSuppression(30.0f);
         }
+
+        const FVector ShotDirection = Movement->Velocity.GetSafeNormal();
+        UGameplayStatics::ApplyPointDamage(
+            OtherActor,
+            Damage * GetHitLocationMultiplier(Hit),
+            ShotDirection,
+            Hit,
+            InstigatorController.Get(),
+            GetOwner(),
+            UDamageType::StaticClass());
+
+        Destroy();
+        return;
+    }
+
+    if (TryPenetrate(OtherActor, Hit))
+    {
+        return;
     }
 
     const FVector ShotDirection = Movement->Velocity.GetSafeNormal();
