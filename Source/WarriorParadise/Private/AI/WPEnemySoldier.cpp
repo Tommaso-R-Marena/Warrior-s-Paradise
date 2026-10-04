@@ -22,6 +22,7 @@ AWPEnemySoldier::AWPEnemySoldier()
     TorsoVisual = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TorsoVisual"));
     TorsoVisual->SetupAttachment(GetCapsuleComponent());
     TorsoVisual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    TorsoVisual->SetOwnerNoSee(true);
     TorsoVisual->SetRelativeLocation(FVector(0.0f, 0.0f, 18.0f));
     TorsoVisual->SetRelativeScale3D(FVector(0.34f, 0.22f, 0.52f));
     if (CubeAsset.Succeeded())
@@ -32,6 +33,7 @@ AWPEnemySoldier::AWPEnemySoldier()
     HeadVisual = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HeadVisual"));
     HeadVisual->SetupAttachment(GetCapsuleComponent());
     HeadVisual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    HeadVisual->SetOwnerNoSee(true);
     HeadVisual->SetRelativeLocation(FVector(0.0f, 0.0f, 76.0f));
     HeadVisual->SetRelativeScale3D(FVector(0.21f));
     if (SphereAsset.Succeeded())
@@ -42,6 +44,7 @@ AWPEnemySoldier::AWPEnemySoldier()
     RifleVisual = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RifleVisual"));
     RifleVisual->SetupAttachment(GetCapsuleComponent());
     RifleVisual->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    RifleVisual->SetOwnerNoSee(true);
     RifleVisual->SetRelativeLocation(FVector(34.0f, 19.0f, 25.0f));
     RifleVisual->SetRelativeScale3D(FVector(0.54f, 0.035f, 0.035f));
     if (CubeAsset.Succeeded())
