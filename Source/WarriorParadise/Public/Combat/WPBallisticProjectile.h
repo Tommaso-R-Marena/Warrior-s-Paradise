@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Combat/WPCombatTypes.h"
 #include "GameFramework/Actor.h"
 #include "WPBallisticProjectile.generated.h"
 
@@ -24,7 +25,8 @@ public:
         float MuzzleVelocityCmPerSecond,
         float InDamage,
         float InMaximumTravelCm,
-        AController* InInstigatorController);
+        AController* InInstigatorController,
+        EWPCombatTeam InTeam);
 
 protected:
     virtual void BeginPlay() override;
@@ -45,6 +47,7 @@ private:
     float Damage = 34.0f;
     float MaximumTravelCm = 60000.0f;
     FVector SpawnLocation = FVector::ZeroVector;
+    EWPCombatTeam ProjectileTeam = EWPCombatTeam::Allies;
     TWeakObjectPtr<AController> InstigatorController;
     TSet<TWeakObjectPtr<AActor>> SuppressedActors;
 
