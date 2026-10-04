@@ -291,6 +291,36 @@ void AWPSoldierCharacter::Tick(float DeltaSeconds)
         ? SuppressionComponent->GetNormalizedSuppression()
         : 0.0f;
 
+    if (IsCombatCapable())
+    {
+        const float RecoveryScale = FMath::Lerp(1.0f, 0.72f, Suppression);
+        const float RecoverySpeed = RecoilRecoverySpeed * RecoveryScale;
+
+        const float NewPitch = FMath::FInterpTo(
+            PendingRecoilPitch,
+            0.0f,
+            DeltaSeconds,
+            RecoverySpeed);
+        const float PitchRecovered = PendingRecoilPitch - NewPitch;
+        if (!FMath::IsNearlyZero(PitchRecovered))
+        {
+            AddControllerPitchInput(PitchRecovered);
+        }
+        PendingRecoilPitch = NewPitch;
+
+        const float NewYaw = FMath::FInterpTo(
+            PendingRecoilYaw,
+            0.0f,
+            DeltaSeconds,
+            RecoverySpeed);
+        const float YawRecovered = PendingRecoilYaw - NewYaw;
+        if (!FMath::IsNearlyZero(YawRecovered))
+        {
+            AddControllerYawInput(-YawRecovered);
+        }
+        PendingRecoilYaw = NewYaw;
+    }
+
     float AccuracyMultiplier = 1.0f;
     AccuracyMultiplier *= FMath::Lerp(1.0f, 2.0f, SpeedAlpha);
     AccuracyMultiplier *= FMath::Lerp(1.0f, 1.65f, Suppression);
@@ -560,6 +590,13 @@ void AWPSoldierCharacter::HandleShotFired(float RecoilPitch, float RecoilYaw)
 
     AddControllerPitchInput(-RecoilPitch);
     AddControllerYawInput(RecoilYaw);
+
+    PendingRecoilPitch += RecoilPitch * 0.72f;
+    PendingRecoilYaw += RecoilYaw * 0.58f;
+
+    FirstPersonCamera->SetFieldOfView(
+        FirstPersonCamera->FieldOfView +
+        RecoilCameraImpulseFOV * (bAiming ? 0.55f : 1.0f));
 }
 
 void AWPSoldierCharacter::HandleDowned()
@@ -576,6 +613,8 @@ void AWPSoldierCharacter::HandleRevived()
     Stamina = FMath::Max(Stamina, MaxStamina * 0.5f);
     GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+    PendingRecoilPitch = 0.0f;
+    PendingRecoilYaw = 0.0f;
     SuppressionComponent->ClearSuppression();
 }
 
