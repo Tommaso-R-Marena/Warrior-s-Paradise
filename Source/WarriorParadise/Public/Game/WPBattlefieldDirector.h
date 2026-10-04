@@ -262,6 +262,8 @@ private:
     UPROPERTY(VisibleInstanceOnly, Category="Battle")
     bool bBattleLost = false;
 
+    bool bHeadlessSimulation = false;
+
     UPROPERTY(Transient)
     TObjectPtr<UStaticMesh> CubeMesh;
 
