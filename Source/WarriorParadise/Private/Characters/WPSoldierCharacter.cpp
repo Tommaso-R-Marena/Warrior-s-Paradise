@@ -22,6 +22,8 @@
 #include "Presentation/WPWeaponPresentationComponent.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Vehicles/WPLightVehicle.h"
+#include "World/WPGunEmplacement.h"
 
 AWPSoldierCharacter::AWPSoldierCharacter()
 {
@@ -758,6 +760,7 @@ void AWPSoldierCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
     PlayerInputComponent->BindAction(TEXT("SquadAttack"), IE_Pressed, this, &AWPSoldierCharacter::IssueAttackOrder);
     PlayerInputComponent->BindAction(TEXT("SquadHold"), IE_Pressed, this, &AWPSoldierCharacter::IssueHoldOrder);
     PlayerInputComponent->BindAction(TEXT("CallArtillery"), IE_Pressed, this, &AWPSoldierCharacter::CallArtilleryInput);
+    PlayerInputComponent->BindAction(TEXT("CallAirSupport"), IE_Pressed, this, &AWPSoldierCharacter::CallAirSupportInput);
 }
 
 void AWPSoldierCharacter::StartFireInput()
@@ -1191,6 +1194,67 @@ void AWPSoldierCharacter::InteractInput()
     if (BestTarget)
     {
         TryReviveSoldier(BestTarget);
+        return;
+    }
+
+    AWPGunEmplacement* BestEmplacement = nullptr;
+    float BestEmplacementDistanceSquared = FMath::Square(285.0f);
+
+    for (TActorIterator<AWPGunEmplacement> It(GetWorld()); It; ++It)
+    {
+        AWPGunEmplacement* Emplacement = *It;
+        if (!Emplacement ||
+            Emplacement->GetCombatTeam() != CombatTeam ||
+            Emplacement->IsDestroyed() ||
+            Emplacement->IsOccupied())
+        {
+            continue;
+        }
+
+        const float DistanceSquared = FVector::DistSquared(
+            GetActorLocation(),
+            Emplacement->GetActorLocation());
+
+        if (DistanceSquared < BestEmplacementDistanceSquared)
+        {
+            BestEmplacementDistanceSquared = DistanceSquared;
+            BestEmplacement = Emplacement;
+        }
+    }
+
+    if (BestEmplacement && BestEmplacement->TryUse(this))
+    {
+        return;
+    }
+
+    AWPLightVehicle* BestVehicle = nullptr;
+    float BestVehicleDistanceSquared = FMath::Square(360.0f);
+
+    for (TActorIterator<AWPLightVehicle> It(GetWorld()); It; ++It)
+    {
+        AWPLightVehicle* Vehicle = *It;
+        if (!Vehicle ||
+            Vehicle->GetCombatTeam() != CombatTeam ||
+            Vehicle->IsDestroyed() ||
+            Vehicle->IsOccupied())
+        {
+            continue;
+        }
+
+        const float DistanceSquared = FVector::DistSquared(
+            GetActorLocation(),
+            Vehicle->GetActorLocation());
+
+        if (DistanceSquared < BestVehicleDistanceSquared)
+        {
+            BestVehicleDistanceSquared = DistanceSquared;
+            BestVehicle = Vehicle;
+        }
+    }
+
+    if (BestVehicle)
+    {
+        BestVehicle->TryEnter(this);
     }
 }
 
@@ -1234,6 +1298,18 @@ void AWPSoldierCharacter::CallArtilleryInput()
         if (AWPBattlefieldDirector* Director = GetBattlefieldDirector())
         {
             Director->RequestArtillery(this, TargetLocation);
+        }
+    }
+}
+
+void AWPSoldierCharacter::CallAirSupportInput()
+{
+    FVector TargetLocation;
+    if (GetViewTarget(TargetLocation, 12000.0f))
+    {
+        if (AWPBattlefieldDirector* Director = GetBattlefieldDirector())
+        {
+            Director->RequestAirSupport(this, TargetLocation);
         }
     }
 }
