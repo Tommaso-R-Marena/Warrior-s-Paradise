@@ -9,6 +9,7 @@
 #include "Components/InputComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
+#include "Engine/World.h"
 #include "Game/WPBattlefieldDirector.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
@@ -325,7 +326,11 @@ void AWPSoldierCharacter::Tick(float DeltaSeconds)
     AccuracyMultiplier *= FMath::Lerp(1.0f, 2.0f, SpeedAlpha);
     AccuracyMultiplier *= FMath::Lerp(1.0f, 1.65f, Suppression);
 
-    if (bIsCrouched)
+    if (bProne)
+    {
+        AccuracyMultiplier *= 0.50f;
+    }
+    else if (bIsCrouched)
     {
         AccuracyMultiplier *= 0.72f;
     }
@@ -345,9 +350,25 @@ void AWPSoldierCharacter::Tick(float DeltaSeconds)
         AimInterpSpeed));
 
     const float AimSwayScale = bAiming ? 0.38f : 1.0f;
+    const float StanceSwayScale = bProne
+        ? 0.48f
+        : (bIsCrouched ? 0.72f : 1.0f);
+
     const float SwayAmplitude = BaseWeaponSwayCm *
         AimSwayScale *
+        StanceSwayScale *
         (1.0f + SpeedAlpha * 1.8f + Suppression * 1.25f);
+
+    const FVector CameraTarget(
+        -8.0f,
+        0.0f,
+        bProne ? ProneCameraZ : StandingCameraZ);
+
+    FirstPersonCamera->SetRelativeLocation(FMath::VInterpTo(
+        FirstPersonCamera->GetRelativeLocation(),
+        CameraTarget,
+        DeltaSeconds,
+        StanceInterpSpeed));
 
     const float SwayPhase = Time * FMath::Lerp(1.6f, 3.1f, SpeedAlpha);
     const FVector SwayOffset(
@@ -383,8 +404,9 @@ void AWPSoldierCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
     PlayerInputComponent->BindAxis(TEXT("Turn"), this, &AWPSoldierCharacter::Turn);
     PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &AWPSoldierCharacter::LookUp);
 
-    PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &ACharacter::Jump);
+    PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &AWPSoldierCharacter::JumpInput);
     PlayerInputComponent->BindAction(TEXT("Jump"), IE_Released, this, &ACharacter::StopJumping);
+    PlayerInputComponent->BindAction(TEXT("Prone"), IE_Pressed, this, &AWPSoldierCharacter::ToggleProne);
     PlayerInputComponent->BindAction(TEXT("Fire"), IE_Pressed, WeaponComponent, &UWPWeaponComponent::StartFire);
     PlayerInputComponent->BindAction(TEXT("Fire"), IE_Released, WeaponComponent, &UWPWeaponComponent::StopFire);
     PlayerInputComponent->BindAction(TEXT("Reload"), IE_Pressed, WeaponComponent, &UWPWeaponComponent::Reload);
@@ -442,6 +464,11 @@ void AWPSoldierCharacter::StartSprint()
         return;
     }
 
+    if (bProne && !ExitProne())
+    {
+        return;
+    }
+
     StopAim();
     UnCrouch();
     bSprinting = true;
@@ -459,17 +486,145 @@ void AWPSoldierCharacter::StopSprint()
     }
 }
 
+void AWPSoldierCharacter::JumpInput()
+{
+    if (!IsCombatCapable())
+    {
+        return;
+    }
+
+    if (bProne)
+    {
+        ExitProne();
+        return;
+    }
+
+    if (bIsCrouched)
+    {
+        UnCrouch();
+        return;
+    }
+
+    Jump();
+}
+
+void AWPSoldierCharacter::ToggleProne()
+{
+    if (!IsCombatCapable())
+    {
+        return;
+    }
+
+    if (bProne)
+    {
+        ExitProne();
+    }
+    else
+    {
+        EnterProne();
+    }
+}
+
+bool AWPSoldierCharacter::EnterProne()
+{
+    if (bProne || !IsCombatCapable())
+    {
+        return bProne;
+    }
+
+    StopSprint();
+    UnCrouch();
+
+    UCapsuleComponent* Capsule = GetCapsuleComponent();
+    if (!Capsule)
+    {
+        return false;
+    }
+
+    const float CurrentHalfHeight = Capsule->GetUnscaledCapsuleHalfHeight();
+    const float HeightDelta = FMath::Max(
+        0.0f,
+        CurrentHalfHeight - ProneCapsuleHalfHeight);
+
+    Capsule->SetCapsuleHalfHeight(ProneCapsuleHalfHeight, true);
+    AddActorWorldOffset(
+        FVector(0.0f, 0.0f, -HeightDelta),
+        true);
+
+    bProne = true;
+    GetCharacterMovement()->MaxWalkSpeed = ProneSpeed;
+    return true;
+}
+
+bool AWPSoldierCharacter::ExitProne()
+{
+    if (!bProne)
+    {
+        return true;
+    }
+
+    UCapsuleComponent* Capsule = GetCapsuleComponent();
+    if (!Capsule || !GetWorld())
+    {
+        return false;
+    }
+
+    const float HeightDelta = FMath::Max(
+        0.0f,
+        StandingCapsuleHalfHeight - ProneCapsuleHalfHeight);
+
+    const FVector DesiredCenter =
+        GetActorLocation() + FVector(0.0f, 0.0f, HeightDelta);
+
+    FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(WPExitProne), false, this);
+    QueryParams.AddIgnoredActor(this);
+
+    const bool bBlocked = GetWorld()->OverlapBlockingTestByChannel(
+        DesiredCenter,
+        FQuat::Identity,
+        ECC_Pawn,
+        FCollisionShape::MakeCapsule(
+            Capsule->GetUnscaledCapsuleRadius(),
+            StandingCapsuleHalfHeight),
+        QueryParams);
+
+    if (bBlocked)
+    {
+        return false;
+    }
+
+    AddActorWorldOffset(
+        FVector(0.0f, 0.0f, HeightDelta),
+        false);
+
+    Capsule->SetCapsuleHalfHeight(StandingCapsuleHalfHeight, true);
+    bProne = false;
+    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+    return true;
+}
+
 void AWPSoldierCharacter::StartCrouch()
 {
-    if (IsCombatCapable())
+    if (!IsCombatCapable())
     {
-        Crouch();
+        return;
     }
+
+    if (bProne)
+    {
+        ExitProne();
+        return;
+    }
+
+    Crouch();
 }
 
 void AWPSoldierCharacter::StopCrouch()
 {
-    UnCrouch();
+    if (!bProne)
+    {
+        UnCrouch();
+    }
 }
 
 void AWPSoldierCharacter::StartAim()
@@ -613,6 +768,7 @@ void AWPSoldierCharacter::HandleShotFired(float RecoilPitch, float RecoilYaw)
 void AWPSoldierCharacter::HandleDowned()
 {
     StopSprint();
+    ExitProne();
     StopAim();
     WeaponComponent->StopFire();
     GetCharacterMovement()->DisableMovement();
@@ -631,6 +787,7 @@ void AWPSoldierCharacter::HandleRevived()
 
 void AWPSoldierCharacter::HandleDeath()
 {
+    ExitProne();
     StopAim();
     WeaponComponent->StopFire();
     GetCharacterMovement()->DisableMovement();
