@@ -82,6 +82,8 @@ jobs:
           $params = @{
             Configuration = $env:WP_CONFIGURATION
             BuildGameTarget = $true
+            HeadlessSmoke = $true
+            HeadlessSmokeSeconds = 15
           }
 
           if ($env:WP_CLEAN -eq "true") {
@@ -131,7 +133,7 @@ jobs:
         run: |
           if ($env:JOB_STATUS -eq "success") {
             $verdict = "PASS"
-            $detail = "WarriorParadiseEditor and WarriorParadise Win64 compiled successfully with UE 5.8."
+            $detail = "WarriorParadiseEditor and WarriorParadise Win64 compiled successfully with UE 5.8, and the GPU-less NullRHI gameplay smoke test passed."
           }
           else {
             $verdict = "FAIL"
