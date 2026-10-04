@@ -9,6 +9,11 @@ param(
     [switch]$HeadlessSmoke,
     [ValidateRange(5, 300)]
     [int]$HeadlessSmokeSeconds = 15,
+    [switch]$LaunchIntegrated,
+    [ValidateRange(640, 3840)]
+    [int]$IntegratedResX = 1280,
+    [ValidateRange(360, 2160)]
+    [int]$IntegratedResY = 720,
     [switch]$Package,
     [string]$ArchiveDirectory = ""
 )
@@ -251,6 +256,27 @@ if ($HeadlessSmoke) {
     )
 
     Write-Host "GPU-less gameplay smoke test passed." -ForegroundColor Green
+}
+
+if ($LaunchIntegrated) {
+    $EditorExe = Join-Path $ResolvedEngineRoot "Engine\Binaries\Win64\UnrealEditor.exe"
+
+    if (-not (Test-Path $EditorExe)) {
+        throw "UnrealEditor.exe was not found: $EditorExe"
+    }
+
+    Write-Step "Launching Minimal / Integrated visual mode"
+    Invoke-Checked -Executable $EditorExe -Arguments @(
+        $ProjectFile,
+        "/Engine/Maps/Entry",
+        "-game",
+        "-WPIntegratedGraphics",
+        "-windowed",
+        "-ForceRes",
+        "-ResX=$IntegratedResX",
+        "-ResY=$IntegratedResY",
+        "-nosplash"
+    )
 }
 
 if ($Package) {
