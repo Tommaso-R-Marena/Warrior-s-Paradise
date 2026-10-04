@@ -335,6 +335,26 @@
       "acquisition": "Free Fab download; FBX plus converted GLB/glTF/USDZ",
       "distribution": "Keep raw asset private/local; do not redistribute standalone.",
       "purpose": "Period-correct Soviet automatic weapon candidate with 2K PBR texture set"
+    },
+    {
+      "id": "fab_free_military_field_truck",
+      "name": "Military Field Truck Depo",
+      "source": "Fab",
+      "license": "Fab Standard License",
+      "page_url": "https://www.fab.com/listings/5f32ce25-1647-46fc-8f21-34cebc67c6e8",
+      "acquisition": "Free Fab listing; OBJ plus converted GLB/glTF/USDZ",
+      "distribution": "Keep raw asset private/local; do not redistribute standalone.",
+      "purpose": "WWII-inspired transport truck candidate for squad transport/light-vehicle presentation"
+    },
+    {
+      "id": "opengameart_ww2_airplane_rigged",
+      "name": "ww2 airplane rigged",
+      "source": "OpenGameArt",
+      "license": "CC0-1.0",
+      "page_url": "https://opengameart.org/content/ww2-airplane-rigged",
+      "acquisition": "Download the CC0 Blender model from OpenGameArt and export FBX/glTF before Unreal import.",
+      "distribution": "CC0; may be modified and redistributed. Source file is Blender and requires conversion for the current importer.",
+      "purpose": "Free rigged WWII aircraft candidate for flyby/strafe/bombing presentation"
     }
   ]
 }
