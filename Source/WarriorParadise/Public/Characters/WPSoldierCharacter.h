@@ -5,6 +5,8 @@
 #include "GameFramework/Character.h"
 #include "WPSoldierCharacter.generated.h"
 
+class AWPBattlefieldDirector;
+class AWPFragGrenade;
 class UCameraComponent;
 class UStaticMeshComponent;
 class UWPHealthComponent;
@@ -37,6 +39,27 @@ public:
     UFUNCTION(BlueprintCallable, Category="Combat")
     void SetCombatTeam(EWPCombatTeam NewTeam) { CombatTeam = NewTeam; }
 
+    UFUNCTION(BlueprintPure, Category="Combat")
+    EWPSoldierRole GetSoldierRole() const { return SoldierRole; }
+
+    UFUNCTION(BlueprintCallable, Category="Combat")
+    void SetSoldierRole(EWPSoldierRole NewRole) { SoldierRole = NewRole; }
+
+    UFUNCTION(BlueprintPure, Category="Combat")
+    bool IsDowned() const;
+
+    UFUNCTION(BlueprintPure, Category="Combat")
+    bool IsCombatCapable() const;
+
+    UFUNCTION(BlueprintPure, Category="Combat")
+    int32 GetGrenadesRemaining() const { return GrenadesRemaining; }
+
+    UFUNCTION(BlueprintCallable, Category="Combat")
+    bool ThrowGrenadeAt(const FVector& TargetLocation);
+
+    UFUNCTION(BlueprintCallable, Category="Combat")
+    bool TryReviveSoldier(AWPSoldierCharacter* Target);
+
 protected:
     virtual void BeginPlay() override;
 
@@ -55,12 +78,27 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat")
     EWPCombatTeam CombatTeam = EWPCombatTeam::Allies;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat")
+    EWPSoldierRole SoldierRole = EWPSoldierRole::Rifleman;
+
 private:
     UPROPERTY(VisibleAnywhere, Category="View")
     TObjectPtr<UStaticMeshComponent> ViewWeaponBody;
 
     UPROPERTY(VisibleAnywhere, Category="View")
     TObjectPtr<UStaticMeshComponent> ViewWeaponBarrel;
+
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Grenade")
+    TSubclassOf<AWPFragGrenade> GrenadeClass;
+
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Grenade", meta=(ClampMin="0"))
+    int32 GrenadesRemaining = 2;
+
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Grenade", meta=(ClampMin="100.0"))
+    float GrenadeThrowSpeed = 1350.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Interaction", meta=(ClampMin="50.0"))
+    float ReviveInteractionRange = 225.0f;
 
     UPROPERTY(EditDefaultsOnly, Category="Movement")
     float WalkSpeed = 470.0f;
@@ -84,6 +122,10 @@ private:
     const FVector HipBarrelLocation = FVector(82.0f, 18.0f, -15.0f);
     const FVector AimBarrelLocation = FVector(82.0f, 0.0f, -10.0f);
 
+    void ApplyRoleLoadout();
+    AWPBattlefieldDirector* GetBattlefieldDirector() const;
+    bool GetViewTarget(FVector& OutTargetLocation, float MaxRangeCm = 10000.0f) const;
+
     void MoveForward(float Value);
     void MoveRight(float Value);
     void Turn(float Value);
@@ -94,9 +136,21 @@ private:
     void StopCrouch();
     void StartAim();
     void StopAim();
+    void ThrowGrenadeInput();
+    void InteractInput();
+    void IssueFollowOrder();
+    void IssueAttackOrder();
+    void IssueHoldOrder();
+    void CallArtilleryInput();
 
     UFUNCTION()
     void HandleShotFired(float RecoilPitch, float RecoilYaw);
+
+    UFUNCTION()
+    void HandleDowned();
+
+    UFUNCTION()
+    void HandleRevived();
 
     UFUNCTION()
     void HandleDeath();
