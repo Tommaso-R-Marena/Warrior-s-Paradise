@@ -2,6 +2,8 @@
 #include "AI/WPEnemySoldier.h"
 #include "Characters/WPSoldierCharacter.h"
 #include "Combat/WPCombatTypes.h"
+#include "Combat/WPHealthComponent.h"
+#include "Combat/WPWeaponComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/LightComponent.h"
 #include "Components/SkyLightComponent.h"
