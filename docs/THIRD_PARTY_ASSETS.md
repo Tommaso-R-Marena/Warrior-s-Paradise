@@ -28,6 +28,15 @@ Use: development/retargeting animation coverage and immediate visual replacement
 
 The catalog contains the CC0 rigged low-poly WWII soldier for development retargeting and silhouette testing.
 
+### OpenGameArt combined-arms candidates
+
+Tracked CC0 candidates include:
+
+- rigged WWII airplane (Blender source; export to FBX/glTF before Unreal import);
+- low-poly GAZ-67 Soviet WWII jeep.
+
+These are legal development/fallback candidates; their art fidelity should be evaluated in-engine before treating them as final production content.
+
 ### MetaWorldOS WWII Tank Pack
 
 CC0 pack containing Panther, Panzer IV, Sherman and IS-2 models plus battlefield props. The pack is a strong period-correct replacement candidate for the runtime cube tanks.
@@ -47,6 +56,10 @@ Use as the high-fidelity human/rig foundation where appropriate.
 ### Fab Modular Rural Cabins
 
 Use for realistic rural buildings, interiors and foliage.
+
+### Free Fab transport
+
+The catalog tracks the free **Military Field Truck Depo** listing as a WWII-inspired transport candidate. Keep the raw provider asset local/private under the applicable Fab terms.
 
 ### Fab VFX
 
