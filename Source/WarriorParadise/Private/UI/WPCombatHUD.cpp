@@ -214,6 +214,11 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
             false);
     }
 
+    const FString WeaponName =
+        Weapon
+            ? Weapon->GetWeaponDisplayName()
+            : TEXT("WEAPON");
+
     const FString WeaponState =
         Weapon && Weapon->IsCyclingAction()
             ? TEXT("CYCLING")
@@ -224,7 +229,7 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
     DrawText(
         FString::Printf(
             TEXT("%s  [%s]  %02d / %03d"),
-            Weapon ? *Weapon->GetWeaponDisplayName() : TEXT("WEAPON"),
+            *WeaponName,
             *WeaponState,
             CurrentAmmo,
             Reserve),
