@@ -16,6 +16,8 @@ The repository now contains a substantial code-side combined-arms battle rather 
 - skeletal-bone hit multipliers ready for production character rigs;
 - thin-cover penetration with retained velocity/damage;
 - data-driven weapon definitions through `UWPWeaponDefinition`;
+- automatic, semi-automatic and manual-action weapon mechanics;
+- authentic Lee-Enfield/Kar98k bolt cycling with per-weapon cycle timing, HUD state and presentation hooks;
 - magazines, reload timing, dry fire, reload cancellation and engineer resupply;
 - melee combat;
 - frag grenades and tactical smoke grenades;
