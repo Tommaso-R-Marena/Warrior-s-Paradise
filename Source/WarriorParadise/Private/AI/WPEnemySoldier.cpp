@@ -1,11 +1,14 @@
 #include "AI/WPEnemySoldier.h"
+#include "AI/WPCoverPoint.h"
 #include "Combat/WPHealthComponent.h"
 #include "Combat/WPSuppressionComponent.h"
 #include "Combat/WPWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
+#include "Game/WPBattlefieldDirector.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 
 AWPEnemySoldier::AWPEnemySoldier()
@@ -57,16 +60,55 @@ void AWPEnemySoldier::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (GetCombatTeam() == EWPCombatTeam::Allies)
+    BattlefieldDirector = Cast<AWPBattlefieldDirector>(
+        UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass()));
+
+    if (GetCombatTeam() == EWPCombatTeam::Axis)
     {
-        GetWeaponComponent()->Configure(14.0f, 430.0f, 2.7f);
-        GetCharacterMovement()->MaxWalkSpeed = 335.0f;
+        GetHealthComponent()->SetCanBeDowned(false);
     }
     else
     {
-        GetWeaponComponent()->Configure(9.0f, 360.0f, 4.2f);
-        GetCharacterMovement()->MaxWalkSpeed = 315.0f;
+        GetHealthComponent()->SetCanBeDowned(true);
     }
+
+    switch (GetSoldierRole())
+    {
+        case EWPSoldierRole::Assault:
+            DesiredRange = 650.0f;
+            MaximumEngagementRange = 2100.0f;
+            GetCharacterMovement()->MaxWalkSpeed = 355.0f;
+            break;
+
+        case EWPSoldierRole::Medic:
+            DesiredRange = 900.0f;
+            MaximumEngagementRange = 2350.0f;
+            GetCharacterMovement()->MaxWalkSpeed = 340.0f;
+            break;
+
+        case EWPSoldierRole::Engineer:
+            DesiredRange = 900.0f;
+            MaximumEngagementRange = 2450.0f;
+            GetCharacterMovement()->MaxWalkSpeed = 325.0f;
+            break;
+
+        case EWPSoldierRole::Rifleman:
+        default:
+            DesiredRange = 1100.0f;
+            MaximumEngagementRange = 3000.0f;
+            GetCharacterMovement()->MaxWalkSpeed = 330.0f;
+            break;
+    }
+
+    NextGrenadeTime = GetWorld()
+        ? GetWorld()->GetTimeSeconds() + FMath::FRandRange(5.0f, 10.0f)
+        : 5.0f;
+}
+
+void AWPEnemySoldier::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    ReleaseCover();
+    Super::EndPlay(EndPlayReason);
 }
 
 AWPSoldierCharacter* AWPEnemySoldier::FindBestTarget() const
@@ -82,17 +124,10 @@ AWPSoldierCharacter* AWPEnemySoldier::FindBestTarget() const
     for (TActorIterator<AWPSoldierCharacter> It(GetWorld()); It; ++It)
     {
         AWPSoldierCharacter* Candidate = *It;
-        if (!Candidate || Candidate == this)
-        {
-            continue;
-        }
-
-        if (Candidate->GetCombatTeam() == GetCombatTeam())
-        {
-            continue;
-        }
-
-        if (!Candidate->GetHealthComponent() || Candidate->GetHealthComponent()->IsDead())
+        if (!Candidate ||
+            Candidate == this ||
+            Candidate->GetCombatTeam() == GetCombatTeam() ||
+            !Candidate->IsCombatCapable())
         {
             continue;
         }
@@ -104,6 +139,11 @@ AWPSoldierCharacter* AWPEnemySoldier::FindBestTarget() const
             Score *= 0.82f;
         }
 
+        if (HasLineOfSightTo(Candidate))
+        {
+            Score *= 0.72f;
+        }
+
         if (Score < BestScore)
         {
             BestScore = Score;
@@ -112,6 +152,136 @@ AWPSoldierCharacter* AWPEnemySoldier::FindBestTarget() const
     }
 
     return BestTarget;
+}
+
+AWPSoldierCharacter* AWPEnemySoldier::FindDownedAlly(float MaximumRange) const
+{
+    if (!GetWorld())
+    {
+        return nullptr;
+    }
+
+    AWPSoldierCharacter* BestTarget = nullptr;
+    float BestDistanceSquared = FMath::Square(MaximumRange);
+
+    for (TActorIterator<AWPSoldierCharacter> It(GetWorld()); It; ++It)
+    {
+        AWPSoldierCharacter* Candidate = *It;
+        if (!Candidate ||
+            Candidate == this ||
+            Candidate->GetCombatTeam() != GetCombatTeam() ||
+            !Candidate->IsDowned())
+        {
+            continue;
+        }
+
+        const float DistanceSquared = FVector::DistSquared2D(
+            GetActorLocation(),
+            Candidate->GetActorLocation());
+
+        if (DistanceSquared < BestDistanceSquared)
+        {
+            BestDistanceSquared = DistanceSquared;
+            BestTarget = Candidate;
+        }
+    }
+
+    return BestTarget;
+}
+
+AWPSoldierCharacter* AWPEnemySoldier::FindAmmoTarget(float MaximumRange) const
+{
+    if (!GetWorld())
+    {
+        return nullptr;
+    }
+
+    AWPSoldierCharacter* BestTarget = nullptr;
+    float BestDistanceSquared = FMath::Square(MaximumRange);
+
+    for (TActorIterator<AWPSoldierCharacter> It(GetWorld()); It; ++It)
+    {
+        AWPSoldierCharacter* Candidate = *It;
+        if (!Candidate ||
+            Candidate == this ||
+            Candidate->GetCombatTeam() != GetCombatTeam() ||
+            !Candidate->IsCombatCapable() ||
+            !Candidate->GetWeaponComponent() ||
+            Candidate->GetWeaponComponent()->GetReserveAmmo() >= 60)
+        {
+            continue;
+        }
+
+        const float DistanceSquared = FVector::DistSquared2D(
+            GetActorLocation(),
+            Candidate->GetActorLocation());
+
+        if (DistanceSquared < BestDistanceSquared)
+        {
+            BestDistanceSquared = DistanceSquared;
+            BestTarget = Candidate;
+        }
+    }
+
+    return BestTarget;
+}
+
+AWPCoverPoint* AWPEnemySoldier::FindBestCover(const AWPSoldierCharacter* Threat) const
+{
+    if (!GetWorld() || !Threat)
+    {
+        return nullptr;
+    }
+
+    AWPCoverPoint* BestCover = nullptr;
+    float BestScore = TNumericLimits<float>::Max();
+
+    const FVector ThreatEye = Threat->GetActorLocation() + FVector(0.0f, 0.0f, 58.0f);
+
+    for (TActorIterator<AWPCoverPoint> It(GetWorld()); It; ++It)
+    {
+        AWPCoverPoint* Candidate = *It;
+        if (!Candidate || !Candidate->IsAvailableFor(this))
+        {
+            continue;
+        }
+
+        const float OwnDistance = FVector::Dist2D(GetActorLocation(), Candidate->GetActorLocation());
+        if (OwnDistance > CoverSearchRadius)
+        {
+            continue;
+        }
+
+        const FVector CoverEye = Candidate->GetActorLocation() + FVector(0.0f, 0.0f, 55.0f);
+        FHitResult Hit;
+        FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(WPCoverExposure), true, this);
+        QueryParams.AddIgnoredActor(this);
+        QueryParams.AddIgnoredActor(Threat);
+
+        const bool bOccluded = GetWorld()->LineTraceSingleByChannel(
+            Hit,
+            ThreatEye,
+            CoverEye,
+            ECC_Visibility,
+            QueryParams);
+
+        const float ThreatDistance = FVector::Dist2D(
+            Candidate->GetActorLocation(),
+            Threat->GetActorLocation());
+
+        const float RangePenalty = FMath::Abs(ThreatDistance - DesiredRange) * 0.25f;
+        const float ExposurePenalty = bOccluded ? -850.0f : 1100.0f;
+        const float QualityBonus = -Candidate->GetCoverQuality() * 420.0f;
+        const float Score = OwnDistance + RangePenalty + ExposurePenalty + QualityBonus;
+
+        if (Score < BestScore)
+        {
+            BestScore = Score;
+            BestCover = Candidate;
+        }
+    }
+
+    return BestCover;
 }
 
 bool AWPEnemySoldier::HasLineOfSightTo(const AActor* Target) const
@@ -136,36 +306,248 @@ bool AWPEnemySoldier::HasLineOfSightTo(const AActor* Target) const
     return Hit.GetActor() == Target;
 }
 
-void AWPEnemySoldier::Tick(float DeltaSeconds)
+FVector AWPEnemySoldier::GetFormationOffset() const
 {
-    Super::Tick(DeltaSeconds);
+    const uint32 Slot = GetUniqueID() % 7;
+    const float Angle = static_cast<float>(Slot) / 7.0f * UE_TWO_PI;
+    const float Radius = 220.0f + static_cast<float>(Slot % 3) * 70.0f;
+    return FVector(FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, 0.0f);
+}
 
-    if (IsPlayerControlled())
+FVector AWPEnemySoldier::GetStrategicDestination() const
+{
+    AWPBattlefieldDirector* Director = BattlefieldDirector.Get();
+    if (!Director)
+    {
+        return GetActorLocation();
+    }
+
+    if (GetCombatTeam() == EWPCombatTeam::Axis)
+    {
+        return Director->GetActiveObjectiveLocation() + GetFormationOffset();
+    }
+
+    switch (Director->GetSquadOrder())
+    {
+        case EWPSquadOrder::Follow:
+        {
+            if (const ACharacter* Player = UGameplayStatics::GetPlayerCharacter(this, 0))
+            {
+                return Player->GetActorLocation() + GetFormationOffset();
+            }
+            break;
+        }
+
+        case EWPSquadOrder::HoldPosition:
+            return Director->GetSquadOrderLocation() + GetFormationOffset();
+
+        case EWPSquadOrder::AttackObjective:
+        default:
+            return Director->GetActiveObjectiveLocation() + GetFormationOffset();
+    }
+
+    return Director->GetSquadOrderLocation();
+}
+
+void AWPEnemySoldier::MoveTacticallyToward(const FVector& Destination, float InputScale)
+{
+    if (!GetWorld())
     {
         return;
     }
 
-    if (GetHealthComponent()->IsDead() || !GetWorld())
+    FVector Direction = Destination - GetActorLocation();
+    Direction.Z = 0.0f;
+
+    if (Direction.SizeSquared() < FMath::Square(35.0f))
+    {
+        return;
+    }
+
+    Direction.Normalize();
+
+    const FVector TraceStart = GetActorLocation() + FVector(0.0f, 0.0f, 45.0f);
+    const FVector TraceEnd = TraceStart + Direction * 190.0f;
+
+    FHitResult Hit;
+    FCollisionQueryParams Params(SCENE_QUERY_STAT(WPObstacleSteer), true, this);
+    Params.AddIgnoredActor(this);
+
+    if (GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
+    {
+        FVector Right = FVector::CrossProduct(FVector::UpVector, Direction).GetSafeNormal();
+        if ((GetUniqueID() & 1U) == 0U)
+        {
+            Right *= -1.0f;
+        }
+
+        Direction = (Direction * 0.22f + Right * 0.95f).GetSafeNormal();
+    }
+
+    AddMovementInput(Direction, FMath::Clamp(InputScale, 0.0f, 1.0f));
+}
+
+void AWPEnemySoldier::ReleaseCover()
+{
+    if (AWPCoverPoint* Cover = CurrentCover.Get())
+    {
+        Cover->Release(this);
+    }
+
+    CurrentCover.Reset();
+}
+
+bool AWPEnemySoldier::HandleMedicSupport()
+{
+    if (GetSoldierRole() != EWPSoldierRole::Medic)
+    {
+        return false;
+    }
+
+    AWPSoldierCharacter* DownedAlly = FindDownedAlly(1800.0f);
+    if (!DownedAlly)
+    {
+        return false;
+    }
+
+    ReleaseCover();
+    GetWeaponComponent()->StopFire();
+    bPulseFiring = false;
+
+    const float Distance = FVector::Dist2D(GetActorLocation(), DownedAlly->GetActorLocation());
+    if (Distance <= 210.0f)
+    {
+        TryReviveSoldier(DownedAlly);
+    }
+    else
+    {
+        MoveTacticallyToward(DownedAlly->GetActorLocation(), 1.0f);
+    }
+
+    return true;
+}
+
+bool AWPEnemySoldier::HandleEngineerSupport()
+{
+    if (GetSoldierRole() != EWPSoldierRole::Engineer || !GetWorld())
+    {
+        return false;
+    }
+
+    const float Time = GetWorld()->GetTimeSeconds();
+    if (Time < NextEngineerSupplyTime)
+    {
+        return false;
+    }
+
+    AWPSoldierCharacter* AmmoTarget = FindAmmoTarget(950.0f);
+    if (!AmmoTarget)
+    {
+        return false;
+    }
+
+    const float Distance = FVector::Dist2D(GetActorLocation(), AmmoTarget->GetActorLocation());
+    if (Distance <= 220.0f)
+    {
+        AmmoTarget->GetWeaponComponent()->AddReserveAmmo(45);
+        NextEngineerSupplyTime = Time + 14.0f;
+        return true;
+    }
+
+    if (!CurrentTarget.IsValid())
+    {
+        MoveTacticallyToward(AmmoTarget->GetActorLocation(), 0.85f);
+        return true;
+    }
+
+    return false;
+}
+
+void AWPEnemySoldier::HandleGrenadeOpportunity(AWPSoldierCharacter* Target, float Distance)
+{
+    if (!Target || !GetWorld() || TimeSince(0.0f) < 0.0f)
     {
         return;
     }
 
     const float Time = GetWorld()->GetTimeSeconds();
+    if (Time < NextGrenadeTime ||
+        Distance < GrenadeMinimumRange ||
+        Distance > GrenadeMaximumRange ||
+        !HasLineOfSightTo(Target))
+    {
+        return;
+    }
+
+    const float Suppression = GetSuppressionComponent()
+        ? GetSuppressionComponent()->GetNormalizedSuppression()
+        : 0.0f;
+
+    if (Suppression > 0.72f)
+    {
+        return;
+    }
+
+    if (FMath::FRand() <= 0.32f &&
+        ThrowGrenadeAt(Target->GetActorLocation() + Target->GetVelocity() * 0.35f))
+    {
+        NextGrenadeTime = Time + GrenadeCooldownSeconds + FMath::FRandRange(0.0f, 6.0f);
+    }
+}
+
+void AWPEnemySoldier::Tick(float DeltaSeconds)
+{
+    Super::Tick(DeltaSeconds);
+
+    if (IsPlayerControlled() || !GetWorld() || !IsCombatCapable())
+    {
+        return;
+    }
+
+    if (!BattlefieldDirector.IsValid())
+    {
+        BattlefieldDirector = Cast<AWPBattlefieldDirector>(
+            UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass()));
+    }
+
+    const float Time = GetWorld()->GetTimeSeconds();
+
+    if (GetSoldierRole() == EWPSoldierRole::Medic && Time >= NextSupportSearchTime)
+    {
+        NextSupportSearchTime = Time + 0.35f;
+        if (HandleMedicSupport())
+        {
+            return;
+        }
+    }
 
     if (Time >= NextTargetSearchTime ||
         !CurrentTarget.IsValid() ||
-        !CurrentTarget->GetHealthComponent() ||
-        CurrentTarget->GetHealthComponent()->IsDead())
+        !CurrentTarget->IsCombatCapable())
     {
         CurrentTarget = FindBestTarget();
         NextTargetSearchTime = Time + RetargetInterval + FMath::FRandRange(0.0f, 0.18f);
     }
 
     AWPSoldierCharacter* Target = CurrentTarget.Get();
+
     if (!Target)
     {
+        ReleaseCover();
         GetWeaponComponent()->StopFire();
         bPulseFiring = false;
+
+        if (HandleEngineerSupport())
+        {
+            return;
+        }
+
+        const FVector Destination = GetStrategicDestination();
+        const float DistanceToDestination = FVector::Dist2D(GetActorLocation(), Destination);
+        if (DistanceToDestination > 170.0f)
+        {
+            MoveTacticallyToward(Destination, 0.9f);
+        }
         return;
     }
 
@@ -174,28 +556,68 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
     const float Suppression = GetSuppressionComponent()
         ? GetSuppressionComponent()->GetNormalizedSuppression()
         : 0.0f;
+    const float HealthNormalized = GetHealthComponent()->GetHealthNormalized();
     const FVector FlatDirection = FVector(ToTarget.X, ToTarget.Y, 0.0f).GetSafeNormal();
 
     if (!FlatDirection.IsNearlyZero())
     {
         const FRotator DesiredRotation = FlatDirection.Rotation();
-        SetActorRotation(FMath::RInterpTo(GetActorRotation(), DesiredRotation, DeltaSeconds, AimTurnSpeed));
+        SetActorRotation(FMath::RInterpTo(
+            GetActorRotation(),
+            DesiredRotation,
+            DeltaSeconds,
+            AimTurnSpeed));
     }
 
-    if (Distance > DesiredRange)
+    const bool bWantsCover =
+        Suppression >= CoverTriggerSuppression ||
+        HealthNormalized <= 0.45f;
+
+    if (bWantsCover && Time >= NextCoverSearchTime)
     {
-        AddMovementInput(FlatDirection, 0.75f * FMath::Lerp(1.0f, 0.62f, Suppression));
+        NextCoverSearchTime = Time + 1.1f + FMath::FRandRange(0.0f, 0.4f);
+
+        AWPCoverPoint* BetterCover = FindBestCover(Target);
+        if (BetterCover && BetterCover != CurrentCover.Get() && BetterCover->TryReserve(this))
+        {
+            ReleaseCover();
+            CurrentCover = BetterCover;
+        }
     }
-    else if (Distance < DesiredRange * 0.62f)
+
+    bool bAtCover = false;
+    if (AWPCoverPoint* Cover = CurrentCover.Get())
     {
-        AddMovementInput(-FlatDirection, 0.35f + Suppression * 0.28f);
+        const float CoverDistance = FVector::Dist2D(GetActorLocation(), Cover->GetActorLocation());
+        bAtCover = CoverDistance <= 115.0f;
+
+        if (!bAtCover)
+        {
+            MoveTacticallyToward(Cover->GetActorLocation(), FMath::Lerp(0.95f, 0.7f, Suppression));
+        }
+    }
+    else if (Distance > DesiredRange)
+    {
+        MoveTacticallyToward(
+            Target->GetActorLocation(),
+            0.78f * FMath::Lerp(1.0f, 0.62f, Suppression));
+    }
+    else if (Distance < DesiredRange * 0.58f)
+    {
+        MoveTacticallyToward(
+            GetActorLocation() - FlatDirection * 500.0f,
+            0.38f + Suppression * 0.25f);
     }
     else
     {
         const FVector Strafe(-FlatDirection.Y, FlatDirection.X, 0.0f);
-        const float StrafeStrength = FMath::Lerp(0.22f, 0.55f, Suppression);
-        AddMovementInput(Strafe, FMath::Sin(Time * 0.85f + GetUniqueID()) * StrafeStrength);
+        const float StrafeStrength = FMath::Lerp(0.18f, 0.52f, Suppression);
+        AddMovementInput(
+            Strafe,
+            FMath::Sin(Time * 0.85f + static_cast<float>(GetUniqueID())) * StrafeStrength);
     }
+
+    HandleGrenadeOpportunity(Target, Distance);
 
     if (bPulseFiring && Time >= StopFireTime)
     {
@@ -205,16 +627,29 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
     if (Time >= NextDecisionTime)
     {
-        NextDecisionTime = Time + FMath::FRandRange(0.35f, 0.75f);
+        NextDecisionTime = Time + FMath::FRandRange(0.32f, 0.72f);
 
-        const float FireChance = FMath::Lerp(1.0f, 0.32f, Suppression);
+        const float CoverConfidence = bAtCover ? 1.12f : 1.0f;
+        const float FireChance = FMath::Clamp(
+            FMath::Lerp(1.0f, 0.28f, Suppression) * CoverConfidence,
+            0.05f,
+            1.0f);
+
         if (Distance <= MaximumEngagementRange &&
             HasLineOfSightTo(Target) &&
             FMath::FRand() <= FireChance)
         {
             GetWeaponComponent()->StartFire();
             bPulseFiring = true;
-            StopFireTime = Time + FirePulseSeconds;
+            StopFireTime = Time + FirePulseSeconds * FMath::Lerp(1.0f, 0.65f, Suppression);
         }
+    }
+
+    if (GetSoldierRole() == EWPSoldierRole::Engineer &&
+        Distance > 1300.0f &&
+        Time >= NextSupportSearchTime)
+    {
+        NextSupportSearchTime = Time + 0.6f;
+        HandleEngineerSupport();
     }
 }
