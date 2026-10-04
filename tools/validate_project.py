@@ -342,6 +342,15 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/Combat/WPWeaponDefinition.h", "bRequiresManualCycle"),
+        ("Source/WarriorParadise/Public/Combat/WPWeaponDefinition.h", "ManualCycleDuration"),
+        ("Source/WarriorParadise/Private/Combat/WPWeaponComponent.cpp", "BeginManualCycle"),
+        ("Source/WarriorParadise/Private/Combat/WPWeaponComponent.cpp", "FinishManualCycle"),
+        ("Source/WarriorParadise/Public/Combat/WPWeaponComponent.h", "OnManualCycleStarted"),
+        ("Source/WarriorParadise/Private/Presentation/WPWeaponPresentationComponent.cpp", "HandleManualCycleStarted"),
+        ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "CYCLING"),
+        ("Content/Python/wp_setup_free_profiles.py", "manual_cycle_seconds=0.68"),
+        ("Content/Python/wp_setup_free_profiles.py", "manual_cycle_seconds=0.76"),
         ("Source/WarriorParadise/Private/Game/WPRuntimeMode.cpp", "WPHeadlessSmoke"),
         ("Source/WarriorParadise/Private/Game/WPRuntimeMode.cpp", "nullrhi"),
         ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "StartHeadlessSmokeTest"),
