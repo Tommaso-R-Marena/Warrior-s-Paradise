@@ -955,7 +955,7 @@ void AWPBattlefieldDirector::BuildAtmosphere()
         Fog->GetComponent()->SetFogDensity(0.012f);
         Fog->GetComponent()->SetFogHeightFalloff(0.22f);
         Fog->GetComponent()->SetFogInscatteringColor(
-            FLinearColor(0.46f, 0.48f, 0.49f));
+            FLinearColor::Black);
         Fog->GetComponent()->SetVolumetricFog(true);
     }
 }
