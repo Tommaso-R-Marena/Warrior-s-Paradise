@@ -31,6 +31,9 @@ public:
     UFUNCTION(BlueprintCallable, Category="Battle|Squad")
     void IssueSquadOrder(EWPSquadOrder NewOrder, const FVector& OrderLocation);
 
+    UFUNCTION(BlueprintCallable, Category="Battle|Squad")
+    bool SwitchPlayerToSquadmate(AWPSoldierCharacter* CurrentSoldier);
+
     UFUNCTION(BlueprintCallable, Category="Battle|Support")
     bool RequestArtillery(AWPSoldierCharacter* Caller, const FVector& TargetLocation);
 
