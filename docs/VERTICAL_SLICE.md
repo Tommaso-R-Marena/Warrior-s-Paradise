@@ -50,6 +50,8 @@ The code now includes production visual/loadout profiles, Motion Matching discov
 - suppression-driven AI accuracy degradation, aggressive cover-seeking and pinned return-fire limits;
 - pinned player sprint lock plus explicit HUD state feedback;
 - cover reservations;
+- coordinated Base Of Fire / Maneuver behavior against shared visible targets;
+- Assault-biased maneuver selection with Riflemen/other troops forming the fire base;
 - LOS + close awareness;
 - location-based shared contacts;
 - gunshot investigation;
