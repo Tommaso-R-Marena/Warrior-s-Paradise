@@ -113,7 +113,8 @@ void UWPGameUserSettings::ApplyMinimalRenderingOverrides(bool bEnable)
         {
             Variable->Set(
                 bEnable ? Setting.MinimalValue : Setting.NormalValue,
-                ECVF_SetByGameSetting);
+                ECVF_SetByGameOverride,
+                NAME_None);
         }
     }
 }
