@@ -58,8 +58,62 @@ void UWPSuppressionComponent::ClearSuppression()
 
 void UWPSuppressionComponent::BroadcastIfChanged(float PreviousValue)
 {
+    UpdateSuppressionState();
+
     if (!FMath::IsNearlyEqual(PreviousValue, Suppression))
     {
         OnSuppressionChanged.Broadcast(GetNormalizedSuppression());
+    }
+}
+
+void UWPSuppressionComponent::UpdateSuppressionState()
+{
+    const float Normalized = GetNormalizedSuppression();
+    EWPSuppressionState NewState = SuppressionState;
+
+    switch (SuppressionState)
+    {
+        case EWPSuppressionState::Steady:
+            if (Normalized >= PinnedEnterThreshold)
+            {
+                NewState = EWPSuppressionState::Pinned;
+            }
+            else if (Normalized >= PressuredEnterThreshold)
+            {
+                NewState = EWPSuppressionState::Pressured;
+            }
+            break;
+
+        case EWPSuppressionState::Pressured:
+            if (Normalized >= PinnedEnterThreshold)
+            {
+                NewState = EWPSuppressionState::Pinned;
+            }
+            else if (Normalized <= PressuredExitThreshold)
+            {
+                NewState = EWPSuppressionState::Steady;
+            }
+            break;
+
+        case EWPSuppressionState::Pinned:
+            if (Normalized <= PressuredExitThreshold)
+            {
+                NewState = EWPSuppressionState::Steady;
+            }
+            else if (Normalized <= PinnedExitThreshold)
+            {
+                NewState = EWPSuppressionState::Pressured;
+            }
+            break;
+
+        default:
+            NewState = EWPSuppressionState::Steady;
+            break;
+    }
+
+    if (NewState != SuppressionState)
+    {
+        SuppressionState = NewState;
+        OnSuppressionStateChanged.Broadcast(SuppressionState);
     }
 }
