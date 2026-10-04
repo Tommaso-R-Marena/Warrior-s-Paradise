@@ -2,133 +2,129 @@
 
 ## Product target
 
-Build one complete, polished WWII battle before expanding the content surface.
+One original WWII village battle, approximately 15–20 minutes, at a comparable quality bar for weapon feel, squad warfare, battlefield pressure and combined-arms atmosphere.
 
-The target is not a clone of Enlisted. The target is an original game whose **single vertical slice** reaches a comparable bar for battlefield density, presentation, weapon feel, and combined-arms atmosphere.
+The target is **not an Enlisted clone**.
 
-## Slice definition
-
-The first battle is a rural European village assault with three sequential phases:
+## Battle flow
 
 1. break the outer defensive line;
 2. capture the village center;
-3. survive a counterattack.
+3. push into the inner village;
+4. receive Allied armored support;
+5. secure the final objective;
+6. survive an infantry-and-armor counterattack.
 
-Target session length: 15–20 minutes.
+## Code-side gameplay status
 
-## Mature slice content budget
+### Weapon / movement feel — implemented baseline
 
-- 1 battlefield.
-- 2 infantry factions.
-- 8–12 weapons.
-- 4 core infantry roles.
-- 30–60 simultaneously active combatants after optimization.
-- 1 armored vehicle per side.
-- sequential capture objectives.
-- artillery, smoke, suppression, destruction, and reinforcement pressure.
+- physical projectile ballistics and gravity;
+- ADS;
+- stance/movement/suppression accuracy coupling;
+- sprint stamina;
+- crouch and collision-aware prone;
+- weapon sway;
+- recoil, recovery and camera impulse;
+- suppression camera response;
+- hit-location multipliers;
+- thin-cover penetration;
+- data-driven weapon definition assets;
+- magazines, reload/dry-fire/cancel events and resupply;
+- melee;
+- timed bandaging.
 
-## M0 — executable combat kernel
+Production skeletal rigs, AnimBPs, authentic weapon data, material response, audio and VFX remain content work.
 
-Implemented in the repository foundation:
+### Squad warfare — implemented baseline
 
-- first-person locomotion;
-- sprint, crouch, jump, and mouse look;
-- physical projectile ballistics with gravity and configurable muzzle velocity;
-- baseline ADS with aim-dependent dispersion and FOV interpolation;
-- procedural recoil response;
-- magazines and reloads;
-- damage and death;
-- Allied/Axis factions with autonomous soldiers targeting opposing combatants;
-- a five-soldier friendly squad fighting alongside the player;
-- control transfer into a surviving squadmate after player death;
-- near-miss suppression with decay and AI behavior effects;
-- three sequential capture objectives plus a final counterattack/victory state;
-- hostile soldiers with movement, facing, line-of-sight checks, and burst fire;
-- runtime battlefield blockout;
-- directional light, skylight, atmospheric fog;
-- wave spawning and scoring;
-- code HUD;
-- structural CI validation.
+- explicit factions and four infantry roles;
+- five AI squadmates plus the player;
+- Follow / Attack / Hold orders;
+- manual squad switching and death-driven control transfer;
+- unified AI-capable player/squad pawn;
+- suppression and cover reservations;
+- LOS + close awareness;
+- location-based shared contacts;
+- gunshot investigation;
+- flanking;
+- frag/smoke decisions;
+- medic revive/smoke logic;
+- engineer ammunition support.
 
-This milestone intentionally has no production art dependency. It proves the combat loop before expensive content enters the project.
+### Wounds / reinforcements — implemented
 
-## M1 — production weapon feel
+- downed/bleedout/final-death lifecycle;
+- manual and AI revive;
+- Allied replacement tickets;
+- Axis reinforcement tickets;
+- delayed replacement soldiers;
+- safe spawn candidate selection;
+- moving front-line spawn anchors;
+- victory/defeat exhaustion logic.
 
-Baseline projectile travel, ADS, and recoil now exist. Production work still includes:
+### Objective / support layer — implemented
 
-- data-driven weapon definitions;
-- skeletal first-person weapon rigs;
-- animation-driven ADS and reloads;
-- recoil curves, recovery, and stance coupling;
-- weapon inertia and procedural sway;
-- camera impulse and suppression response;
-- material-aware penetration and ricochet;
-- muzzle flash, smoke, shell ejection, impact VFX, decals, and spatial audio;
-- per-surface impact response;
-- weapon inspection/debug overlay.
+- three sequential capture points;
+- combat-capable presence counting;
+- contested force-balance state;
+- reinforcement escalation;
+- artillery with charges/cooldown;
+- final counterattack;
+- battle score, victory and defeat.
 
-## M2 — squad warfare
+### Battlefield interaction — implemented fallback
 
-Implemented baseline:
-- explicit factions and friendly squad membership;
-- autonomous friendly-versus-hostile target acquisition;
-- suppression state driven by bullet near misses;
-- suppression-sensitive movement and firing confidence;
-- player control transfer to surviving squadmates;
-- objective/reinforcement ownership in the battlefield director.
+- runtime village/cover blockout;
+- reservable cover points;
+- penetrable thin cover;
+- destructible cover with physics-debris fallback;
+- tactical Local Fog Volume smoke used by visual and AI sight;
+- sun/skylight/volumetric atmosphere.
 
-Still required for production:
-- player-issued squad commands;
-- tactical cover queries;
-- target sharing and role-aware threat selection;
-- formation movement;
-- coordinated flanking;
-- grenade decisions;
-- medic/ammo behaviors;
-- morale and richer suppression responses.
+### Combined arms — implemented fallback
 
-## M3 — production battlefield
+- one Allied and one Axis armored vehicle;
+- autonomous movement/targeting;
+- visible-target-only acquisition;
+- objective advance when no target is visible;
+- turret/cannon/coax behavior;
+- tank shells;
+- front/side/rear armor response;
+- small-arms armor immunity;
+- smoke-aware sight;
+- vehicle destruction and victory accounting.
 
-- authored terrain;
-- Nanite environment set;
-- dense foliage and debris;
-- Lumen lighting pass;
-- physically based material library;
-- decals and battlefield damage;
-- interiors;
-- smoke volumes and atmospheric depth;
-- production character meshes;
-- locomotion and weapon animation sets.
+## Production presentation contract
 
-## M4 — battle orchestration
+The C++ layer now exposes events for the expensive presentation systems rather than hard-coding temporary effects into simulation. See `docs/PRESENTATION_BINDINGS.md`.
 
-- objective state machine;
-- tickets and reinforcement waves;
-- spawn-front movement;
-- artillery;
-- vehicle combat;
-- squad replacement;
-- victory/defeat flow;
-- battle telemetry.
+## Production content still required
 
-## M5 — optimization and shipping slice
+These are necessary before the phrase “Enlisted-quality graphics/presentation” is justified:
 
-- scalability tiers;
-- Unreal Insights capture;
-- AI significance manager;
-- animation budget allocator;
-- pooling where profiling justifies it;
-- HLOD/streaming pass;
-- packaged Windows build;
-- fixed benchmark route and frame-time acceptance test.
+- production skeletal characters, hands and weapons;
+- authored animation sets and AnimBPs;
+- authentic vehicles;
+- high-density terrain/buildings/interiors/foliage;
+- Nanite/HLOD/streaming setup where appropriate;
+- PBR physical-material library;
+- Niagara combat VFX;
+- weapon/explosion/vehicle/voice/foley audio;
+- decals, dirt, damage and battlefield dressing;
+- authored navigation and cover pass;
+- Chaos destruction for hero structures;
+- UMG presentation polish.
 
-## Acceptance bar
+## Hard validation gate
 
-The vertical slice is ready only when all of the following are true:
+The slice is not shipping-quality until all of the following are true:
 
-- combat is fun without relying on spectacle;
-- a 10-minute unedited capture looks coherent and production-quality;
-- bots create credible pressure rather than simply rushing the player;
-- no major gameplay system depends on editor-only manual intervention;
-- the build can be reproduced from the repository plus documented content dependencies;
-- performance targets are measured, not assumed.
+- the UE 5.8 C++ project compiles cleanly;
+- a packaged Windows build is reproducible;
+- a 10-minute unedited play capture has no obvious simulation/UI breakage;
+- bots create credible pressure without omniscient target tracking;
+- squad switching, revive, reinforcement and vehicle state survive repeated playtests;
+- objective completion cannot soft-lock;
+- frame-time targets are measured using Unreal Insights;
+- production assets are bound without changing core simulation rules.
