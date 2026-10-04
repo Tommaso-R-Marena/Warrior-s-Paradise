@@ -55,6 +55,9 @@ public:
     TSoftObjectPtr<USoundBase> DryFireSound;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio")
+    TSoftObjectPtr<USoundBase> ManualCycleSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio")
     TSoftObjectPtr<USoundBase> BulletImpactSound;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Impact")
