@@ -488,11 +488,118 @@ bool AWPBattlefieldDirector::SpawnBuildingVisual(
     return true;
 }
 
+void AWPBattlefieldDirector::SpawnEnterableBuilding(
+    const FVector& Location,
+    const FVector& Scale,
+    const FRotator& Rotation,
+    EWPEnvironmentSurface WallSurface)
+{
+    const bool bHasBuildingVisual =
+        SpawnBuildingVisual(Location, Scale, Rotation);
+
+    constexpr float WallThicknessScale = 0.25f;
+    constexpr float RoofThicknessScale = 0.18f;
+
+    const float HalfWidthCm = FMath::Abs(Scale.X) * 50.0f;
+    const float HalfDepthCm = FMath::Abs(Scale.Y) * 50.0f;
+    const float HalfHeightCm = FMath::Abs(Scale.Z) * 50.0f;
+    const float WallHalfThicknessCm = WallThicknessScale * 50.0f;
+
+    auto ToWorld = [&Location, &Rotation](const FVector& LocalOffset)
+    {
+        return Location + Rotation.RotateVector(LocalOffset);
+    };
+
+    SpawnBox(
+        ToWorld(FVector(-HalfWidthCm + WallHalfThicknessCm, 0.0f, 0.0f)),
+        FVector(WallThicknessScale, Scale.Y, Scale.Z),
+        Rotation,
+        WallSurface,
+        bHasBuildingVisual);
+
+    SpawnBox(
+        ToWorld(FVector(HalfWidthCm - WallHalfThicknessCm, 0.0f, 0.0f)),
+        FVector(WallThicknessScale, Scale.Y, Scale.Z),
+        Rotation,
+        WallSurface,
+        bHasBuildingVisual);
+
+    SpawnBox(
+        ToWorld(FVector(0.0f, -HalfDepthCm + WallHalfThicknessCm, 0.0f)),
+        FVector(Scale.X, WallThicknessScale, Scale.Z),
+        Rotation,
+        WallSurface,
+        bHasBuildingVisual);
+
+    const float DoorScaleX = FMath::Clamp(
+        FMath::Min(1.4f, Scale.X * 0.35f),
+        0.9f,
+        Scale.X * 0.5f);
+
+    const float FrontSegmentScaleX =
+        FMath::Max(0.1f, (Scale.X - DoorScaleX) * 0.5f);
+
+    const float FrontSegmentOffsetCm =
+        50.0f * (DoorScaleX + FrontSegmentScaleX);
+
+    const float FrontY =
+        HalfDepthCm - WallHalfThicknessCm;
+
+    SpawnBox(
+        ToWorld(FVector(-FrontSegmentOffsetCm, FrontY, 0.0f)),
+        FVector(FrontSegmentScaleX, WallThicknessScale, Scale.Z),
+        Rotation,
+        WallSurface,
+        bHasBuildingVisual);
+
+    SpawnBox(
+        ToWorld(FVector(FrontSegmentOffsetCm, FrontY, 0.0f)),
+        FVector(FrontSegmentScaleX, WallThicknessScale, Scale.Z),
+        Rotation,
+        WallSurface,
+        bHasBuildingVisual);
+
+    const float FullHeightCm = FMath::Abs(Scale.Z) * 100.0f;
+    const float DoorHeightCm = FMath::Min(220.0f, FullHeightCm * 0.75f);
+    const float HeaderHeightCm =
+        FMath::Max(0.0f, FullHeightCm - DoorHeightCm);
+
+    if (HeaderHeightCm > 10.0f)
+    {
+        SpawnBox(
+            ToWorld(FVector(
+                0.0f,
+                FrontY,
+                DoorHeightCm * 0.5f)),
+            FVector(
+                DoorScaleX,
+                WallThicknessScale,
+                HeaderHeightCm / 100.0f),
+            Rotation,
+            WallSurface,
+            bHasBuildingVisual);
+    }
+
+    SpawnBox(
+        ToWorld(FVector(
+            0.0f,
+            0.0f,
+            HalfHeightCm + RoofThicknessScale * 50.0f)),
+        FVector(
+            Scale.X * 1.04f,
+            Scale.Y * 1.04f,
+            RoofThicknessScale),
+        Rotation,
+        EWPEnvironmentSurface::Roof,
+        bHasBuildingVisual);
+}
+
 void AWPBattlefieldDirector::SpawnBox(
     const FVector& Location,
     const FVector& Scale,
     const FRotator& Rotation,
-    EWPEnvironmentSurface Surface)
+    EWPEnvironmentSurface Surface,
+    bool bCollisionOnly)
 {
     if (!GetWorld() || !CubeMesh)
     {
@@ -518,16 +625,7 @@ void AWPBattlefieldDirector::SpawnBox(
 
     Box->SetActorScale3D(Scale);
 
-    const bool bLargeBuildingShell =
-        Scale.Z >= 2.5f &&
-        Scale.X >= 5.0f &&
-        Scale.Y >= 4.0f &&
-        (Surface == EWPEnvironmentSurface::Plaster ||
-         Surface == EWPEnvironmentSurface::Brick ||
-         Surface == EWPEnvironmentSurface::Stone);
-
-    if (bLargeBuildingShell &&
-        SpawnBuildingVisual(Location, Scale, Rotation))
+    if (bCollisionOnly)
     {
         MeshComponent->SetVisibility(false, true);
     }
@@ -580,28 +678,28 @@ void AWPBattlefieldDirector::BuildBattlefield()
         FRotator::ZeroRotator,
         EWPEnvironmentSurface::Ground);
 
-    SpawnBox(
+    SpawnEnterableBuilding(
         FVector(-1750.0f, -500.0f, 280.0f),
         FVector(7.0f, 5.0f, 3.4f),
-        FRotator::ZeroRotator,
+        FRotator(0.0f, 8.0f, 0.0f),
         EWPEnvironmentSurface::Plaster);
 
-    SpawnBox(
+    SpawnEnterableBuilding(
         FVector(1650.0f, -1450.0f, 320.0f),
         FVector(8.0f, 6.0f, 3.8f),
-        FRotator::ZeroRotator,
+        FRotator(0.0f, -12.0f, 0.0f),
         EWPEnvironmentSurface::Brick);
 
-    SpawnBox(
+    SpawnEnterableBuilding(
         FVector(-1900.0f, -2550.0f, 260.0f),
         FVector(6.5f, 5.0f, 3.2f),
-        FRotator::ZeroRotator,
+        FRotator(0.0f, 14.0f, 0.0f),
         EWPEnvironmentSurface::Stone);
 
-    SpawnBox(
+    SpawnEnterableBuilding(
         FVector(1850.0f, -3300.0f, 300.0f),
         FVector(7.5f, 5.5f, 3.6f),
-        FRotator::ZeroRotator,
+        FRotator(0.0f, -6.0f, 0.0f),
         EWPEnvironmentSurface::Plaster);
 
     SpawnBox(
