@@ -2,6 +2,8 @@
 #include "AI/WPEnemySoldier.h"
 #include "Characters/WPSoldierCharacter.h"
 #include "Game/WPBattlefieldDirector.h"
+#include "Game/WPGameUserSettings.h"
+#include "Game/WPPlayerController.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/WPCombatHUD.h"
@@ -9,6 +11,7 @@
 AWPCombatGameMode::AWPCombatGameMode()
 {
     DefaultPawnClass = AWPEnemySoldier::StaticClass();
+    PlayerControllerClass = AWPPlayerController::StaticClass();
     HUDClass = AWPCombatHUD::StaticClass();
 }
 
@@ -19,6 +22,13 @@ void AWPCombatGameMode::StartPlay()
     if (!GetWorld())
     {
         return;
+    }
+
+    if (UWPGameUserSettings* Settings =
+        UWPGameUserSettings::Get())
+    {
+        Settings->LoadSettings(false);
+        Settings->EnsureInitialHardwareBenchmark();
     }
 
     APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
