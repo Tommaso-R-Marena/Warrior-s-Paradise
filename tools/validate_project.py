@@ -342,6 +342,17 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/Combat/WPSuppressionComponent.h", "EWPSuppressionState"),
+        ("Source/WarriorParadise/Public/Combat/WPSuppressionComponent.h", "PressedEnterThreshold".replace("Pressed", "Pressured")),
+        ("Source/WarriorParadise/Public/Combat/WPSuppressionComponent.h", "PinnedEnterThreshold"),
+        ("Source/WarriorParadise/Private/Combat/WPSuppressionComponent.cpp", "UpdateSuppressionState"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "EWPSuppressionState::Pinned"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "SuppressionAccuracy"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "FireChance = bPinned"),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "SuppressionComponent->IsPinned()"),
+        ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "PRESSURED"),
+        ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "PINNED"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "bHeadlessSuppressionStateValid"),
         ("Source/WarriorParadise/Public/Combat/WPWeaponDefinition.h", "bRequiresManualCycle"),
         ("Source/WarriorParadise/Public/Combat/WPWeaponDefinition.h", "ManualCycleDuration"),
         ("Source/WarriorParadise/Private/Combat/WPWeaponComponent.cpp", "BeginManualCycle"),
@@ -522,7 +533,7 @@ def main() -> None:
         "feedback, tracers, decals, surface impacts, enterable buildings, "
         "crewable tanks, subsystem armor damage, transports, armored cars, "
         "emplacements, scripted air support, battlefield ambience, spatial-audio, "
-        "destruction, squad, support, first-run auto benchmark and Low/Medium/High/Ultra scalability contracts checked)."
+        "destruction, squad, suppression-state behavior, support, first-run auto benchmark and Minimal/Low/Medium/High/Ultra scalability contracts checked)."
     )
 
 
