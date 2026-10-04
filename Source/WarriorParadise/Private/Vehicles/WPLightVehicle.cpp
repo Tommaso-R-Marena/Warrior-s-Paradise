@@ -169,6 +169,10 @@ void AWPLightVehicle::SetupPlayerInputComponent(
         TEXT("Turn"),
         this,
         &AWPLightVehicle::Turn);
+    PlayerInputComponent->BindAxis(
+        TEXT("MoveRight"),
+        this,
+        &AWPLightVehicle::Turn);
     PlayerInputComponent->BindAction(
         TEXT("Fire"),
         IE_Pressed,
