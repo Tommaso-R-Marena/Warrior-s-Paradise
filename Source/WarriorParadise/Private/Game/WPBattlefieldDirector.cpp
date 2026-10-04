@@ -1,9 +1,8 @@
 #include "Game/WPBattlefieldDirector.h"
+#include "AI/WPCoverPoint.h"
 #include "AI/WPEnemySoldier.h"
 #include "Characters/WPSoldierCharacter.h"
-#include "Combat/WPCombatTypes.h"
 #include "Combat/WPHealthComponent.h"
-#include "Combat/WPWeaponComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/LightComponent.h"
 #include "Components/SkyLightComponent.h"
@@ -14,8 +13,8 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
+#include "Game/WPArtilleryStrike.h"
 #include "Game/WPCaptureObjective.h"
-#include "GameFramework/Character.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -25,8 +24,11 @@
 AWPBattlefieldDirector::AWPBattlefieldDirector()
 {
     PrimaryActorTick.bCanEverTick = false;
+
     AISoldierClass = AWPEnemySoldier::StaticClass();
     ObjectiveClass = AWPCaptureObjective::StaticClass();
+    CoverPointClass = AWPCoverPoint::StaticClass();
+    ArtilleryStrikeClass = AWPArtilleryStrike::StaticClass();
 
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeAsset(TEXT("/Engine/BasicShapes/Cube.Cube"));
     if (CubeAsset.Succeeded())
@@ -40,11 +42,16 @@ void AWPBattlefieldDirector::BeginPlay()
     Super::BeginPlay();
 
     BuildBattlefield();
+    BuildCoverPoints();
 
-    if (AWPSoldierCharacter* Player = Cast<AWPSoldierCharacter>(
-        UGameplayStatics::GetPlayerCharacter(this, 0)))
+    AWPSoldierCharacter* Player = Cast<AWPSoldierCharacter>(
+        UGameplayStatics::GetPlayerCharacter(this, 0));
+
+    if (Player)
     {
         Player->SetCombatTeam(EWPCombatTeam::Allies);
+        Player->SetSoldierRole(EWPSoldierRole::Rifleman);
+        Player->GetHealthComponent()->SetCanBeDowned(true);
 
         const FRotator StartRotation(0.0f, -90.0f, 0.0f);
         Player->SetActorLocationAndRotation(
@@ -58,9 +65,12 @@ void AWPBattlefieldDirector::BeginPlay()
         {
             Controller->SetControlRotation(StartRotation);
         }
+
+        FriendlySoldiersAlive = 1;
     }
 
     BuildObjectives();
+    SquadOrderLocation = GetActiveObjectiveLocation();
     SpawnFriendlySquad();
     SpawnWave();
 }
@@ -80,7 +90,85 @@ float AWPBattlefieldDirector::GetActiveObjectiveProgress() const
     return bBattleWon ? 1.0f : 0.0f;
 }
 
-void AWPBattlefieldDirector::SpawnBox(const FVector& Location, const FVector& Scale, const FRotator& Rotation)
+FVector AWPBattlefieldDirector::GetActiveObjectiveLocation() const
+{
+    if (Objectives.IsValidIndex(ActiveObjectiveIndex) && Objectives[ActiveObjectiveIndex])
+    {
+        return Objectives[ActiveObjectiveIndex]->GetActorLocation();
+    }
+
+    return FVector::ZeroVector;
+}
+
+float AWPBattlefieldDirector::GetArtilleryCooldownRemaining() const
+{
+    if (!GetWorld())
+    {
+        return 0.0f;
+    }
+
+    return FMath::Max(0.0f, NextArtilleryAvailableTime - GetWorld()->GetTimeSeconds());
+}
+
+void AWPBattlefieldDirector::IssueSquadOrder(EWPSquadOrder NewOrder, const FVector& OrderLocation)
+{
+    if (bBattleWon || bBattleLost)
+    {
+        return;
+    }
+
+    CurrentSquadOrder = NewOrder;
+
+    if (NewOrder == EWPSquadOrder::AttackObjective)
+    {
+        SquadOrderLocation = GetActiveObjectiveLocation();
+    }
+    else
+    {
+        SquadOrderLocation = OrderLocation;
+    }
+}
+
+bool AWPBattlefieldDirector::RequestArtillery(
+    AWPSoldierCharacter* Caller,
+    const FVector& TargetLocation)
+{
+    if (!Caller ||
+        !GetWorld() ||
+        !ArtilleryStrikeClass ||
+        Caller->GetCombatTeam() != EWPCombatTeam::Allies ||
+        !Caller->IsCombatCapable() ||
+        ArtilleryCharges <= 0 ||
+        GetArtilleryCooldownRemaining() > 0.0f ||
+        bBattleWon ||
+        bBattleLost)
+    {
+        return false;
+    }
+
+    if (FVector::DistSquared2D(Caller->GetActorLocation(), TargetLocation) > FMath::Square(9000.0f))
+    {
+        return false;
+    }
+
+    if (AWPArtilleryStrike* Strike = GetWorld()->SpawnActor<AWPArtilleryStrike>(
+        ArtilleryStrikeClass,
+        TargetLocation,
+        FRotator::ZeroRotator))
+    {
+        Strike->InitializeStrike(TargetLocation, EWPCombatTeam::Allies);
+        --ArtilleryCharges;
+        NextArtilleryAvailableTime = GetWorld()->GetTimeSeconds() + ArtilleryCooldownSeconds;
+        return true;
+    }
+
+    return false;
+}
+
+void AWPBattlefieldDirector::SpawnBox(
+    const FVector& Location,
+    const FVector& Scale,
+    const FRotator& Rotation)
 {
     if (!GetWorld() || !CubeMesh)
     {
@@ -153,6 +241,46 @@ void AWPBattlefieldDirector::BuildBattlefield()
     }
 }
 
+void AWPBattlefieldDirector::SpawnCoverPoint(
+    const FVector& Location,
+    const FVector& CoverNormal,
+    float Quality)
+{
+    if (!GetWorld() || !CoverPointClass)
+    {
+        return;
+    }
+
+    if (AWPCoverPoint* CoverPoint = GetWorld()->SpawnActor<AWPCoverPoint>(
+        CoverPointClass,
+        Location,
+        CoverNormal.Rotation()))
+    {
+        CoverPoint->InitializeCover(CoverNormal, Quality);
+        CoverPoints.Add(CoverPoint);
+    }
+}
+
+void AWPBattlefieldDirector::BuildCoverPoints()
+{
+    SpawnCoverPoint(FVector(-1000.0f, 1050.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.2f);
+    SpawnCoverPoint(FVector(-200.0f, 1050.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.1f);
+    SpawnCoverPoint(FVector(650.0f, 1050.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.1f);
+
+    SpawnCoverPoint(FVector(-1050.0f, -950.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.2f);
+    SpawnCoverPoint(FVector(250.0f, -950.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.0f);
+    SpawnCoverPoint(FVector(1050.0f, -950.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.15f);
+
+    SpawnCoverPoint(FVector(-1400.0f, -2750.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.35f);
+    SpawnCoverPoint(FVector(-450.0f, -2750.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.15f);
+    SpawnCoverPoint(FVector(550.0f, -2750.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.15f);
+    SpawnCoverPoint(FVector(1450.0f, -2750.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.35f);
+
+    SpawnCoverPoint(FVector(-1200.0f, -3900.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.1f);
+    SpawnCoverPoint(FVector(0.0f, -3900.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.0f);
+    SpawnCoverPoint(FVector(1200.0f, -3900.0f, 95.0f), FVector(0.0f, 1.0f, 0.0f), 1.1f);
+}
+
 void AWPBattlefieldDirector::BuildObjectives()
 {
     if (!GetWorld() || !ObjectiveClass)
@@ -182,13 +310,48 @@ void AWPBattlefieldDirector::BuildObjectives()
     }
 }
 
-void AWPBattlefieldDirector::SpawnFriendlySquad()
+AWPSoldierCharacter* AWPBattlefieldDirector::SpawnFriendlySoldier(
+    const FVector& Location,
+    EWPSoldierRole Role,
+    APlayerController* ControllerToPossess)
 {
     if (!GetWorld() || !AISoldierClass)
     {
-        return;
+        return nullptr;
     }
 
+    const FTransform SpawnTransform(FRotator(0.0f, -90.0f, 0.0f), Location);
+
+    AWPEnemySoldier* Soldier = GetWorld()->SpawnActorDeferred<AWPEnemySoldier>(
+        AISoldierClass,
+        SpawnTransform,
+        nullptr,
+        nullptr,
+        ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn);
+
+    if (!Soldier)
+    {
+        return nullptr;
+    }
+
+    Soldier->SetCombatTeam(EWPCombatTeam::Allies);
+    Soldier->SetSoldierRole(Role);
+    Soldier->FinishSpawning(SpawnTransform);
+
+    FriendlySquad.Add(Soldier);
+    ++FriendlySoldiersAlive;
+
+    if (ControllerToPossess)
+    {
+        ControllerToPossess->Possess(Soldier);
+        ControllerToPossess->SetControlRotation(Soldier->GetActorRotation());
+    }
+
+    return Soldier;
+}
+
+void AWPBattlefieldDirector::SpawnFriendlySquad()
+{
     static const FVector Offsets[] =
     {
         FVector(-260.0f, 80.0f, 0.0f),
@@ -198,37 +361,131 @@ void AWPBattlefieldDirector::SpawnFriendlySquad()
         FVector(0.0f, 430.0f, 0.0f)
     };
 
-    FriendlySoldiersAlive = 0;
-
-    for (const FVector& Offset : Offsets)
+    static const EWPSoldierRole Roles[] =
     {
-        const FTransform SpawnTransform(
-            FRotator(0.0f, -90.0f, 0.0f),
-            FVector(0.0f, 2850.0f, 120.0f) + Offset);
+        EWPSoldierRole::Rifleman,
+        EWPSoldierRole::Assault,
+        EWPSoldierRole::Medic,
+        EWPSoldierRole::Engineer,
+        EWPSoldierRole::Rifleman
+    };
 
-        if (AWPEnemySoldier* Soldier = GetWorld()->SpawnActorDeferred<AWPEnemySoldier>(
-            AISoldierClass,
-            SpawnTransform,
-            nullptr,
-            nullptr,
-            ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn))
+    const FVector BaseSpawn(0.0f, 2850.0f, 120.0f);
+
+    for (int32 Index = 0; Index < UE_ARRAY_COUNT(Offsets); ++Index)
+    {
+        SpawnFriendlySoldier(BaseSpawn + Offsets[Index], Roles[Index]);
+    }
+}
+
+FVector AWPBattlefieldDirector::GetFriendlySpawnLocation() const
+{
+    static const FVector SpawnAnchors[] =
+    {
+        FVector(0.0f, 2850.0f, 120.0f),
+        FVector(0.0f, 1650.0f, 120.0f),
+        FVector(0.0f, -450.0f, 120.0f),
+        FVector(0.0f, -2600.0f, 120.0f)
+    };
+
+    const int32 SpawnIndex = FMath::Clamp(ActiveObjectiveIndex, 0, UE_ARRAY_COUNT(SpawnAnchors) - 1);
+    const FVector Jitter(FMath::FRandRange(-320.0f, 320.0f), FMath::FRandRange(-180.0f, 180.0f), 0.0f);
+    return SpawnAnchors[SpawnIndex] + Jitter;
+}
+
+void AWPBattlefieldDirector::QueueFriendlyReplacement(APlayerController* ControllerNeedingPawn)
+{
+    if (AlliedTickets <= 0 || bBattleWon || bBattleLost || !GetWorld())
+    {
+        if (ControllerNeedingPawn && FriendlySoldiersAlive <= 0)
         {
-            Soldier->SetCombatTeam(EWPCombatTeam::Allies);
-            Soldier->FinishSpawning(SpawnTransform);
-            FriendlySquad.Add(Soldier);
-            ++FriendlySoldiersAlive;
+            bBattleLost = true;
         }
+        return;
+    }
+
+    ++PendingFriendlyReplacements;
+
+    if (ControllerNeedingPawn)
+    {
+        PendingPlayerRespawnController = ControllerNeedingPawn;
+    }
+
+    if (!GetWorld()->GetTimerManager().IsTimerActive(FriendlyReplacementTimer))
+    {
+        GetWorld()->GetTimerManager().SetTimer(
+            FriendlyReplacementTimer,
+            this,
+            &AWPBattlefieldDirector::SpawnQueuedFriendlyReplacement,
+            FriendlyReplacementDelay,
+            false);
+    }
+}
+
+void AWPBattlefieldDirector::SpawnQueuedFriendlyReplacement()
+{
+    if (PendingFriendlyReplacements <= 0 || AlliedTickets <= 0 || bBattleWon || bBattleLost)
+    {
+        if (FriendlySoldiersAlive <= 0 && AlliedTickets <= 0)
+        {
+            bBattleLost = true;
+        }
+        return;
+    }
+
+    static const EWPSoldierRole ReplacementRoles[] =
+    {
+        EWPSoldierRole::Rifleman,
+        EWPSoldierRole::Assault,
+        EWPSoldierRole::Medic,
+        EWPSoldierRole::Engineer
+    };
+
+    const EWPSoldierRole Role = ReplacementRoles[
+        ReplacementRoleCursor % UE_ARRAY_COUNT(ReplacementRoles)];
+    ++ReplacementRoleCursor;
+
+    APlayerController* RespawnController = PendingPlayerRespawnController.Get();
+    AWPSoldierCharacter* Replacement = SpawnFriendlySoldier(
+        GetFriendlySpawnLocation(),
+        Role,
+        RespawnController);
+
+    if (Replacement)
+    {
+        --AlliedTickets;
+        --PendingFriendlyReplacements;
+
+        if (RespawnController)
+        {
+            PendingPlayerRespawnController.Reset();
+        }
+    }
+
+    if (PendingFriendlyReplacements > 0 && AlliedTickets > 0 && GetWorld())
+    {
+        GetWorld()->GetTimerManager().SetTimer(
+            FriendlyReplacementTimer,
+            this,
+            &AWPBattlefieldDirector::SpawnQueuedFriendlyReplacement,
+            FriendlyReplacementDelay,
+            false);
     }
 }
 
 void AWPBattlefieldDirector::SpawnWave()
 {
+    if (AxisTickets <= 0)
+    {
+        return;
+    }
+
     SpawnEnemyGroup(FMath::Min(6 + Wave * 2, 20), true);
 }
 
 void AWPBattlefieldDirector::SpawnEnemyGroup(int32 Count, bool bResetEnemyCounter)
 {
-    if (!GetWorld() || !AISoldierClass || Count <= 0)
+    if (!GetWorld() || !AISoldierClass || Count <= 0 || AxisTickets <= 0)
     {
         return;
     }
@@ -246,12 +503,23 @@ void AWPBattlefieldDirector::SpawnEnemyGroup(int32 Count, bool bResetEnemyCounte
         FVector(3600.0f, -900.0f, 120.0f)
     };
 
+    static const EWPSoldierRole EnemyRoles[] =
+    {
+        EWPSoldierRole::Rifleman,
+        EWPSoldierRole::Rifleman,
+        EWPSoldierRole::Assault,
+        EWPSoldierRole::Medic,
+        EWPSoldierRole::Engineer
+    };
+
     if (bResetEnemyCounter)
     {
         RemainingEnemies = 0;
     }
 
-    for (int32 Index = 0; Index < Count; ++Index)
+    const int32 ActualCount = FMath::Min(Count, AxisTickets);
+
+    for (int32 Index = 0; Index < ActualCount; ++Index)
     {
         const FVector Base = SpawnPoints[Index % UE_ARRAY_COUNT(SpawnPoints)];
         const FVector Jitter(
@@ -271,8 +539,10 @@ void AWPBattlefieldDirector::SpawnEnemyGroup(int32 Count, bool bResetEnemyCounte
             ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn))
         {
             Enemy->SetCombatTeam(EWPCombatTeam::Axis);
+            Enemy->SetSoldierRole(EnemyRoles[Index % UE_ARRAY_COUNT(EnemyRoles)]);
             Enemy->FinishSpawning(SpawnTransform);
             ++RemainingEnemies;
+            --AxisTickets;
         }
     }
 }
@@ -286,14 +556,28 @@ void AWPBattlefieldDirector::NotifySoldierKilled(AWPSoldierCharacter* Soldier)
 
     if (Soldier->GetCombatTeam() == EWPCombatTeam::Allies)
     {
-        if (FriendlySquad.Contains(Soldier))
+        const bool bWasPlayerControlled = Soldier->IsPlayerControlled();
+        APlayerController* FallenController = bWasPlayerControlled
+            ? Cast<APlayerController>(Soldier->GetController())
+            : nullptr;
+
+        FriendlySquad.Remove(Soldier);
+        FriendlySoldiersAlive = FMath::Max(0, FriendlySoldiersAlive - 1);
+
+        bool bTransferred = false;
+        if (bWasPlayerControlled)
         {
-            FriendlySoldiersAlive = FMath::Max(0, FriendlySoldiersAlive - 1);
+            bTransferred = TransferPlayerControl(Soldier);
         }
 
-        if (Soldier->IsPlayerControlled())
+        QueueFriendlyReplacement(
+            bWasPlayerControlled && !bTransferred
+                ? FallenController
+                : nullptr);
+
+        if (FriendlySoldiersAlive <= 0 && AlliedTickets <= 0)
         {
-            TransferPlayerControl(Soldier);
+            bBattleLost = true;
         }
 
         return;
@@ -310,6 +594,11 @@ void AWPBattlefieldDirector::NotifySoldierKilled(AWPSoldierCharacter* Soldier)
     if (bFinalCounterattack)
     {
         bBattleWon = true;
+        return;
+    }
+
+    if (AxisTickets <= 0)
+    {
         return;
     }
 
@@ -338,14 +627,23 @@ void AWPBattlefieldDirector::HandleObjectiveCaptured(AWPCaptureObjective* Object
     {
         ++ActiveObjectiveIndex;
         Objectives[ActiveObjectiveIndex]->SetObjectiveActive(true);
+        SquadOrderLocation = GetActiveObjectiveLocation();
         ++Wave;
-        SpawnEnemyGroup(4 + ActiveObjectiveIndex * 2, false);
+
+        if (AxisTickets > 0)
+        {
+            SpawnEnemyGroup(4 + ActiveObjectiveIndex * 2, false);
+        }
         return;
     }
 
     bFinalCounterattack = true;
     ++Wave;
-    SpawnEnemyGroup(12, false);
+
+    if (AxisTickets > 0)
+    {
+        SpawnEnemyGroup(12, false);
+    }
 
     if (RemainingEnemies == 0)
     {
@@ -353,17 +651,17 @@ void AWPBattlefieldDirector::HandleObjectiveCaptured(AWPCaptureObjective* Object
     }
 }
 
-void AWPBattlefieldDirector::TransferPlayerControl(AWPSoldierCharacter* FallenSoldier)
+bool AWPBattlefieldDirector::TransferPlayerControl(AWPSoldierCharacter* FallenSoldier)
 {
     if (!FallenSoldier)
     {
-        return;
+        return false;
     }
 
     APlayerController* PlayerController = Cast<APlayerController>(FallenSoldier->GetController());
     if (!PlayerController)
     {
-        return;
+        return false;
     }
 
     AWPSoldierCharacter* BestCandidate = nullptr;
@@ -373,8 +671,7 @@ void AWPBattlefieldDirector::TransferPlayerControl(AWPSoldierCharacter* FallenSo
     {
         if (!Candidate ||
             Candidate == FallenSoldier ||
-            !Candidate->GetHealthComponent() ||
-            Candidate->GetHealthComponent()->IsDead())
+            !Candidate->IsCombatCapable())
         {
             continue;
         }
@@ -392,18 +689,17 @@ void AWPBattlefieldDirector::TransferPlayerControl(AWPSoldierCharacter* FallenSo
 
     if (!BestCandidate)
     {
-        return;
+        return false;
     }
 
     PlayerController->Possess(BestCandidate);
-    BestCandidate->GetWeaponComponent()->Configure(34.0f, 540.0f, 1.15f);
-    BestCandidate->GetWeaponComponent()->SetAiming(false);
     PlayerController->SetControlRotation(BestCandidate->GetActorRotation());
+    return true;
 }
 
 void AWPBattlefieldDirector::SpawnNextWave()
 {
-    if (bBattleWon || bFinalCounterattack)
+    if (bBattleWon || bBattleLost || bFinalCounterattack || AxisTickets <= 0)
     {
         return;
     }
