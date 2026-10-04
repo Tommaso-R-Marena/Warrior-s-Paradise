@@ -29,6 +29,7 @@ import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
 from typing import Any, Iterable
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -124,6 +125,48 @@ def stream_download(
         "bytes": destination.stat().st_size,
         "downloaded": True,
     }
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while True:
+            chunk = handle.read(1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def safe_extract_zip(archive: Path, destination: Path) -> list[dict[str, Any]]:
+    destination.mkdir(parents=True, exist_ok=True)
+    destination_root = destination.resolve()
+    extracted: list[dict[str, Any]] = []
+
+    with zipfile.ZipFile(archive) as bundle:
+        for member in bundle.infolist():
+            if member.is_dir():
+                continue
+
+            member_path = (destination / member.filename).resolve()
+            if destination_root not in member_path.parents:
+                raise RuntimeError(
+                    f"unsafe path in archive {archive.name}: {member.filename}"
+                )
+
+            member_path.parent.mkdir(parents=True, exist_ok=True)
+            with bundle.open(member) as source, member_path.open("wb") as target:
+                shutil.copyfileobj(source, target)
+
+            extracted.append(
+                {
+                    "path": str(member_path.relative_to(ROOT)),
+                    "sha256": file_sha256(member_path),
+                    "bytes": member_path.stat().st_size,
+                }
+            )
+
+    return extracted
 
 
 def normalized_words(value: str) -> set[str]:
@@ -513,6 +556,22 @@ def bootstrap_direct_cc0(
             dry_run=dry_run,
         )
 
+        extracted_files: list[dict[str, Any]] = []
+        if (
+            asset.get("extract_zip")
+            and destination.suffix.lower() == ".zip"
+            and not dry_run
+        ):
+            extract_destination = destination.parent / "extracted"
+            print(
+                f"[direct-cc0] extracting {destination.name} -> "
+                f"{extract_destination.relative_to(ROOT)}"
+            )
+            extracted_files = safe_extract_zip(
+                destination,
+                extract_destination,
+            )
+
         entry = {
             "id": asset["id"],
             "name": asset["name"],
@@ -520,6 +579,7 @@ def bootstrap_direct_cc0(
             "license": asset["license"],
             "source_url": asset["page_url"],
             "files": [file_record],
+            "extracted_files": extracted_files,
             "purpose": asset.get("purpose"),
         }
         lock["assets"][f"direct:{asset['id']}"] = entry
