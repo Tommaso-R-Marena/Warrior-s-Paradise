@@ -6,6 +6,11 @@
 #include "Engine/PointLight.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "Presentation/WPExplosionPresentationProfile.h"
+#include "Sound/SoundAttenuation.h"
+#include "Sound/SoundBase.h"
 #include "TimerManager.h"
 #include "Vehicles/WPArmoredVehicle.h"
 #include "World/WPDestructibleCover.h"
@@ -150,6 +155,43 @@ void AWPArtilleryStrike::FireImpact()
             Light->SetAttenuationRadius(1500.0f);
             Light->SetLightColor(FLinearColor(1.0f, 0.55f, 0.22f));
             Light->SetCastShadows(false);
+        }
+    }
+
+    if (PresentationProfile)
+    {
+        if (UNiagaraSystem* System =
+            PresentationProfile->ExplosionEffect.LoadSynchronous())
+        {
+            UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                this,
+                System,
+                ImpactLocation,
+                FRotator::ZeroRotator,
+                PresentationProfile->EffectScale,
+                true,
+                true,
+                ENCPoolMethod::AutoRelease,
+                true);
+        }
+
+        if (USoundBase* Sound =
+            PresentationProfile->ExplosionSound.LoadSynchronous())
+        {
+            const float Pitch = 1.0f + FMath::FRandRange(
+                -PresentationProfile->PitchRandomization,
+                PresentationProfile->PitchRandomization);
+
+            UGameplayStatics::PlaySoundAtLocation(
+                this,
+                Sound,
+                ImpactLocation,
+                PresentationProfile->Volume,
+                Pitch,
+                0.0f,
+                PresentationProfile->Attenuation.LoadSynchronous(),
+                nullptr,
+                nullptr);
         }
     }
 
