@@ -26,16 +26,22 @@
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInterface.h"
 #include "Sound/SoundBase.h"
+#include "Presentation/WPAirSupportVisualProfile.h"
 #include "Presentation/WPBattlePresentationSet.h"
+#include "Presentation/WPEmplacementVisualProfile.h"
 #include "Presentation/WPEnvironmentVisualProfile.h"
 #include "Presentation/WPExplosionPresentationProfile.h"
 #include "Presentation/WPInfantryLoadoutProfile.h"
+#include "Presentation/WPLightVehicleVisualProfile.h"
 #include "Presentation/WPSmokePresentationProfile.h"
 #include "Presentation/WPVehicleVisualProfile.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Vehicles/WPAirSupportAircraft.h"
 #include "Vehicles/WPArmoredVehicle.h"
+#include "Vehicles/WPLightVehicle.h"
 #include "World/WPDestructibleCover.h"
+#include "World/WPGunEmplacement.h"
 
 AWPBattlefieldDirector::AWPBattlefieldDirector()
 {
@@ -46,6 +52,9 @@ AWPBattlefieldDirector::AWPBattlefieldDirector()
     CoverPointClass = AWPCoverPoint::StaticClass();
     ArtilleryStrikeClass = AWPArtilleryStrike::StaticClass();
     ArmoredVehicleClass = AWPArmoredVehicle::StaticClass();
+    LightVehicleClass = AWPLightVehicle::StaticClass();
+    GunEmplacementClass = AWPGunEmplacement::StaticClass();
+    AirSupportClass = AWPAirSupportAircraft::StaticClass();
 
     BattlePresentationSetAsset = TSoftObjectPtr<UWPBattlePresentationSet>(
         FSoftObjectPath(TEXT(
@@ -110,7 +119,10 @@ void AWPBattlefieldDirector::BeginPlay()
     BuildObjectives();
     SquadOrderLocation = GetActiveObjectiveLocation();
     SpawnFriendlySquad();
+    SpawnInitialCombinedArms();
+    SpawnDefensiveEmplacements();
     SpawnWave();
+    ScheduleAmbientFlyby();
 }
 
 int32 AWPBattlefieldDirector::GetActiveObjectiveNumber() const
@@ -195,6 +207,19 @@ float AWPBattlefieldDirector::GetArtilleryCooldownRemaining() const
     return FMath::Max(0.0f, NextArtilleryAvailableTime - GetWorld()->GetTimeSeconds());
 }
 
+float AWPBattlefieldDirector::GetAirSupportCooldownRemaining() const
+{
+    if (!GetWorld())
+    {
+        return 0.0f;
+    }
+
+    return FMath::Max(
+        0.0f,
+        NextAirSupportAvailableTime -
+            GetWorld()->GetTimeSeconds());
+}
+
 void AWPBattlefieldDirector::IssueSquadOrder(EWPSquadOrder NewOrder, const FVector& OrderLocation)
 {
     if (bBattleWon || bBattleLost)
@@ -212,6 +237,83 @@ void AWPBattlefieldDirector::IssueSquadOrder(EWPSquadOrder NewOrder, const FVect
     {
         SquadOrderLocation = OrderLocation;
     }
+}
+
+bool AWPBattlefieldDirector::RequestAirSupport(
+    AWPSoldierCharacter* Caller,
+    const FVector& TargetLocation)
+{
+    if (!Caller ||
+        Caller->GetCombatTeam() != EWPCombatTeam::Allies ||
+        !Caller->IsCombatCapable() ||
+        !GetWorld() ||
+        bBattleWon ||
+        bBattleLost ||
+        AirSupportCharges <= 0)
+    {
+        return false;
+    }
+
+    const float Time = GetWorld()->GetTimeSeconds();
+    if (Time < NextAirSupportAvailableTime)
+    {
+        return false;
+    }
+
+    bool bArmorNearTarget = false;
+
+    for (TActorIterator<AWPArmoredVehicle> It(GetWorld()); It; ++It)
+    {
+        const AWPArmoredVehicle* Vehicle = *It;
+        if (Vehicle &&
+            Vehicle->GetCombatTeam() == EWPCombatTeam::Axis &&
+            !Vehicle->IsDestroyed() &&
+            FVector::DistSquared2D(
+                TargetLocation,
+                Vehicle->GetActorLocation()) <=
+                FMath::Square(1250.0f))
+        {
+            bArmorNearTarget = true;
+            break;
+        }
+    }
+
+    if (!bArmorNearTarget)
+    {
+        for (TActorIterator<AWPLightVehicle> It(GetWorld()); It; ++It)
+        {
+            const AWPLightVehicle* Vehicle = *It;
+            if (Vehicle &&
+                Vehicle->GetCombatTeam() == EWPCombatTeam::Axis &&
+                !Vehicle->IsDestroyed() &&
+                FVector::DistSquared2D(
+                    TargetLocation,
+                    Vehicle->GetActorLocation()) <=
+                    FMath::Square(1250.0f))
+            {
+                bArmorNearTarget = true;
+                break;
+            }
+        }
+    }
+
+    const EWPAirSupportMission Mission =
+        bArmorNearTarget
+            ? EWPAirSupportMission::Bombing
+            : EWPAirSupportMission::Strafe;
+
+    if (!SpawnAirSupport(
+        EWPCombatTeam::Allies,
+        TargetLocation,
+        Mission))
+    {
+        return false;
+    }
+
+    --AirSupportCharges;
+    NextAirSupportAvailableTime =
+        Time + AirSupportCooldownSeconds;
+    return true;
 }
 
 void AWPBattlefieldDirector::ReportEnemyContact(
