@@ -727,7 +727,7 @@ void AWPBattlefieldDirector::HandleObjectiveCaptured(AWPCaptureObjective* Object
         {
             bAlliedArmorSpawned = SpawnArmoredVehicle(
                 EWPCombatTeam::Allies,
-                FVector(2350.0f, -450.0f, 110.0f),
+                FVector(2350.0f, -450.0f, 76.0f),
                 FRotator(0.0f, -115.0f, 0.0f)) != nullptr;
         }
 
@@ -750,7 +750,7 @@ void AWPBattlefieldDirector::HandleObjectiveCaptured(AWPCaptureObjective* Object
     {
         bAxisArmorSpawned = SpawnArmoredVehicle(
             EWPCombatTeam::Axis,
-            FVector(-2350.0f, -4850.0f, 110.0f),
+            FVector(-2350.0f, -4850.0f, 76.0f),
             FRotator(0.0f, 65.0f, 0.0f)) != nullptr;
     }
 
