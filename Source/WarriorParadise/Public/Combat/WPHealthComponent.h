@@ -14,6 +14,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPDownedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPRevivedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPDeathSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FWPBleedingChangedSignature,
+    bool,
+    bBleeding,
+    float,
+    Severity);
 
 UCLASS(ClassGroup=(Combat), meta=(BlueprintSpawnableComponent))
 class WARRIORPARADISE_API UWPHealthComponent : public UActorComponent
@@ -38,6 +44,9 @@ public:
     UPROPERTY(BlueprintAssignable, Category="Health")
     FWPDeathSignature OnDeath;
 
+    UPROPERTY(BlueprintAssignable, Category="Health|Wounds")
+    FWPBleedingChangedSignature OnBleedingChanged;
+
     UFUNCTION(BlueprintPure, Category="Health")
     float GetHealth() const { return Health; }
 
@@ -55,6 +64,15 @@ public:
 
     UFUNCTION(BlueprintPure, Category="Health")
     float GetBleedoutRemaining() const;
+
+    UFUNCTION(BlueprintPure, Category="Health|Wounds")
+    bool IsBleeding() const { return bBleeding; }
+
+    UFUNCTION(BlueprintPure, Category="Health|Wounds")
+    float GetBleedingSeverity() const { return BleedingSeverity; }
+
+    UFUNCTION(BlueprintCallable, Category="Health|Wounds")
+    bool StopBleeding();
 
     UFUNCTION(BlueprintPure, Category="Health")
     bool CanBeDowned() const { return bCanBeDowned; }
@@ -93,6 +111,36 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="Health|Downed")
     bool bCanBeDowned = true;
 
+    UPROPERTY(
+        EditDefaultsOnly,
+        Category="Health|Wounds",
+        meta=(ClampMin="1.0"))
+    float BleedingDamageThreshold = 28.0f;
+
+    UPROPERTY(
+        EditDefaultsOnly,
+        Category="Health|Wounds",
+        meta=(ClampMin="1.0"))
+    float SevereBleedingDamageThreshold = 60.0f;
+
+    UPROPERTY(
+        EditDefaultsOnly,
+        Category="Health|Wounds",
+        meta=(ClampMin="0.0", ClampMax="1.0"))
+    float LowHealthBleedingThreshold = 0.48f;
+
+    UPROPERTY(
+        EditDefaultsOnly,
+        Category="Health|Wounds",
+        meta=(ClampMin="0.1"))
+    float BleedingDamagePerSecond = 2.4f;
+
+    UPROPERTY(
+        EditDefaultsOnly,
+        Category="Health|Wounds",
+        meta=(ClampMin="0.1"))
+    float BleedingTickSeconds = 1.0f;
+
     UPROPERTY(VisibleInstanceOnly, Category="Health")
     float Health = 100.0f;
 
@@ -102,7 +150,14 @@ private:
     UPROPERTY(VisibleInstanceOnly, Category="Health")
     bool bDead = false;
 
+    UPROPERTY(VisibleInstanceOnly, Category="Health|Wounds")
+    bool bBleeding = false;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Health|Wounds")
+    float BleedingSeverity = 0.0f;
+
     FTimerHandle BleedoutTimerHandle;
+    FTimerHandle BleedingTimerHandle;
 
     UFUNCTION()
     void HandleTakeAnyDamage(
@@ -112,6 +167,8 @@ private:
         AController* InstigatedBy,
         AActor* DamageCauser);
 
+    void TryStartBleedingFromDamage(float Damage);
+    void TickBleeding();
     void EnterDownedState();
     void FinalizeDeath();
 };
