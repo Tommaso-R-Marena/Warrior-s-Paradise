@@ -183,6 +183,8 @@ void AWPBallisticProjectile::HandleHit(
         return;
     }
 
+    OnImpact.Broadcast(Hit.ImpactPoint, Hit.ImpactNormal, OtherActor);
+
     if (AWPSoldierCharacter* Soldier = Cast<AWPSoldierCharacter>(OtherActor))
     {
         if (Soldier->GetCombatTeam() == ProjectileTeam)
