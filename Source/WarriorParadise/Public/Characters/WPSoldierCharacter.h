@@ -14,6 +14,8 @@ class UWPHealthComponent;
 class UWPSuppressionComponent;
 class UWPWeaponComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPSoldierSimpleEventSignature);
+
 UCLASS()
 class WARRIORPARADISE_API AWPSoldierCharacter : public ACharacter
 {
@@ -58,6 +60,21 @@ public:
     UFUNCTION(BlueprintPure, Category="Combat")
     int32 GetSmokeGrenadesRemaining() const { return SmokeGrenadesRemaining; }
 
+    UFUNCTION(BlueprintPure, Category="Combat")
+    int32 GetMedkitsRemaining() const { return MedkitsRemaining; }
+
+    UFUNCTION(BlueprintPure, Category="Combat")
+    bool IsBandaging() const { return bBandaging; }
+
+    UPROPERTY(BlueprintAssignable, Category="Combat|Presentation")
+    FWPSoldierSimpleEventSignature OnMeleeAttack;
+
+    UPROPERTY(BlueprintAssignable, Category="Combat|Presentation")
+    FWPSoldierSimpleEventSignature OnBandageStarted;
+
+    UPROPERTY(BlueprintAssignable, Category="Combat|Presentation")
+    FWPSoldierSimpleEventSignature OnBandageCompleted;
+
     UFUNCTION(BlueprintPure, Category="Movement")
     float GetStaminaNormalized() const
     {
@@ -78,6 +95,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Combat")
     bool TryReviveSoldier(AWPSoldierCharacter* Target);
+
+    UFUNCTION(BlueprintCallable, Category="Combat")
+    bool TryMeleeAttack(AWPSoldierCharacter* Target);
 
 protected:
     virtual void BeginPlay() override;
@@ -124,6 +144,24 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category="Combat|Interaction", meta=(ClampMin="50.0"))
     float ReviveInteractionRange = 225.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Melee", meta=(ClampMin="1.0"))
+    float MeleeDamage = 65.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Melee", meta=(ClampMin="50.0"))
+    float MeleeRange = 185.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Melee", meta=(ClampMin="0.1"))
+    float MeleeCooldownSeconds = 0.85f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Medicine", meta=(ClampMin="0"))
+    int32 MedkitsRemaining = 1;
+
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Medicine", meta=(ClampMin="0.1"))
+    float BandageDurationSeconds = 2.6f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Medicine", meta=(ClampMin="1.0"))
+    float BandageHealAmount = 52.0f;
 
     UPROPERTY(EditDefaultsOnly, Category="Movement")
     float WalkSpeed = 470.0f;
@@ -191,9 +229,12 @@ private:
     bool bAiming = false;
     bool bSprinting = false;
     bool bProne = false;
+    bool bBandaging = false;
     float LastSprintActivityTime = -1000.0f;
     float PendingRecoilPitch = 0.0f;
     float PendingRecoilYaw = 0.0f;
+    float NextMeleeTime = 0.0f;
+    FTimerHandle BandageTimerHandle;
 
     const FVector HipBodyLocation = FVector(45.0f, 18.0f, -18.0f);
     const FVector AimBodyLocation = FVector(45.0f, 0.0f, -12.5f);
@@ -203,6 +244,14 @@ private:
     void ApplyRoleLoadout();
     AWPBattlefieldDirector* GetBattlefieldDirector() const;
     bool GetViewTarget(FVector& OutTargetLocation, float MaxRangeCm = 10000.0f) const;
+
+    void StartFireInput();
+    void StopFireInput();
+    void ReloadInput();
+    void MeleeInput();
+    void StartBandage();
+    void FinishBandage();
+    void CancelBandage();
 
     void MoveForward(float Value);
     void MoveRight(float Value);
