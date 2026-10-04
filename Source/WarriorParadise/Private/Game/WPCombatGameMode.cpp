@@ -1,6 +1,7 @@
 #include "Game/WPCombatGameMode.h"
 #include "AI/WPEnemySoldier.h"
 #include "Characters/WPSoldierCharacter.h"
+#include "Combat/WPHealthComponent.h"
 #include "Combat/WPSuppressionComponent.h"
 #include "Game/WPBattlefieldDirector.h"
 #include "Game/WPGameUserSettings.h"
