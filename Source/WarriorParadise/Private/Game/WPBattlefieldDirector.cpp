@@ -3,9 +3,13 @@
 #include "AI/WPEnemySoldier.h"
 #include "Characters/WPSoldierCharacter.h"
 #include "Combat/WPHealthComponent.h"
+#include "Components/AudioComponent.h"
+#include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/LightComponent.h"
+#include "Components/SkyAtmosphereComponent.h"
 #include "Components/SkyLightComponent.h"
+#include "Components/VolumetricCloudComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/ExponentialHeightFog.h"
@@ -21,6 +25,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInterface.h"
+#include "Sound/SoundBase.h"
 #include "Presentation/WPBattlePresentationSet.h"
 #include "Presentation/WPEnvironmentVisualProfile.h"
 #include "Presentation/WPExplosionPresentationProfile.h"
@@ -844,21 +849,85 @@ void AWPBattlefieldDirector::BuildBattlefield()
         FRotator::ZeroRotator,
         EWPEnvironmentSurface::Concrete);
 
+    BuildAtmosphere();
+    StartEnvironmentAudio();
+}
+
+void AWPBattlefieldDirector::BuildAtmosphere()
+{
+    if (!GetWorld())
+    {
+        return;
+    }
+
+    ASkyAtmosphere* Atmosphere =
+        GetWorld()->SpawnActor<ASkyAtmosphere>(
+            FVector::ZeroVector,
+            FRotator::ZeroRotator);
+
     ADirectionalLight* Sun = GetWorld()->SpawnActor<ADirectionalLight>(
         FVector::ZeroVector,
         FRotator(-38.0f, -28.0f, 0.0f));
-    if (Sun && Sun->GetLightComponent())
+
+    if (Sun)
     {
-        Sun->GetLightComponent()->SetIntensity(7.5f);
-        Sun->GetLightComponent()->SetLightColor(FLinearColor(1.0f, 0.86f, 0.69f));
-        Sun->GetLightComponent()->SetCastShadows(true);
+        if (UDirectionalLightComponent* SunComponent =
+            Sun->FindComponentByClass<UDirectionalLightComponent>())
+        {
+            SunComponent->SetIntensity(7.5f);
+            SunComponent->SetLightColor(
+                FLinearColor(1.0f, 0.86f, 0.69f));
+            SunComponent->SetCastShadows(true);
+            SunComponent->SetAtmosphereSunLight(true);
+            SunComponent->SetAtmosphereSunLightIndex(0);
+        }
+    }
+
+    UMaterialInterface* CloudMaterial = nullptr;
+
+    if (EnvironmentVisualProfile)
+    {
+        CloudMaterial =
+            EnvironmentVisualProfile->CloudMaterial.LoadSynchronous();
+    }
+
+    if (!CloudMaterial)
+    {
+        CloudMaterial = LoadObject<UMaterialInterface>(
+            nullptr,
+            TEXT(
+                "/Engine/EngineSky/VolumetricClouds/"
+                "m_SimpleVolumetricCloud_Inst."
+                "m_SimpleVolumetricCloud_Inst"));
+    }
+
+    if (CloudMaterial)
+    {
+        if (AVolumetricCloud* Cloud =
+            GetWorld()->SpawnActor<AVolumetricCloud>(
+                FVector::ZeroVector,
+                FRotator::ZeroRotator))
+        {
+            if (UVolumetricCloudComponent* CloudComponent =
+                Cloud->FindComponentByClass<UVolumetricCloudComponent>())
+            {
+                CloudComponent->SetMaterial(CloudMaterial);
+                CloudComponent->SetLayerBottomAltitude(1.5f);
+                CloudComponent->SetLayerHeight(5.5f);
+                CloudComponent
+                    ->SetbUsePerSampleAtmosphericLightTransmittance(true);
+                CloudComponent->SetVisibleInRealTimeSkyCaptures(true);
+            }
+        }
     }
 
     ASkyLight* Sky = GetWorld()->SpawnActor<ASkyLight>();
+
     if (Sky && Sky->GetLightComponent())
     {
-        Sky->GetLightComponent()->SetIntensity(0.75f);
-        Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+        USkyLightComponent* SkyComponent = Sky->GetLightComponent();
+        SkyComponent->SetIntensity(0.75f);
+        SkyComponent->SetMobility(EComponentMobility::Movable);
 
         UTextureCube* EnvironmentCubemap =
             EnvironmentVisualProfile
@@ -867,23 +936,119 @@ void AWPBattlefieldDirector::BuildBattlefield()
 
         if (EnvironmentCubemap)
         {
-            Sky->GetLightComponent()->SourceType = SLS_SpecifiedCubemap;
-            Sky->GetLightComponent()->SetCubemap(EnvironmentCubemap);
+            SkyComponent->SourceType = SLS_SpecifiedCubemap;
+            SkyComponent->SetCubemap(EnvironmentCubemap);
+            SkyComponent->SetRealTimeCapture(false);
         }
         else
         {
-            Sky->GetLightComponent()->RecaptureSky();
+            SkyComponent->SetRealTimeCapture(true);
+            SkyComponent->RecaptureSky();
         }
     }
 
-    AExponentialHeightFog* Fog = GetWorld()->SpawnActor<AExponentialHeightFog>();
+    AExponentialHeightFog* Fog =
+        GetWorld()->SpawnActor<AExponentialHeightFog>();
+
     if (Fog && Fog->GetComponent())
     {
         Fog->GetComponent()->SetFogDensity(0.012f);
         Fog->GetComponent()->SetFogHeightFalloff(0.22f);
-        Fog->GetComponent()->SetFogInscatteringColor(FLinearColor(0.46f, 0.48f, 0.49f));
+        Fog->GetComponent()->SetFogInscatteringColor(
+            FLinearColor(0.46f, 0.48f, 0.49f));
         Fog->GetComponent()->SetVolumetricFog(true);
     }
+}
+
+void AWPBattlefieldDirector::StartEnvironmentAudio()
+{
+    if (!GetWorld() || !EnvironmentVisualProfile)
+    {
+        return;
+    }
+
+    if (USoundBase* Ambient =
+        EnvironmentVisualProfile->AmbientLoop.LoadSynchronous())
+    {
+        AmbientAudioComponent = UGameplayStatics::SpawnSound2D(
+            this,
+            Ambient,
+            EnvironmentVisualProfile->AmbientVolume,
+            1.0f,
+            0.0f,
+            nullptr,
+            false,
+            false);
+    }
+
+    if (USoundBase* Wind =
+        EnvironmentVisualProfile->WindLoop.LoadSynchronous())
+    {
+        WindAudioComponent = UGameplayStatics::SpawnSound2D(
+            this,
+            Wind,
+            EnvironmentVisualProfile->WindVolume,
+            1.0f,
+            0.0f,
+            nullptr,
+            false,
+            false);
+    }
+
+    if (!EnvironmentVisualProfile->DistantBattleOneShot.IsNull())
+    {
+        const float MinInterval = FMath::Max(
+            1.0f,
+            EnvironmentVisualProfile->DistantBattleMinIntervalSeconds);
+
+        const float MaxInterval = FMath::Max(
+            MinInterval,
+            EnvironmentVisualProfile->DistantBattleMaxIntervalSeconds);
+
+        GetWorld()->GetTimerManager().SetTimer(
+            DistantBattleTimer,
+            this,
+            &AWPBattlefieldDirector::PlayDistantBattleOneShot,
+            FMath::FRandRange(MinInterval, MaxInterval),
+            false);
+    }
+}
+
+void AWPBattlefieldDirector::PlayDistantBattleOneShot()
+{
+    if (!GetWorld() || !EnvironmentVisualProfile)
+    {
+        return;
+    }
+
+    if (USoundBase* Sound =
+        EnvironmentVisualProfile->DistantBattleOneShot.LoadSynchronous())
+    {
+        UGameplayStatics::PlaySound2D(
+            this,
+            Sound,
+            EnvironmentVisualProfile->DistantBattleVolume,
+            FMath::FRandRange(0.94f, 1.06f),
+            0.0f,
+            nullptr,
+            this,
+            false);
+    }
+
+    const float MinInterval = FMath::Max(
+        1.0f,
+        EnvironmentVisualProfile->DistantBattleMinIntervalSeconds);
+
+    const float MaxInterval = FMath::Max(
+        MinInterval,
+        EnvironmentVisualProfile->DistantBattleMaxIntervalSeconds);
+
+    GetWorld()->GetTimerManager().SetTimer(
+        DistantBattleTimer,
+        this,
+        &AWPBattlefieldDirector::PlayDistantBattleOneShot,
+        FMath::FRandRange(MinInterval, MaxInterval),
+        false);
 }
 
 void AWPBattlefieldDirector::ScatterEnvironmentProps()
