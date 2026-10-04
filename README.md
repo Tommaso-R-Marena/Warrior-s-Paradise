@@ -144,6 +144,22 @@ See [Free Content Workflow](docs/FREE_CONTENT_WORKFLOW.md), [Free Asset Bootstra
 | 3 | Squad Hold |
 | T | Designate artillery |
 | Y | Designate air support |
+| F10 | Cycle Low / Medium / High / Ultra graphics |
+| F9 | Auto-detect graphics from hardware benchmark |
+
+## Graphics scalability
+
+Warrior's Paradise now treats performance tiers as a core product requirement rather than a post-launch optimization.
+
+- **Auto** runs UE 5.8's hardware benchmark once on first launch and stores its per-group recommendation.
+- **Low** targets performance-first older dedicated GPUs at 67% internal resolution and UE Low rendering groups.
+- **Medium** targets mainstream PCs at 78%.
+- **High** is the main high-fidelity/60-FPS design target at 90%; UE 5.8's High Lumen tier is designed around a 60-FPS budget.
+- **Ultra** uses Unreal Epic-quality groups at 100% internal resolution for high-end systems.
+
+Low deliberately retains partial foliage density so quality settings do not create a gameplay concealment advantage. Core ballistics, cover, smoke occlusion, AI, armor and objective simulation are unchanged across presets.
+
+See [Scalability and Performance Presets](docs/SCALABILITY.md).
 
 ## Engine and run
 
@@ -178,7 +194,7 @@ Optional packaged Win64 build:
 .\tools\build_local.ps1 -Package
 ```
 
-The validator now checks the **67-file** source surface plus Python tooling, plugin requirements, free-asset/license metadata, smoke/soldier/weapon/vehicle presentation, enterable buildings, material-specific impacts, tracers/decals and the free-content bootstrap contract.
+The validator now checks the **71-file** source surface plus Python tooling, plugin requirements, free-asset/license metadata, smoke/soldier/weapon/vehicle presentation, enterable buildings, material-specific impacts, tracers/decals and the free-content bootstrap contract.
 
 GitHub Actions is manual-only and is not required for development. A **full Unreal C++ compile/playtest has still not been executed from this ChatGPT environment**; a clean local UE 5.8 build remains the next hard validation gate.
 
@@ -194,4 +210,4 @@ The remaining gap is now dominated by **content acquisition, art-direction coher
 - author any hero destruction/animation not supplied by the free sources;
 - compile in UE 5.8, fix UHT/C++/asset-load issues, playtest, tune AI/combat, profile with Unreal Insights and validate a packaged Win64 build.
 
-See [Vertical Slice](docs/VERTICAL_SLICE.md), [Combined Arms](docs/COMBINED_ARMS.md), [Architecture](docs/ARCHITECTURE.md), [Asset Pipeline](docs/ASSET_PIPELINE.md), and [Performance Target](docs/PERFORMANCE_TARGET.md).
+See [Vertical Slice](docs/VERTICAL_SLICE.md), [Combined Arms](docs/COMBINED_ARMS.md), [Architecture](docs/ARCHITECTURE.md), [Asset Pipeline](docs/ASSET_PIPELINE.md), and [Performance Target](docs/PERFORMANCE_TARGET.md), and [Scalability](docs/SCALABILITY.md).
