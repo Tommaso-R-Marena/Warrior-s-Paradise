@@ -33,7 +33,7 @@ private:
     float DesiredRange = 850.0f;
 
     UPROPERTY(EditDefaultsOnly, Category="AI")
-    float MaximumEngagementRange = 2200.0f;
+    float MaximumEngagementRange = 2600.0f;
 
     UPROPERTY(EditDefaultsOnly, Category="AI")
     float AimTurnSpeed = 4.5f;
@@ -41,12 +41,19 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="AI")
     float FirePulseSeconds = 0.22f;
 
+    UPROPERTY(EditDefaultsOnly, Category="AI")
+    float RetargetInterval = 0.45f;
+
     float NextDecisionTime = 0.0f;
+    float NextTargetSearchTime = 0.0f;
     float StopFireTime = 0.0f;
     bool bPulseFiring = false;
 
-    UFUNCTION()
-    void HandleEnemyDeath();
+    TWeakObjectPtr<AWPSoldierCharacter> CurrentTarget;
 
+    UFUNCTION()
+    void HandleSoldierDeath();
+
+    AWPSoldierCharacter* FindBestTarget() const;
     bool HasLineOfSightTo(const AActor* Target) const;
 };
