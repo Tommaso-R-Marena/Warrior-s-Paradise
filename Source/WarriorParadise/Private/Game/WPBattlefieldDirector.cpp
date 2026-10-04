@@ -394,6 +394,8 @@ void AWPBattlefieldDirector::TransferPlayerControl(AWPSoldierCharacter* FallenSo
     }
 
     PlayerController->Possess(BestCandidate);
+    BestCandidate->GetWeaponComponent()->Configure(34.0f, 540.0f, 1.15f);
+    BestCandidate->GetWeaponComponent()->SetAiming(false);
     PlayerController->SetControlRotation(BestCandidate->GetActorRotation());
 }
 
