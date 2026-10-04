@@ -639,6 +639,7 @@ void AWPGunEmplacement::DestroyEmplacement()
         PlayerController->Possess(Soldier);
         Soldier->SetActorHiddenInGame(false);
         Soldier->SetActorEnableCollision(true);
+        Soldier->SetActorTickEnabled(true);
         Soldier->SetActorLocation(
             GetActorLocation() -
                 GetActorForwardVector() * 145.0f +
