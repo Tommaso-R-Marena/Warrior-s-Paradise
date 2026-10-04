@@ -7,6 +7,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
+#include "Vehicles/WPArmoredVehicle.h"
 #include "World/WPDestructibleCover.h"
 
 AWPFragGrenade::AWPFragGrenade()
@@ -113,6 +114,29 @@ void AWPFragGrenade::Explode()
             UGameplayStatics::ApplyDamage(
                 Soldier,
                 Damage,
+                GetInstigatorController(),
+                this,
+                UDamageType::StaticClass());
+        }
+    }
+
+    for (TActorIterator<AWPArmoredVehicle> It(GetWorld()); It; ++It)
+    {
+        AWPArmoredVehicle* Vehicle = *It;
+        if (!Vehicle ||
+            Vehicle->GetCombatTeam() == GrenadeTeam ||
+            Vehicle->IsDestroyed())
+        {
+            continue;
+        }
+
+        const float Distance = FVector::Dist(ExplosionLocation, Vehicle->GetActorLocation());
+        if (Distance <= BlastRadiusCm)
+        {
+            const float Alpha = 1.0f - FMath::Clamp(Distance / BlastRadiusCm, 0.0f, 1.0f);
+            UGameplayStatics::ApplyDamage(
+                Vehicle,
+                MaximumDamage * 0.55f * FMath::Square(Alpha),
                 GetInstigatorController(),
                 this,
                 UDamageType::StaticClass());
