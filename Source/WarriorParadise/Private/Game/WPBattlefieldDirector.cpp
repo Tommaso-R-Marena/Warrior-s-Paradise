@@ -319,6 +319,9 @@ bool AWPBattlefieldDirector::SwitchPlayerToSquadmate(
     CurrentSoldier->GetWeaponComponent()->StopFire();
     CurrentSoldier->GetWeaponComponent()->SetAiming(false);
 
+    Destination->GetWeaponComponent()->StopFire();
+    Destination->GetWeaponComponent()->SetAiming(false);
+
     PlayerController->Possess(Destination);
     PlayerController->SetControlRotation(Destination->GetActorRotation());
     return true;
@@ -1088,6 +1091,9 @@ bool AWPBattlefieldDirector::TransferPlayerControl(AWPSoldierCharacter* FallenSo
     {
         return false;
     }
+
+    BestCandidate->GetWeaponComponent()->StopFire();
+    BestCandidate->GetWeaponComponent()->SetAiming(false);
 
     PlayerController->Possess(BestCandidate);
     PlayerController->SetControlRotation(BestCandidate->GetActorRotation());
