@@ -1,6 +1,7 @@
 #include "AI/WPEnemySoldier.h"
 #include "AI/WPCoverPoint.h"
 #include "Combat/WPHealthComponent.h"
+#include "Combat/WPSmokeCloud.h"
 #include "Combat/WPSuppressionComponent.h"
 #include "Combat/WPWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -294,6 +295,15 @@ bool AWPEnemySoldier::HasLineOfSightTo(const AActor* Target) const
     const FVector Start = GetActorLocation() + FVector(0.0f, 0.0f, 58.0f);
     const FVector End = Target->GetActorLocation() + FVector(0.0f, 0.0f, 45.0f);
 
+    for (TActorIterator<AWPSmokeCloud> It(GetWorld()); It; ++It)
+    {
+        const AWPSmokeCloud* Smoke = *It;
+        if (Smoke && Smoke->BlocksSightBetween(Start, End))
+        {
+            return false;
+        }
+    }
+
     FHitResult Hit;
     FCollisionQueryParams Params(SCENE_QUERY_STAT(WPEnemySight), true, this);
     Params.AddIgnoredActor(this);
@@ -415,6 +425,17 @@ bool AWPEnemySoldier::HandleMedicSupport()
     bPulseFiring = false;
 
     const float Distance = FVector::Dist2D(GetActorLocation(), DownedAlly->GetActorLocation());
+    const float Suppression = GetSuppressionComponent()
+        ? GetSuppressionComponent()->GetNormalizedSuppression()
+        : 0.0f;
+
+    if (Suppression >= 0.25f &&
+        GetSmokeGrenadesRemaining() > 0 &&
+        Distance > 300.0f)
+    {
+        ThrowSmokeGrenadeAt(DownedAlly->GetActorLocation());
+    }
+
     if (Distance <= 210.0f)
     {
         TryReviveSoldier(DownedAlly);
