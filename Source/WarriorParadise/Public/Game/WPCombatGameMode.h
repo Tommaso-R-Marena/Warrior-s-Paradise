@@ -12,4 +12,11 @@ class WARRIORPARADISE_API AWPCombatGameMode : public AGameMode
 public:
     AWPCombatGameMode();
     virtual void StartPlay() override;
+
+private:
+    void StartHeadlessSmokeTest();
+    void FinishHeadlessSmokeTest();
+
+    FTimerHandle HeadlessSmokeTimer;
+    bool bHeadlessSmokeInitialStateValid = false;
 };
