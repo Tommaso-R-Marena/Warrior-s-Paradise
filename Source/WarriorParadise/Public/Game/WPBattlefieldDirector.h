@@ -233,6 +233,7 @@ private:
     FTimerHandle FriendlyReplacementTimer;
 
     void BuildBattlefield();
+    void ScatterEnvironmentProps();
     void BuildObjectives();
     void BuildCoverPoints();
     void SpawnFriendlySquad();
