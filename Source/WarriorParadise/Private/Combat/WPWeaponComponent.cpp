@@ -95,7 +95,10 @@ void UWPWeaponComponent::StartFire()
     bWantsToFire = true;
     TryFire();
 
-    if (bAutomatic && GetWorld() && !GetWorld()->GetTimerManager().IsTimerActive(FireTimerHandle))
+    if (bWantsToFire &&
+        bAutomatic &&
+        GetWorld() &&
+        !GetWorld()->GetTimerManager().IsTimerActive(FireTimerHandle))
     {
         const float Interval = 60.0f / FMath::Max(60.0f, RoundsPerMinute);
         GetWorld()->GetTimerManager().SetTimer(
@@ -127,6 +130,7 @@ void UWPWeaponComponent::Reload()
     StopFire();
     bAiming = false;
     bReloading = true;
+    OnReloadStarted.Broadcast();
     OnWeaponStateChanged.Broadcast();
 
     GetWorld()->GetTimerManager().SetTimer(
@@ -144,6 +148,7 @@ void UWPWeaponComponent::FinishReload()
     AmmoInMagazine += Transferred;
     ReserveAmmo -= Transferred;
     bReloading = false;
+    OnReloadCompleted.Broadcast();
     OnWeaponStateChanged.Broadcast();
 }
 
@@ -183,7 +188,16 @@ void UWPWeaponComponent::TryFire()
 
     if (AmmoInMagazine <= 0)
     {
-        Reload();
+        if (ReserveAmmo > 0)
+        {
+            Reload();
+        }
+        else
+        {
+            StopFire();
+            OnDryFire.Broadcast();
+            OnWeaponStateChanged.Broadcast();
+        }
         return;
     }
 
@@ -231,6 +245,8 @@ void UWPWeaponComponent::TryFire()
                 RangeCm,
                 InstigatorController,
                 Team);
+
+            OnProjectileSpawned.Broadcast(Projectile);
         }
     }
 
