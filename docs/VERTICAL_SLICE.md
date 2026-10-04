@@ -55,11 +55,14 @@ The code now includes production visual/loadout profiles, Motion Matching discov
 - gunshot investigation;
 - flanking;
 - frag/smoke decisions;
-- medic revive/smoke logic;
+- medic revive/smoke logic plus bleeding-ally stabilization;
 - engineer ammunition support.
 
 ### Wounds / reinforcements — implemented
 
+- active severity-scaled bleeding from traumatic or low-health wounds;
+- bandaging stops bleeding before healing and is interrupted by new damage;
+- conscious bleeding allies can be field-dressed by nearby squadmates/medics;
 - downed/bleedout/final-death lifecycle;
 - manual and AI revive;
 - Allied replacement tickets;
