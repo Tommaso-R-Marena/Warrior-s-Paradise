@@ -13,6 +13,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
+#include "Engine/TextureCube.h"
 #include "EngineUtils.h"
 #include "Game/WPArtilleryStrike.h"
 #include "Game/WPCaptureObjective.h"
@@ -61,6 +62,7 @@ void AWPBattlefieldDirector::BeginPlay()
         : nullptr;
 
     BuildBattlefield();
+    ScatterEnvironmentProps();
     BuildCoverPoints();
 
     AWPSoldierCharacter* Player = Cast<AWPSoldierCharacter>(
@@ -593,7 +595,21 @@ void AWPBattlefieldDirector::BuildBattlefield()
     {
         Sky->GetLightComponent()->SetIntensity(0.75f);
         Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-        Sky->GetLightComponent()->RecaptureSky();
+
+        UTextureCube* EnvironmentCubemap =
+            EnvironmentVisualProfile
+                ? EnvironmentVisualProfile->SkyCubemap.LoadSynchronous()
+                : nullptr;
+
+        if (EnvironmentCubemap)
+        {
+            Sky->GetLightComponent()->SourceType = SLS_SpecifiedCubemap;
+            Sky->GetLightComponent()->SetCubemap(EnvironmentCubemap);
+        }
+        else
+        {
+            Sky->GetLightComponent()->RecaptureSky();
+        }
     }
 
     AExponentialHeightFog* Fog = GetWorld()->SpawnActor<AExponentialHeightFog>();
@@ -603,6 +619,102 @@ void AWPBattlefieldDirector::BuildBattlefield()
         Fog->GetComponent()->SetFogHeightFalloff(0.22f);
         Fog->GetComponent()->SetFogInscatteringColor(FLinearColor(0.46f, 0.48f, 0.49f));
         Fog->GetComponent()->SetVolumetricFog(true);
+    }
+}
+
+void AWPBattlefieldDirector::ScatterEnvironmentProps()
+{
+    if (!GetWorld() || !EnvironmentVisualProfile)
+    {
+        return;
+    }
+
+    UStaticMesh* TreeMesh = EnvironmentVisualProfile->TreeMesh.LoadSynchronous();
+    UStaticMesh* CrateMesh = EnvironmentVisualProfile->CrateMesh.LoadSynchronous();
+    UStaticMesh* BarrelMesh = EnvironmentVisualProfile->BarrelMesh.LoadSynchronous();
+
+    auto SpawnDecoration = [this](
+        UStaticMesh* Mesh,
+        const FVector& Location,
+        const FRotator& Rotation,
+        const FVector& Scale)
+    {
+        if (!Mesh)
+        {
+            return;
+        }
+
+        AStaticMeshActor* Decoration =
+            GetWorld()->SpawnActor<AStaticMeshActor>(Location, Rotation);
+
+        if (!Decoration)
+        {
+            return;
+        }
+
+        UStaticMeshComponent* Component = Decoration->GetStaticMeshComponent();
+        Component->SetMobility(EComponentMobility::Movable);
+        Component->SetStaticMesh(Mesh);
+        Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Component->SetCastShadow(true);
+        Decoration->SetActorScale3D(Scale);
+    };
+
+    FRandomStream Random(1944);
+
+    if (TreeMesh)
+    {
+        for (int32 Index = 0; Index < 30; ++Index)
+        {
+            const bool bLeftRight = (Index % 2) == 0;
+            const float X = bLeftRight
+                ? Random.FRandRange(-5400.0f, -2800.0f)
+                : Random.FRandRange(2800.0f, 5400.0f);
+            const float Y = Random.FRandRange(-5000.0f, 5000.0f);
+            const float UniformScale = Random.FRandRange(0.82f, 1.35f);
+
+            SpawnDecoration(
+                TreeMesh,
+                FVector(X, Y, 35.0f),
+                FRotator(0.0f, Random.FRandRange(-180.0f, 180.0f), 0.0f),
+                FVector(UniformScale));
+        }
+    }
+
+    static const FVector CrateLocations[] =
+    {
+        FVector(-480.0f, 1220.0f, 45.0f),
+        FVector(560.0f, 900.0f, 45.0f),
+        FVector(-520.0f, -1180.0f, 45.0f),
+        FVector(680.0f, -1460.0f, 45.0f),
+        FVector(-620.0f, -3380.0f, 45.0f),
+        FVector(620.0f, -3700.0f, 45.0f)
+    };
+
+    for (int32 Index = 0; Index < UE_ARRAY_COUNT(CrateLocations); ++Index)
+    {
+        SpawnDecoration(
+            CrateMesh,
+            CrateLocations[Index],
+            FRotator(0.0f, static_cast<float>(Index * 37), 0.0f),
+            FVector(Random.FRandRange(0.85f, 1.12f)));
+    }
+
+    static const FVector BarrelLocations[] =
+    {
+        FVector(-720.0f, 780.0f, 45.0f),
+        FVector(760.0f, 1280.0f, 45.0f),
+        FVector(-780.0f, -1540.0f, 45.0f),
+        FVector(780.0f, -3050.0f, 45.0f)
+    };
+
+    for (int32 Index = 0; Index < UE_ARRAY_COUNT(BarrelLocations); ++Index)
+    {
+        SpawnDecoration(
+            BarrelMesh,
+            BarrelLocations[Index],
+            FRotator(0.0f, static_cast<float>(Index * 61), 0.0f),
+            FVector(Random.FRandRange(0.9f, 1.08f)));
     }
 }
 
