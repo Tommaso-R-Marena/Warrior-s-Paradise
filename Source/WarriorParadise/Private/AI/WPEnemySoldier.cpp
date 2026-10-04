@@ -350,6 +350,170 @@ AWPCoverPoint* AWPEnemySoldier::FindBestCover(const AWPSoldierCharacter* Threat)
     return BestCover;
 }
 
+AWPEnemySoldier* AWPEnemySoldier::SelectManeuverElement(
+    const AWPSoldierCharacter* Target,
+    int32& OutEligibleShooters) const
+{
+    OutEligibleShooters = 0;
+
+    if (!Target || !GetWorld())
+    {
+        return nullptr;
+    }
+
+    AWPEnemySoldier* BestCandidate = nullptr;
+    float BestScore = TNumericLimits<float>::Max();
+
+    for (TActorIterator<AWPEnemySoldier> It(GetWorld()); It; ++It)
+    {
+        AWPEnemySoldier* Candidate = *It;
+        if (!Candidate ||
+            Candidate->IsPlayerControlled() ||
+            !Candidate->IsCombatCapable() ||
+            Candidate->GetCombatTeam() != GetCombatTeam())
+        {
+            continue;
+        }
+
+        if (FVector::DistSquared2D(
+                GetActorLocation(),
+                Candidate->GetActorLocation()) >
+            FMath::Square(CoordinationRadius))
+        {
+            continue;
+        }
+
+        UWPSuppressionComponent* CandidateSuppression =
+            Candidate->GetSuppressionComponent();
+        if (CandidateSuppression &&
+            CandidateSuppression->IsPinned())
+        {
+            continue;
+        }
+
+        const float TargetDistance =
+            FVector::Dist2D(
+                Candidate->GetActorLocation(),
+                Target->GetActorLocation());
+
+        if (TargetDistance >
+                Candidate->MaximumEngagementRange * 1.15f ||
+            !Candidate->HasLineOfSightTo(Target))
+        {
+            continue;
+        }
+
+        ++OutEligibleShooters;
+
+        const float Score =
+            Candidate->GetManeuverSelectionScore();
+
+        if (Score < BestScore)
+        {
+            BestScore = Score;
+            BestCandidate = Candidate;
+        }
+    }
+
+    return BestCandidate;
+}
+
+float AWPEnemySoldier::GetManeuverSelectionScore() const
+{
+    float RoleBias = 1000.0f;
+
+    switch (GetSoldierRole())
+    {
+        case EWPSoldierRole::Assault:
+            RoleBias = 0.0f;
+            break;
+
+        case EWPSoldierRole::Rifleman:
+            RoleBias = 1000.0f;
+            break;
+
+        case EWPSoldierRole::Engineer:
+            RoleBias = 3000.0f;
+            break;
+
+        case EWPSoldierRole::Medic:
+            RoleBias = 5000.0f;
+            break;
+
+        default:
+            break;
+    }
+
+    const UWPSuppressionComponent* Suppression =
+        GetSuppressionComponent();
+    const UWPHealthComponent* Health =
+        GetHealthComponent();
+
+    const float SuppressionPenalty =
+        Suppression
+            ? Suppression->GetNormalizedSuppression() * 4000.0f
+            : 0.0f;
+
+    const float BleedingPenalty =
+        Health && Health->IsBleeding()
+            ? Health->GetBleedingSeverity() * 6000.0f
+            : 0.0f;
+
+    const float StableTieBreak =
+        static_cast<float>(GetUniqueID() % 997U);
+
+    return
+        RoleBias +
+        SuppressionPenalty +
+        BleedingPenalty +
+        StableTieBreak;
+}
+
+FVector AWPEnemySoldier::GetManeuverDestination(
+    const AWPSoldierCharacter* Target) const
+{
+    if (!Target)
+    {
+        return GetActorLocation();
+    }
+
+    FVector ToTarget =
+        Target->GetActorLocation() - GetActorLocation();
+    ToTarget.Z = 0.0f;
+
+    const float Distance = ToTarget.Size();
+    const FVector Forward =
+        ToTarget.GetSafeNormal();
+
+    if (Forward.IsNearlyZero())
+    {
+        return GetActorLocation();
+    }
+
+    FVector Lateral =
+        FVector::CrossProduct(
+            FVector::UpVector,
+            Forward).GetSafeNormal();
+
+    if ((GetUniqueID() & 1U) != 0U)
+    {
+        Lateral *= -1.0f;
+    }
+
+    const float FlankDistance =
+        FMath::Min(
+            ManeuverFlankDistance,
+            FMath::Max(300.0f, Distance * 0.42f));
+
+    const float Standoff =
+        FMath::Max(300.0f, DesiredRange * 0.72f);
+
+    return
+        Target->GetActorLocation() -
+        Forward * Standoff +
+        Lateral * FlankDistance;
+}
+
 bool AWPEnemySoldier::HasLineOfSightTo(const AActor* Target) const
 {
     if (!Target || !GetWorld())
@@ -634,6 +798,10 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
     const bool bPressured =
         SuppressionState != EWPSuppressionState::Steady;
 
+    TacticalPosture = bPinned
+        ? EWPAITacticalPosture::Pinned
+        : EWPAITacticalPosture::Independent;
+
     if (UWPWeaponComponent* Weapon = GetWeaponComponent())
     {
         const float SuppressionAccuracy =
@@ -795,8 +963,34 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
     const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
     const float Distance = ToTarget.Size();
-    const float HealthNormalized = GetHealthComponent()->GetHealthNormalized();
-    const FVector FlatDirection = FVector(ToTarget.X, ToTarget.Y, 0.0f).GetSafeNormal();
+    const float HealthNormalized =
+        GetHealthComponent()->GetHealthNormalized();
+    const FVector FlatDirection =
+        FVector(ToTarget.X, ToTarget.Y, 0.0f).GetSafeNormal();
+
+    if (!bPinned &&
+        !bPressured &&
+        bTargetVisible &&
+        Distance > 350.0f)
+    {
+        int32 EligibleShooters = 0;
+        AWPEnemySoldier* ManeuverElement =
+            SelectManeuverElement(
+                Target,
+                EligibleShooters);
+
+        if (EligibleShooters >= 2 &&
+            ManeuverElement)
+        {
+            TacticalPosture =
+                ManeuverElement == this &&
+                Distance > DesiredRange * 0.68f
+                    ? EWPAITacticalPosture::Maneuver
+                    : EWPAITacticalPosture::BaseOfFire;
+
+            bHasUsedCoordinatedTactic = true;
+        }
+    }
 
     if (Distance <= 180.0f && TryMeleeAttack(Target))
     {
@@ -815,8 +1009,17 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
             AimTurnSpeed));
     }
 
+    if (TacticalPosture ==
+            EWPAITacticalPosture::Maneuver &&
+        CurrentCover.IsValid())
+    {
+        ReleaseCover();
+    }
+
     const bool bWantsCover =
         bPressured ||
+        TacticalPosture ==
+            EWPAITacticalPosture::BaseOfFire ||
         Suppression >= CoverTriggerSuppression ||
         HealthNormalized <= 0.45f;
 
@@ -858,25 +1061,71 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
             GetActorLocation() - FlatDirection * 650.0f,
             0.72f);
     }
+    else if (TacticalPosture ==
+                 EWPAITacticalPosture::Maneuver &&
+             Distance > DesiredRange * 0.62f)
+    {
+        MoveTacticallyToward(
+            GetManeuverDestination(Target),
+            0.96f);
+    }
+    else if (TacticalPosture ==
+             EWPAITacticalPosture::BaseOfFire)
+    {
+        if (Distance < DesiredRange * 0.55f)
+        {
+            MoveTacticallyToward(
+                GetActorLocation() -
+                    FlatDirection * 450.0f,
+                0.38f);
+        }
+        else
+        {
+            const FVector Strafe(
+                -FlatDirection.Y,
+                FlatDirection.X,
+                0.0f);
+
+            AddMovementInput(
+                Strafe,
+                FMath::Sin(
+                    Time * 0.55f +
+                    static_cast<float>(GetUniqueID())) *
+                    0.12f);
+        }
+    }
     else if (Distance > DesiredRange)
     {
         FVector ApproachPoint = Target->GetActorLocation();
 
         const uint32 FlankSlot = GetUniqueID() % 5U;
-        if (Suppression < 0.35f && (FlankSlot == 0U || FlankSlot == 1U))
+        if (Suppression < 0.35f &&
+            (FlankSlot == 0U || FlankSlot == 1U))
         {
-            FVector Lateral = FVector::CrossProduct(FVector::UpVector, FlatDirection).GetSafeNormal();
+            FVector Lateral =
+                FVector::CrossProduct(
+                    FVector::UpVector,
+                    FlatDirection).GetSafeNormal();
+
             if (FlankSlot == 1U)
             {
                 Lateral *= -1.0f;
             }
 
-            ApproachPoint += Lateral * FMath::Min(700.0f, Distance * 0.32f);
+            ApproachPoint +=
+                Lateral *
+                FMath::Min(
+                    700.0f,
+                    Distance * 0.32f);
         }
 
         MoveTacticallyToward(
             ApproachPoint,
-            0.78f * FMath::Lerp(1.0f, 0.62f, Suppression));
+            0.78f *
+                FMath::Lerp(
+                    1.0f,
+                    0.62f,
+                    Suppression));
     }
     else if (Distance < DesiredRange * 0.58f)
     {
@@ -918,13 +1167,31 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
                 ? FMath::FRandRange(0.65f, 1.10f)
                 : FMath::FRandRange(0.32f, 0.72f));
 
-        const float CoverConfidence = bAtCover ? 1.12f : 1.0f;
+        const float CoverConfidence =
+            bAtCover ? 1.12f : 1.0f;
+
+        float TacticalFireScale = 1.0f;
+        if (TacticalPosture ==
+            EWPAITacticalPosture::BaseOfFire)
+        {
+            TacticalFireScale = 1.28f;
+        }
+        else if (TacticalPosture ==
+                 EWPAITacticalPosture::Maneuver)
+        {
+            TacticalFireScale = 0.32f;
+        }
+
         const float FireChance = bPinned
             ? (bAtCover ? 0.10f : 0.0f)
             : FMath::Clamp(
-                FMath::Lerp(1.0f, 0.28f, Suppression) *
-                    CoverConfidence,
-                0.05f,
+                FMath::Lerp(
+                    1.0f,
+                    0.28f,
+                    Suppression) *
+                    CoverConfidence *
+                    TacticalFireScale,
+                0.03f,
                 1.0f);
 
         if (Distance <= MaximumEngagementRange &&
@@ -934,7 +1201,28 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         {
             GetWeaponComponent()->StartFire();
             bPulseFiring = true;
-            StopFireTime = Time + FirePulseSeconds * FMath::Lerp(1.0f, 0.65f, Suppression);
+
+            float PulseScale = 1.0f;
+            if (TacticalPosture ==
+                EWPAITacticalPosture::BaseOfFire)
+            {
+                PulseScale =
+                    BaseOfFirePulseMultiplier;
+            }
+            else if (TacticalPosture ==
+                     EWPAITacticalPosture::Maneuver)
+            {
+                PulseScale = 0.65f;
+            }
+
+            StopFireTime =
+                Time +
+                FirePulseSeconds *
+                    PulseScale *
+                    FMath::Lerp(
+                        1.0f,
+                        0.65f,
+                        Suppression);
         }
     }
 
