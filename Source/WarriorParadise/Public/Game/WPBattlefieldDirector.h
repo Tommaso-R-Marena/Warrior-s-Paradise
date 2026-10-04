@@ -35,9 +35,21 @@ public:
     bool RequestArtillery(AWPSoldierCharacter* Caller, const FVector& TargetLocation);
 
     void ReportEnemyContact(EWPCombatTeam ReportingTeam, AWPSoldierCharacter* Contact);
-    AWPSoldierCharacter* GetSharedEnemyContact(
+    bool GetRecentEnemyContactLocation(
         EWPCombatTeam ReportingTeam,
+        FVector& OutLocation,
         float MaximumAgeSeconds = 4.0f) const;
+
+    void ReportGunshot(
+        EWPCombatTeam ShooterTeam,
+        const FVector& Location,
+        float AudibleRadiusCm = 9000.0f);
+
+    bool GetRecentEnemyGunshot(
+        EWPCombatTeam ListeningTeam,
+        const FVector& ListenerLocation,
+        FVector& OutLocation,
+        float MaximumAgeSeconds = 4.5f) const;
 
     UFUNCTION(BlueprintPure, Category="Battle")
     int32 GetWave() const { return Wave; }
@@ -182,10 +194,16 @@ private:
     int32 ReplacementRoleCursor = 0;
     float NextArtilleryAvailableTime = 0.0f;
     TWeakObjectPtr<APlayerController> PendingPlayerRespawnController;
-    TWeakObjectPtr<AWPSoldierCharacter> AlliedSharedContact;
-    TWeakObjectPtr<AWPSoldierCharacter> AxisSharedContact;
+    FVector AlliedSharedContactLocation = FVector::ZeroVector;
+    FVector AxisSharedContactLocation = FVector::ZeroVector;
     float AlliedSharedContactTime = -1000.0f;
     float AxisSharedContactTime = -1000.0f;
+    FVector AlliedGunshotLocation = FVector::ZeroVector;
+    FVector AxisGunshotLocation = FVector::ZeroVector;
+    float AlliedGunshotTime = -1000.0f;
+    float AxisGunshotTime = -1000.0f;
+    float AlliedGunshotRadiusCm = 0.0f;
+    float AxisGunshotRadiusCm = 0.0f;
 
     FTimerHandle NextWaveTimer;
     FTimerHandle FriendlyReplacementTimer;
@@ -200,6 +218,7 @@ private:
         APlayerController* ControllerToPossess = nullptr);
     void SpawnQueuedFriendlyReplacement();
     FVector GetFriendlySpawnLocation() const;
+    bool IsFriendlySpawnLocationSafe(const FVector& Location) const;
 
     void SpawnWave();
     void SpawnEnemyGroup(int32 Count, bool bResetEnemyCounter);
