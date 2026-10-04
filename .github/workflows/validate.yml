@@ -17,10 +17,5 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Validate Unreal project structure
-        run: python tools/validate_project.py
+        run: python3 tools/validate_project.py
