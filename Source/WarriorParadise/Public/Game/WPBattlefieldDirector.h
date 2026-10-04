@@ -272,11 +272,18 @@ private:
         const FVector& BoxScale,
         const FRotator& Rotation);
 
+    void SpawnEnterableBuilding(
+        const FVector& Location,
+        const FVector& Scale,
+        const FRotator& Rotation,
+        EWPEnvironmentSurface WallSurface);
+
     void SpawnBox(
         const FVector& Location,
         const FVector& Scale,
         const FRotator& Rotation = FRotator::ZeroRotator,
-        EWPEnvironmentSurface Surface = EWPEnvironmentSurface::Concrete);
+        EWPEnvironmentSurface Surface = EWPEnvironmentSurface::Concrete,
+        bool bCollisionOnly = false);
 
     void SpawnCoverPoint(
         const FVector& Location,
