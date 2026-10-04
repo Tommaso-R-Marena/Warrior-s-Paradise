@@ -22,12 +22,15 @@ The repository now contains a substantial code-side combined-arms battle rather 
 - magazines, reload timing, dry fire, reload cancellation and engineer resupply;
 - melee combat;
 - frag grenades and tactical smoke grenades;
+- traumatic and low-health hits can cause active bleeding with severity-scaled health loss;
+- bandaging stops bleeding before restoring health and is interrupted by fresh damage;
+- nearby conscious bleeding allies can be field-dressed with `E`;
 - timed bandaging/field medicine.
 
 ### Wounds and squad lives
 
-- health, downed state, bleedout, finishing damage and revive;
-- medics revive wounded soldiers;
+- health, active bleeding, downed state, bleedout, finishing damage and revive;
+- medics prioritize downed soldiers and can stabilize conscious bleeding allies;
 - player-issued Follow / Attack / Hold commands;
 - **manual squad-member switching** with `X`;
 - automatic control transfer after final death;
@@ -142,7 +145,7 @@ See [Free Content Workflow](docs/FREE_CONTENT_WORKFLOW.md), [Free Asset Bootstra
 | V | Bandage |
 | G | Frag grenade |
 | H | Smoke grenade |
-| E | Revive ally / use friendly tank, vehicle or emplacement |
+| E | Revive/treat ally / use friendly tank, vehicle or emplacement |
 | X | Switch to next living squadmate |
 | 1 | Squad Follow |
 | 2 | Squad Attack objective |
