@@ -7,6 +7,7 @@
 #include "Game/WPPlayerController.h"
 #include "Game/WPRuntimeMode.h"
 #include "GenericPlatform/GenericPlatformMisc.h"
+#include "GameFramework/DamageType.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
@@ -133,6 +134,38 @@ void AWPCombatGameMode::StartHeadlessSmokeTest()
             bRecoveredSteady;
     }
 
+    if (Player && Player->GetHealthComponent())
+    {
+        UWPHealthComponent* Health =
+            Player->GetHealthComponent();
+
+        Health->RestoreToFull();
+
+        UGameplayStatics::ApplyDamage(
+            Player,
+            35.0f,
+            nullptr,
+            this,
+            UDamageType::StaticClass());
+
+        const bool bStartedBleeding =
+            Health->IsBleeding() &&
+            Health->GetBleedingSeverity() > 0.0f;
+
+        const bool bStoppedBleeding =
+            Health->StopBleeding() &&
+            !Health->IsBleeding();
+
+        Health->RestoreToFull();
+
+        bHeadlessBleedingStateValid =
+            bStartedBleeding &&
+            bStoppedBleeding &&
+            FMath::IsNearlyEqual(
+                Health->GetHealth(),
+                Health->GetMaxHealth());
+    }
+
     const float Duration =
         WPRuntimeMode::GetHeadlessSmokeDurationSeconds();
 
@@ -141,9 +174,10 @@ void AWPCombatGameMode::StartHeadlessSmokeTest()
         Display,
         TEXT(
             "WP_HEADLESS_SMOKE START initial=%s suppression=%s "
-            "duration=%.1f friendly=%d enemies=%d objective=%d"),
+            "bleeding=%s duration=%.1f friendly=%d enemies=%d objective=%d"),
         bHeadlessSmokeInitialStateValid ? TEXT("PASS") : TEXT("FAIL"),
         bHeadlessSuppressionStateValid ? TEXT("PASS") : TEXT("FAIL"),
+        bHeadlessBleedingStateValid ? TEXT("PASS") : TEXT("FAIL"),
         Duration,
         Director ? Director->GetFriendlySoldiersAlive() : -1,
         Director ? Director->GetRemainingEnemies() : -1,
@@ -172,6 +206,7 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
     const bool bPassed =
         bHeadlessSmokeInitialStateValid &&
         bHeadlessSuppressionStateValid &&
+        bHeadlessBleedingStateValid &&
         bRuntimeStateValid;
 
     UE_LOG(
