@@ -495,6 +495,138 @@ def configure_vehicle_presentation(asset) -> None:
             set_prop(asset, property_name, value)
 
 
+def configure_light_vehicle_presentation(asset, *, armored: bool) -> None:
+    muzzle = find_asset(
+        unreal.NiagaraSystem,
+        ("machine", "gun", "muzzle"),
+        ("muzzle", "flash"),
+    )
+    destruction = find_asset(
+        unreal.NiagaraSystem,
+        ("vehicle", "explosion"),
+        ("vehicle", "fire"),
+        ("explosion",),
+    )
+    engine = find_asset(
+        unreal.SoundBase,
+        ("truck", "engine"),
+        ("vehicle", "engine"),
+        ("engine", "loop"),
+    )
+    machine_gun = find_asset(
+        unreal.SoundBase,
+        ("machine", "gun", "fire"),
+        ("mg", "fire"),
+        ("automatic", "fire"),
+    )
+    destruction_sound = find_asset(
+        unreal.SoundBase,
+        ("vehicle", "explosion"),
+        ("vehicle", "destroy"),
+        ("explosion",),
+    )
+
+    if muzzle and armored:
+        set_prop(asset, "machine_gun_muzzle_flash", muzzle)
+    if destruction:
+        set_prop(asset, "destruction_effect", destruction)
+    if engine:
+        set_prop(asset, "engine_loop", engine)
+    if machine_gun and armored:
+        set_prop(asset, "machine_gun_sound", machine_gun)
+    if destruction_sound:
+        set_prop(asset, "destruction_sound", destruction_sound)
+
+
+def configure_emplacement_presentation(asset, *, anti_tank: bool) -> None:
+    muzzle = find_asset(
+        unreal.NiagaraSystem,
+        ("cannon", "muzzle") if anti_tank else ("machine", "gun", "muzzle"),
+        ("muzzle", "flash"),
+    )
+    destruction = find_asset(
+        unreal.NiagaraSystem,
+        ("emplacement", "explosion"),
+        ("vehicle", "explosion"),
+        ("explosion",),
+    )
+
+    if anti_tank:
+        fire_sound = find_asset(
+            unreal.SoundBase,
+            ("anti", "tank", "gun"),
+            ("cannon", "fire"),
+            ("artillery", "fire"),
+        )
+    else:
+        fire_sound = find_asset(
+            unreal.SoundBase,
+            ("heavy", "machine", "gun"),
+            ("machine", "gun", "fire"),
+            ("mg42",),
+        )
+
+    destruction_sound = find_asset(
+        unreal.SoundBase,
+        ("emplacement", "destroy"),
+        ("vehicle", "explosion"),
+        ("explosion",),
+    )
+
+    if muzzle:
+        set_prop(asset, "muzzle_flash", muzzle)
+    if destruction:
+        set_prop(asset, "destruction_effect", destruction)
+    if fire_sound:
+        set_prop(asset, "fire_sound", fire_sound)
+    if destruction_sound:
+        set_prop(asset, "destruction_sound", destruction_sound)
+
+
+def configure_aircraft_presentation(asset) -> None:
+    muzzle = find_asset(
+        unreal.NiagaraSystem,
+        ("aircraft", "muzzle"),
+        ("machine", "gun", "muzzle"),
+        ("muzzle", "flash"),
+    )
+    engine = find_asset(
+        unreal.SoundBase,
+        ("aircraft", "engine"),
+        ("plane", "engine"),
+        ("propeller",),
+    )
+    flyby = find_asset(
+        unreal.SoundBase,
+        ("aircraft", "flyby"),
+        ("plane", "flyby"),
+        ("flyby",),
+    )
+    gun = find_asset(
+        unreal.SoundBase,
+        ("aircraft", "gun"),
+        ("fighter", "gun"),
+        ("machine", "gun", "fire"),
+    )
+    bomb_release = find_asset(
+        unreal.SoundBase,
+        ("bomb", "release"),
+        ("bomb", "drop"),
+        ("ordnance", "release"),
+    )
+
+    if muzzle:
+        set_prop(asset, "gun_muzzle_flash", muzzle)
+    if engine:
+        set_prop(asset, "engine_loop", engine)
+    if flyby:
+        set_prop(asset, "flyby_sound", flyby)
+    if gun:
+        set_prop(asset, "gun_sound", gun)
+    if bomb_release:
+        set_prop(asset, "bomb_release_sound", bomb_release)
+
+
 def configure_soldier_presentation(asset) -> None:
     hit_effect = find_asset(
         unreal.NiagaraSystem,
@@ -704,6 +836,67 @@ def main() -> None:
         ),
     }
 
+    light_vehicle_meshes = {
+        "allied_transport": find_asset(
+            unreal.StaticMesh,
+            ("military", "truck"),
+            ("field", "truck"),
+            ("transport", "truck"),
+            ("truck",),
+            ("jeep",),
+        ),
+        "allied_armored": find_asset(
+            unreal.StaticMesh,
+            ("armored", "car"),
+            ("armoured", "car"),
+            ("halftrack",),
+            ("jeep", "mounted"),
+        ),
+        "axis_armored": find_asset(
+            unreal.StaticMesh,
+            ("sdkfz",),
+            ("armored", "car"),
+            ("armoured", "car"),
+            ("halftrack",),
+        ),
+    }
+
+    emplacement_meshes = {
+        "hmg": find_asset(
+            unreal.StaticMesh,
+            ("mg42",),
+            ("heavy", "machine", "gun"),
+            ("machine", "gun"),
+            ("hmg",),
+        ),
+        "at": find_asset(
+            unreal.StaticMesh,
+            ("pak", "40"),
+            ("anti", "tank", "gun"),
+            ("at", "gun"),
+            ("field", "gun"),
+        ),
+    }
+
+    aircraft_meshes = {
+        "allies": find_asset(
+            unreal.StaticMesh,
+            ("spitfire",),
+            ("p51",),
+            ("mustang",),
+            ("allied", "fighter"),
+            ("ww2", "airplane"),
+        ),
+        "axis": find_asset(
+            unreal.StaticMesh,
+            ("bf109",),
+            ("bf", "109"),
+            ("messerschmitt",),
+            ("axis", "fighter"),
+            ("ww2", "airplane"),
+        ),
+    }
+
     weapons = {
         "lee": create_or_load_data_asset("DA_WP_Weapon_LeeEnfield", "WPWeaponDefinition"),
         "ppsh": create_or_load_data_asset("DA_WP_Weapon_PPSh41", "WPWeaponDefinition"),
@@ -885,6 +1078,117 @@ def main() -> None:
     configure_vehicle_presentation(allied_vehicle)
     configure_vehicle_presentation(axis_vehicle)
 
+    allied_transport = create_or_load_data_asset(
+        "DA_WP_LightVehicle_AlliedTransport",
+        "WPLightVehicleVisualProfile",
+    )
+    allied_armored_car = create_or_load_data_asset(
+        "DA_WP_LightVehicle_AlliedArmoredCar",
+        "WPLightVehicleVisualProfile",
+    )
+    axis_armored_car = create_or_load_data_asset(
+        "DA_WP_LightVehicle_AxisArmoredCar",
+        "WPLightVehicleVisualProfile",
+    )
+
+    if light_vehicle_meshes["allied_transport"]:
+        set_prop(
+            allied_transport,
+            "body_mesh",
+            light_vehicle_meshes["allied_transport"],
+        )
+    if light_vehicle_meshes["allied_armored"]:
+        set_prop(
+            allied_armored_car,
+            "body_mesh",
+            light_vehicle_meshes["allied_armored"],
+        )
+    if light_vehicle_meshes["axis_armored"]:
+        set_prop(
+            axis_armored_car,
+            "body_mesh",
+            light_vehicle_meshes["axis_armored"],
+        )
+
+    configure_light_vehicle_presentation(
+        allied_transport,
+        armored=False,
+    )
+    configure_light_vehicle_presentation(
+        allied_armored_car,
+        armored=True,
+    )
+    configure_light_vehicle_presentation(
+        axis_armored_car,
+        armored=True,
+    )
+
+    allied_hmg = create_or_load_data_asset(
+        "DA_WP_Emplacement_AlliedHMG",
+        "WPEmplacementVisualProfile",
+    )
+    allied_at = create_or_load_data_asset(
+        "DA_WP_Emplacement_AlliedAT",
+        "WPEmplacementVisualProfile",
+    )
+    axis_hmg = create_or_load_data_asset(
+        "DA_WP_Emplacement_AxisHMG",
+        "WPEmplacementVisualProfile",
+    )
+    axis_at = create_or_load_data_asset(
+        "DA_WP_Emplacement_AxisAT",
+        "WPEmplacementVisualProfile",
+    )
+
+    for hmg_profile in (allied_hmg, axis_hmg):
+        if emplacement_meshes["hmg"]:
+            set_prop(
+                hmg_profile,
+                "gun_mesh",
+                emplacement_meshes["hmg"],
+            )
+        configure_emplacement_presentation(
+            hmg_profile,
+            anti_tank=False,
+        )
+
+    for at_profile in (allied_at, axis_at):
+        if emplacement_meshes["at"]:
+            set_prop(
+                at_profile,
+                "gun_mesh",
+                emplacement_meshes["at"],
+            )
+        configure_emplacement_presentation(
+            at_profile,
+            anti_tank=True,
+        )
+
+    allied_aircraft = create_or_load_data_asset(
+        "DA_WP_Aircraft_Allied",
+        "WPAirSupportVisualProfile",
+    )
+    axis_aircraft = create_or_load_data_asset(
+        "DA_WP_Aircraft_Axis",
+        "WPAirSupportVisualProfile",
+    )
+
+    if aircraft_meshes["allies"]:
+        set_prop(
+            allied_aircraft,
+            "aircraft_mesh",
+            aircraft_meshes["allies"],
+        )
+    if aircraft_meshes["axis"]:
+        set_prop(
+            axis_aircraft,
+            "aircraft_mesh",
+            aircraft_meshes["axis"],
+        )
+
+    configure_aircraft_presentation(allied_aircraft)
+    configure_aircraft_presentation(axis_aircraft)
+
     frag_explosion = create_or_load_data_asset(
         "DA_WP_Explosion_Frag",
         "WPExplosionPresentationProfile",
@@ -1058,6 +1362,15 @@ def main() -> None:
         "axis_engineer": loadouts["AxisEngineer"],
         "allied_vehicle": allied_vehicle,
         "axis_vehicle": axis_vehicle,
+        "allied_transport": allied_transport,
+        "allied_armored_car": allied_armored_car,
+        "axis_armored_car": axis_armored_car,
+        "allied_hmg": allied_hmg,
+        "allied_at_gun": allied_at,
+        "axis_hmg": axis_hmg,
+        "axis_at_gun": axis_at,
+        "allied_aircraft": allied_aircraft,
+        "axis_aircraft": axis_aircraft,
         "environment": environment,
         "frag_explosion": frag_explosion,
         "artillery_explosion": artillery_explosion,
@@ -1076,6 +1389,15 @@ def main() -> None:
         *loadouts.values(),
         allied_vehicle,
         axis_vehicle,
+        allied_transport,
+        allied_armored_car,
+        axis_armored_car,
+        allied_hmg,
+        allied_at,
+        axis_hmg,
+        axis_at,
+        allied_aircraft,
+        axis_aircraft,
         frag_explosion,
         artillery_explosion,
         smoke_presentation,
