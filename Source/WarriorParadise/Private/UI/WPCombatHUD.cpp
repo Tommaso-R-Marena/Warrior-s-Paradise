@@ -72,9 +72,10 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
     {
         DrawText(
             FString::Printf(
-                TEXT("WAVE %d    HOSTILES %d    SCORE %d"),
+                TEXT("WAVE %d    HOSTILES %d    SQUAD %d    SCORE %d"),
                 Director->GetWave(),
                 Director->GetRemainingEnemies(),
+                Director->GetFriendlySoldiersAlive(),
                 Director->GetScore()),
             FLinearColor::White,
             28.0f,
@@ -82,6 +83,44 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
             GEngine->GetSmallFont(),
             1.0f,
             false);
+
+        if (Director->IsBattleWon())
+        {
+            DrawText(
+                TEXT("BATTLE WON"),
+                FLinearColor(0.25f, 0.92f, 0.35f, 1.0f),
+                Width * 0.5f - 100.0f,
+                Height * 0.28f,
+                GEngine->GetLargeFont(),
+                1.35f,
+                false);
+        }
+        else if (Director->IsFinalCounterattack())
+        {
+            DrawText(
+                FString::Printf(TEXT("HOLD THE VILLAGE   ENEMY REMAINING %d"), Director->GetRemainingEnemies()),
+                FLinearColor(1.0f, 0.64f, 0.16f, 1.0f),
+                Width * 0.5f - 180.0f,
+                52.0f,
+                GEngine->GetMediumFont(),
+                1.0f,
+                false);
+        }
+        else
+        {
+            const int32 ProgressPercent = FMath::RoundToInt(Director->GetActiveObjectiveProgress() * 100.0f);
+            DrawText(
+                FString::Printf(
+                    TEXT("OBJECTIVE %d   CAPTURE %d%%"),
+                    Director->GetActiveObjectiveNumber(),
+                    ProgressPercent),
+                FLinearColor(1.0f, 0.82f, 0.28f, 1.0f),
+                Width * 0.5f - 110.0f,
+                52.0f,
+                GEngine->GetMediumFont(),
+                1.0f,
+                false);
+        }
     }
 
     if (Health && Health->IsDead())
