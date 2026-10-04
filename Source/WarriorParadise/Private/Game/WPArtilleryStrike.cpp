@@ -7,6 +7,7 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
+#include "World/WPDestructibleCover.h"
 
 AWPArtilleryStrike::AWPArtilleryStrike()
 {
@@ -74,6 +75,27 @@ void AWPArtilleryStrike::FireImpact()
             UGameplayStatics::ApplyDamage(
                 Soldier,
                 Damage,
+                nullptr,
+                this,
+                UDamageType::StaticClass());
+        }
+    }
+
+    for (TActorIterator<AWPDestructibleCover> It(GetWorld()); It; ++It)
+    {
+        AWPDestructibleCover* Cover = *It;
+        if (!Cover)
+        {
+            continue;
+        }
+
+        const float Distance = FVector::Dist(ImpactLocation, Cover->GetActorLocation());
+        if (Distance <= BlastRadiusCm)
+        {
+            const float DistanceAlpha = 1.0f - FMath::Clamp(Distance / BlastRadiusCm, 0.0f, 1.0f);
+            UGameplayStatics::ApplyDamage(
+                Cover,
+                MaximumDamage * 1.35f * FMath::Square(DistanceAlpha),
                 nullptr,
                 this,
                 UDamageType::StaticClass());
