@@ -51,9 +51,6 @@ private:
 
     TWeakObjectPtr<AWPSoldierCharacter> CurrentTarget;
 
-    UFUNCTION()
-    void HandleSoldierDeath();
-
     AWPSoldierCharacter* FindBestTarget() const;
     bool HasLineOfSightTo(const AActor* Target) const;
 };
