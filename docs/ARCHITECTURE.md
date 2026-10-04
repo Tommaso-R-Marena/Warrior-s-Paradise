@@ -63,6 +63,7 @@ The tactical infantry layer provides:
 - body-width friendly fire-lane sweeps before every AI firing decision;
 - immediate ceasefire when a friendly enters a live lane, with exposed shooters sidestepping to regain a safe lane while covered shooters hold position;
 - downed friendlies remain physical fire-lane blockers;
+- frag throws are vetoed when friendlies occupy a safety bubble extending beyond the grenade's lethal radius;
 - independent flanking as a fallback when coordinated tactics are unavailable;
 - role behaviors, including medic prioritization of downed and bleeding allies;
 - grenades/smoke;
