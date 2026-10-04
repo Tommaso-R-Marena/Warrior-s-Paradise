@@ -146,6 +146,12 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="View|Sway", meta=(ClampMin="0.0"))
     float BaseWeaponSwayCm = 2.4f;
 
+    UPROPERTY(EditDefaultsOnly, Category="View|Recoil", meta=(ClampMin="0.1"))
+    float RecoilRecoverySpeed = 8.5f;
+
+    UPROPERTY(EditDefaultsOnly, Category="View|Recoil", meta=(ClampMin="0.0"))
+    float RecoilCameraImpulseFOV = 0.5f;
+
     UPROPERTY(EditDefaultsOnly, Category="View")
     float HipFOV = 78.0f;
 
@@ -158,6 +164,8 @@ private:
     bool bAiming = false;
     bool bSprinting = false;
     float LastSprintActivityTime = -1000.0f;
+    float PendingRecoilPitch = 0.0f;
+    float PendingRecoilYaw = 0.0f;
 
     const FVector HipBodyLocation = FVector(45.0f, 18.0f, -18.0f);
     const FVector AimBodyLocation = FVector(45.0f, 0.0f, -12.5f);
