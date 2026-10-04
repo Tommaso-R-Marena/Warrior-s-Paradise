@@ -8,6 +8,7 @@
 class UWPEnvironmentVisualProfile;
 class UWPExplosionPresentationProfile;
 class UWPInfantryLoadoutProfile;
+class UWPSmokePresentationProfile;
 class UWPVehicleVisualProfile;
 
 UCLASS(BlueprintType)
@@ -55,6 +56,9 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Explosions")
     TObjectPtr<UWPExplosionPresentationProfile> ArtilleryExplosion;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Smoke")
+    TObjectPtr<UWPSmokePresentationProfile> SmokePresentation;
+
     UWPInfantryLoadoutProfile* GetInfantryLoadout(
         EWPCombatTeam Team,
         EWPSoldierRole Role) const
@@ -90,5 +94,10 @@ public:
     UWPExplosionPresentationProfile* GetArtilleryExplosion() const
     {
         return ArtilleryExplosion.Get();
+    }
+
+    UWPSmokePresentationProfile* GetSmokePresentation() const
+    {
+        return SmokePresentation.Get();
     }
 };
