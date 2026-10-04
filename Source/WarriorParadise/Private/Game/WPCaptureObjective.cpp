@@ -67,7 +67,7 @@ void AWPCaptureObjective::Tick(float DeltaSeconds)
     for (TActorIterator<AWPSoldierCharacter> It(GetWorld()); It; ++It)
     {
         AWPSoldierCharacter* Soldier = *It;
-        if (!Soldier || Soldier->GetHealthComponent()->IsDead())
+        if (!Soldier || !Soldier->IsCombatCapable())
         {
             continue;
         }
