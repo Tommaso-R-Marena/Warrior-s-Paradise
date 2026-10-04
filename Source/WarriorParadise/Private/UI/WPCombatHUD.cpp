@@ -214,19 +214,38 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
             false);
     }
 
+    const FString WeaponState =
+        Weapon && Weapon->IsCyclingAction()
+            ? TEXT("CYCLING")
+            : (Weapon && Weapon->IsReloading()
+                ? TEXT("RELOADING")
+                : (Weapon ? Weapon->GetOperationLabel() : TEXT("")));
+
     DrawText(
         FString::Printf(
-            TEXT("%02d / %03d   FRAG %d   SMOKE %d   MED %d"),
+            TEXT("%s  [%s]  %02d / %03d"),
+            Weapon ? *Weapon->GetWeaponDisplayName() : TEXT("WEAPON"),
+            *WeaponState,
             CurrentAmmo,
-            Reserve,
+            Reserve),
+        FLinearColor::White,
+        Width - 360.0f,
+        Height - 58.0f,
+        GEngine->GetMediumFont(),
+        0.92f,
+        false);
+
+    DrawText(
+        FString::Printf(
+            TEXT("FRAG %d   SMOKE %d   MED %d"),
             Soldier->GetGrenadesRemaining(),
             Soldier->GetSmokeGrenadesRemaining(),
             Soldier->GetMedkitsRemaining()),
-        FLinearColor::White,
-        Width - 245.0f,
-        Height - 58.0f,
-        GEngine->GetMediumFont(),
-        1.0f,
+        FLinearColor(0.82f, 0.86f, 0.92f, 0.9f),
+        Width - 240.0f,
+        Height - 84.0f,
+        GEngine->GetSmallFont(),
+        0.9f,
         false);
 
     const AWPBattlefieldDirector* Director = Cast<AWPBattlefieldDirector>(
