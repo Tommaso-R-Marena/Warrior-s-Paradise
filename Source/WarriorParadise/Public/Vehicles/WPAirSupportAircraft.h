@@ -8,6 +8,7 @@
 class AWPAirBomb;
 class UAudioComponent;
 class UStaticMeshComponent;
+class USoundBase;
 class UWPAirSupportVisualProfile;
 class UWPExplosionPresentationProfile;
 
