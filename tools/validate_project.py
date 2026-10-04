@@ -312,6 +312,10 @@ def main() -> None:
 
     require_text("Source/WarriorParadise/WarriorParadise.Build.cs", '"Niagara"')
 
+    engine_config = (ROOT / "Config/DefaultEngine.ini").read_text(encoding="utf-8")
+    if "\\n" in engine_config:
+        fail("Config/DefaultEngine.ini contains a literal escaped newline")
+
     for action in (
         "Aim",
         "ThrowGrenade",
