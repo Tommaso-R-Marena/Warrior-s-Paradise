@@ -272,6 +272,104 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
         set_prop(asset, "bullet_impact_sound", bullet_impact)
 
 
+def configure_explosion_presentation(
+    asset,
+    *,
+    effect_scale: float,
+    volume: float,
+    sound_groups: list[tuple[str, ...]],
+) -> None:
+    effect = find_asset(
+        unreal.NiagaraSystem,
+        ("explosion",),
+        ("blast",),
+        ("fire", "explosion"),
+    )
+    sound = find_asset(
+        unreal.SoundBase,
+        *sound_groups,
+        ("explosion",),
+        ("blast",),
+    )
+
+    if effect:
+        set_prop(asset, "explosion_effect", effect)
+    if sound:
+        set_prop(asset, "explosion_sound", sound)
+
+    set_prop(
+        asset,
+        "effect_scale",
+        unreal.Vector(effect_scale, effect_scale, effect_scale),
+    )
+    set_prop(asset, "volume", volume)
+
+
+def configure_vehicle_presentation(asset) -> None:
+    cannon_muzzle = find_asset(
+        unreal.NiagaraSystem,
+        ("tank", "muzzle"),
+        ("cannon", "muzzle"),
+        ("muzzle", "flash"),
+    )
+    machine_muzzle = find_asset(
+        unreal.NiagaraSystem,
+        ("machine", "gun", "muzzle"),
+        ("muzzle", "flash"),
+    )
+    shell_impact = find_asset(
+        unreal.NiagaraSystem,
+        ("tank", "impact"),
+        ("shell", "impact"),
+        ("explosion",),
+    )
+    destruction = find_asset(
+        unreal.NiagaraSystem,
+        ("vehicle", "explosion"),
+        ("tank", "explosion"),
+        ("explosion",),
+    )
+
+    cannon_sound = find_asset(
+        unreal.SoundBase,
+        ("tank", "cannon"),
+        ("cannon", "fire"),
+        ("tank", "fire"),
+    )
+    machine_sound = find_asset(
+        unreal.SoundBase,
+        ("machine", "gun", "fire"),
+        ("mg", "fire"),
+        ("automatic", "fire"),
+    )
+    impact_sound = find_asset(
+        unreal.SoundBase,
+        ("shell", "impact"),
+        ("tank", "impact"),
+        ("heavy", "impact"),
+        ("explosion",),
+    )
+    destruction_sound = find_asset(
+        unreal.SoundBase,
+        ("vehicle", "explosion"),
+        ("tank", "explosion"),
+        ("explosion",),
+    )
+
+    for property_name, value in {
+        "cannon_muzzle_flash": cannon_muzzle,
+        "machine_gun_muzzle_flash": machine_muzzle,
+        "shell_impact_effect": shell_impact,
+        "destruction_effect": destruction,
+        "cannon_sound": cannon_sound,
+        "machine_gun_sound": machine_sound,
+        "shell_impact_sound": impact_sound,
+        "destruction_sound": destruction_sound,
+    }.items():
+        if value:
+            set_prop(asset, property_name, value)
+
+
 def configure_loadout(
     asset,
     *,
@@ -520,6 +618,39 @@ def main() -> None:
     if vehicle_meshes["axis"]:
         set_prop(axis_vehicle, "hull_mesh", vehicle_meshes["axis"])
 
+    configure_vehicle_presentation(allied_vehicle)
+    configure_vehicle_presentation(axis_vehicle)
+
+    frag_explosion = create_or_load_data_asset(
+        "DA_WP_Explosion_Frag",
+        "WPExplosionPresentationProfile",
+    )
+    artillery_explosion = create_or_load_data_asset(
+        "DA_WP_Explosion_Artillery",
+        "WPExplosionPresentationProfile",
+    )
+
+    configure_explosion_presentation(
+        frag_explosion,
+        effect_scale=0.85,
+        volume=0.95,
+        sound_groups=[
+            ("grenade", "explosion"),
+            ("frag", "explosion"),
+            ("small", "explosion"),
+        ],
+    )
+    configure_explosion_presentation(
+        artillery_explosion,
+        effect_scale=1.85,
+        volume=1.0,
+        sound_groups=[
+            ("artillery", "explosion"),
+            ("heavy", "explosion"),
+            ("large", "explosion"),
+        ],
+    )
+
     environment = create_or_load_data_asset(
         "DA_WP_Environment_Free",
         "WPEnvironmentVisualProfile",
@@ -587,6 +718,8 @@ def main() -> None:
         "allied_vehicle": allied_vehicle,
         "axis_vehicle": axis_vehicle,
         "environment": environment,
+        "frag_explosion": frag_explosion,
+        "artillery_explosion": artillery_explosion,
     }
 
     for property_name, value in mapping.items():
@@ -600,6 +733,8 @@ def main() -> None:
         *loadouts.values(),
         allied_vehicle,
         axis_vehicle,
+        frag_explosion,
+        artillery_explosion,
         environment,
         battle,
     ]
