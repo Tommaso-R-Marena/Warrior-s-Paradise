@@ -19,6 +19,29 @@ void UWPWeaponPresentationComponent::BeginPlay()
     Super::BeginPlay();
 
     SoldierOwner = Cast<AWPSoldierCharacter>(GetOwner());
+
+    RuntimeAttenuation = NewObject<USoundAttenuation>(
+        this,
+        TEXT("RuntimeOutdoorWeaponAttenuation"));
+
+    if (RuntimeAttenuation)
+    {
+        FSoundAttenuationSettings& Settings =
+            RuntimeAttenuation->Attenuation;
+
+        Settings.bAttenuate = true;
+        Settings.bSpatialize = true;
+        Settings.AttenuationShape = EAttenuationShape::Sphere;
+        Settings.AttenuationShapeExtents = FVector(300.0f);
+        Settings.FalloffDistance = 11000.0f;
+
+        Settings.bEnableOcclusion = true;
+        Settings.OcclusionTraceChannel = ECC_Visibility;
+        Settings.OcclusionLowPassFilterFrequency = 1800.0f;
+        Settings.OcclusionVolumeAttenuation = 0.45f;
+        Settings.OcclusionInterpolationTime = 0.08f;
+    }
+
     BindWeapon();
 }
 
@@ -81,6 +104,11 @@ void UWPWeaponPresentationComponent::PlaySound(
 
     USoundAttenuation* Attenuation =
         PresentationProfile->Attenuation.LoadSynchronous();
+
+    if (!Attenuation)
+    {
+        Attenuation = RuntimeAttenuation;
+    }
 
     const float RandomPitch = 1.0f + FMath::FRandRange(
         -PresentationProfile->PitchRandomization,
