@@ -173,6 +173,12 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="View|Recoil", meta=(ClampMin="0.0"))
     float RecoilCameraImpulseFOV = 0.5f;
 
+    UPROPERTY(EditDefaultsOnly, Category="View|Suppression", meta=(ClampMin="0.0"))
+    float SuppressionFOVPenalty = 1.8f;
+
+    UPROPERTY(EditDefaultsOnly, Category="View|Suppression", meta=(ClampMin="0.0"))
+    float SuppressionRollDegrees = 1.2f;
+
     UPROPERTY(EditDefaultsOnly, Category="View")
     float HipFOV = 78.0f;
 
