@@ -832,7 +832,7 @@ void AWPLightVehicle::DestroyVehicle()
     if (AWPBattlefieldDirector* Director =
         BattlefieldDirector.Get())
     {
-        Director->NotifyVehicleDestroyed(CombatTeam);
+        Director->NotifyLightVehicleDestroyed(CombatTeam);
     }
 
     CollisionRoot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
