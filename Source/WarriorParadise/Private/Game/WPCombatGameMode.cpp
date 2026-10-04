@@ -213,6 +213,7 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
 
     int32 CoordinatedAITroops = 0;
     int32 FriendlyFireHolds = 0;
+    int32 FriendlyGrenadeHolds = 0;
 
     for (TActorIterator<AWPEnemySoldier> It(GetWorld()); It; ++It)
     {
@@ -231,6 +232,11 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
         {
             ++FriendlyFireHolds;
         }
+
+        if (Soldier->HasHeldGrenadeForFriendly())
+        {
+            ++FriendlyGrenadeHolds;
+        }
     }
 
     UE_LOG(
@@ -239,7 +245,8 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
         TEXT(
             "WP_HEADLESS_SMOKE %s friendly=%d enemies=%d "
             "enemyArmor=%d enemyLight=%d objective=%d score=%d "
-            "coordinatedAI=%d friendlyFireHolds=%d won=%d lost=%d"),
+            "coordinatedAI=%d friendlyFireHolds=%d "
+            "friendlyGrenadeHolds=%d won=%d lost=%d"),
         bPassed ? TEXT("PASS") : TEXT("FAIL"),
         Director ? Director->GetFriendlySoldiersAlive() : -1,
         Director ? Director->GetRemainingEnemies() : -1,
@@ -249,6 +256,7 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
         Director ? Director->GetScore() : -1,
         CoordinatedAITroops,
         FriendlyFireHolds,
+        FriendlyGrenadeHolds,
         Director ? Director->IsBattleWon() : false,
         Director ? Director->IsBattleLost() : false);
 
