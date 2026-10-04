@@ -598,7 +598,7 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         GetWeaponComponent()->StopFire();
         bPulseFiring = false;
 
-        if (bPinned)
+        if (bPressured)
         {
             if (AWPCoverPoint* Cover = CurrentCover.Get())
             {
@@ -610,12 +610,12 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
                 {
                     MoveTacticallyToward(
                         Cover->GetActorLocation(),
-                        1.0f);
+                        bPinned ? 1.0f : 0.82f);
                 }
                 return;
             }
         }
-        else if (!bPressured)
+        else
         {
             ReleaseCover();
         }
