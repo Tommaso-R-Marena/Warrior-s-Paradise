@@ -46,6 +46,12 @@ public:
         return bHasHeldFireForFriendly;
     }
 
+    UFUNCTION(BlueprintPure, Category="AI|Tactics")
+    bool HasHeldGrenadeForFriendly() const
+    {
+        return bHasHeldGrenadeForFriendly;
+    }
+
 protected:
     virtual void BeginPlay() override;
 
@@ -104,6 +110,9 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="AI|Grenade")
     float GrenadeCooldownSeconds = 15.0f;
 
+    UPROPERTY(EditDefaultsOnly, Category="AI|Grenade", meta=(ClampMin="0.0"))
+    float GrenadeFriendlySafetyRadius = 650.0f;
+
     float NextDecisionTime = 0.0f;
     float NextTargetSearchTime = 0.0f;
     float NextCoverSearchTime = 0.0f;
@@ -114,6 +123,7 @@ private:
     bool bPulseFiring = false;
     bool bHasUsedCoordinatedTactic = false;
     bool bHasHeldFireForFriendly = false;
+    bool bHasHeldGrenadeForFriendly = false;
 
     UPROPERTY(VisibleInstanceOnly, Category="AI|Tactics")
     EWPAITacticalPosture TacticalPosture =
@@ -135,6 +145,8 @@ private:
     bool HasLineOfSightTo(const AActor* Target) const;
     bool HasClearFireLaneTo(
         const AWPSoldierCharacter* Target) const;
+    bool IsGrenadeTargetSafe(
+        const FVector& TargetLocation) const;
     float GetManeuverSelectionScore() const;
     FVector GetStrategicDestination() const;
     FVector GetManeuverDestination(
