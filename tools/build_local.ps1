@@ -4,6 +4,8 @@ param(
     [ValidateSet("Development", "DebugGame")]
     [string]$Configuration = "Development",
     [switch]$ValidateOnly,
+    [switch]$Clean,
+    [switch]$BuildGameTarget,
     [switch]$Package,
     [string]$ArchiveDirectory = ""
 )
@@ -13,10 +15,22 @@ Set-StrictMode -Version Latest
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $ProjectFile = Join-Path $RepoRoot "WarriorParadise.uproject"
+$BuildStartedAt = Get-Date
 
 function Write-Step([string]$Message) {
     Write-Host ""
     Write-Host "==> $Message" -ForegroundColor Cyan
+}
+
+function Add-Candidate {
+    param(
+        [System.Collections.Generic.List[string]]$Candidates,
+        [string]$Path
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($Path) -and -not $Candidates.Contains($Path)) {
+        $Candidates.Add($Path)
+    }
 }
 
 function Resolve-Python {
@@ -45,28 +59,46 @@ function Find-EngineRoot {
 
     $candidates = New-Object System.Collections.Generic.List[string]
 
-    if (-not [string]::IsNullOrWhiteSpace($ExplicitRoot)) {
-        $candidates.Add($ExplicitRoot)
+    Add-Candidate -Candidates $candidates -Path $ExplicitRoot
+    Add-Candidate -Candidates $candidates -Path $env:UE_5_8_ROOT
+
+    $launcherManifest = Join-Path $env:ProgramData "Epic\UnrealEngineLauncher\LauncherInstalled.dat"
+    if (Test-Path $launcherManifest) {
+        try {
+            $launcherData = Get-Content -Raw $launcherManifest | ConvertFrom-Json
+            foreach ($installation in @($launcherData.InstallationList)) {
+                $appName = [string]$installation.AppName
+                $artifactId = [string]$installation.ArtifactId
+                $appVersion = [string]$installation.AppVersion
+                if ($appName -match "UE_5\.8" -or $artifactId -match "UE_5\.8" -or $appVersion -match "^5\.8") {
+                    Add-Candidate -Candidates $candidates -Path ([string]$installation.InstallLocation)
+                }
+            }
+        }
+        catch {
+            Write-Warning "Could not parse Epic Launcher install manifest: $($_.Exception.Message)"
+        }
     }
 
-    if (-not [string]::IsNullOrWhiteSpace($env:UE_5_8_ROOT)) {
-        $candidates.Add($env:UE_5_8_ROOT)
-    }
-
-    $commonRoots = @(
-        "C:\Program Files\Epic Games\UE_5.8",
-        "C:\Epic Games\UE_5.8",
-        "D:\Program Files\Epic Games\UE_5.8",
-        "D:\Epic Games\UE_5.8"
+    $registryLocations = @(
+        "HKLM:\SOFTWARE\EpicGames\Unreal Engine\5.8",
+        "HKLM:\SOFTWARE\WOW6432Node\EpicGames\Unreal Engine\5.8"
     )
-
-    foreach ($root in $commonRoots) {
-        $candidates.Add($root)
+    foreach ($registryLocation in $registryLocations) {
+        if (Test-Path $registryLocation) {
+            try {
+                $installedDirectory = (Get-ItemProperty $registryLocation -ErrorAction Stop).InstalledDirectory
+                Add-Candidate -Candidates $candidates -Path ([string]$installedDirectory)
+            }
+            catch {
+                Write-Warning "Could not read Unreal Engine registry entry at $registryLocation."
+            }
+        }
     }
 
-    $registryPath = "HKCU:\Software\Epic Games\Unreal Engine\Builds"
-    if (Test-Path $registryPath) {
-        $properties = Get-ItemProperty $registryPath
+    $customBuildsRegistry = "HKCU:\Software\Epic Games\Unreal Engine\Builds"
+    if (Test-Path $customBuildsRegistry) {
+        $properties = Get-ItemProperty $customBuildsRegistry
         foreach ($property in $properties.PSObject.Properties) {
             if ($property.Name -match "^PS") {
                 continue
@@ -74,9 +106,21 @@ function Find-EngineRoot {
 
             $value = [string]$property.Value
             if ($value -match "5\.8" -or $property.Name -match "5\.8") {
-                $candidates.Add($value)
+                Add-Candidate -Candidates $candidates -Path $value
             }
         }
+    }
+
+    $commonRoots = @(
+        "C:\Program Files\Epic Games\UE_5.8",
+        "C:\Epic Games\UE_5.8",
+        "D:\Program Files\Epic Games\UE_5.8",
+        "D:\Epic Games\UE_5.8",
+        "E:\Program Files\Epic Games\UE_5.8",
+        "E:\Epic Games\UE_5.8"
+    )
+    foreach ($root in $commonRoots) {
+        Add-Candidate -Candidates $candidates -Path $root
     }
 
     foreach ($candidate in $candidates) {
@@ -85,8 +129,18 @@ function Find-EngineRoot {
         }
     }
 
+    $candidateList = if ($candidates.Count -gt 0) {
+        ($candidates | ForEach-Object { "  - $_" }) -join [Environment]::NewLine
+    }
+    else {
+        "  (no candidate paths discovered)"
+    }
+
     throw @"
 Unreal Engine 5.8 was not found.
+
+Checked:
+$candidateList
 
 Either:
   1. install UE 5.8 through Epic Games Launcher,
@@ -132,6 +186,17 @@ if ($ValidateOnly) {
 $ResolvedEngineRoot = Find-EngineRoot -ExplicitRoot $EngineRoot
 Write-Host "Using Unreal Engine: $ResolvedEngineRoot" -ForegroundColor Green
 
+if ($Clean) {
+    Write-Step "Removing project build intermediates for a clean compile"
+    foreach ($relativePath in @("Binaries", "Intermediate")) {
+        $path = Join-Path $RepoRoot $relativePath
+        if (Test-Path $path) {
+            Remove-Item -Recurse -Force $path
+            Write-Host "Removed $path" -ForegroundColor DarkGray
+        }
+    }
+}
+
 $BuildBat = Join-Path $ResolvedEngineRoot "Engine\Build\BatchFiles\Build.bat"
 
 Write-Step "Building WarriorParadiseEditor Win64 $Configuration"
@@ -143,6 +208,17 @@ Invoke-Checked -Executable $BuildBat -Arguments @(
     "-WaitMutex",
     "-NoHotReloadFromIDE"
 )
+
+if ($BuildGameTarget) {
+    Write-Step "Building WarriorParadise Win64 $Configuration"
+    Invoke-Checked -Executable $BuildBat -Arguments @(
+        "WarriorParadise",
+        "Win64",
+        $Configuration,
+        $ProjectFile,
+        "-WaitMutex"
+    )
+}
 
 if ($Package) {
     $RunUAT = Join-Path $ResolvedEngineRoot "Engine\Build\BatchFiles\RunUAT.bat"
@@ -174,5 +250,10 @@ if ($Package) {
     Write-Host "Packaged build: $ArchiveDirectory" -ForegroundColor Green
 }
 
+$duration = (Get-Date) - $BuildStartedAt
 Write-Host ""
-Write-Host "Warrior's Paradise local build pipeline completed successfully." -ForegroundColor Green
+Write-Host ("Warrior's Paradise build pipeline completed successfully in {0:hh\:mm\:ss}." -f $duration) -ForegroundColor Green
+
+if ($env:GITHUB_ACTIONS -eq "true") {
+    Write-Host "::notice title=Warrior's Paradise compile gate::UE 5.8 build completed successfully."
+}
