@@ -37,6 +37,18 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Handling")
     bool bAutomatic = true;
 
+    // Manual-action weapons (bolt-action rifles, pump-action shotguns, etc.)
+    // must complete their action cycle before another round can be fired.
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Handling")
+    bool bRequiresManualCycle = false;
+
+    UPROPERTY(
+        EditDefaultsOnly,
+        BlueprintReadOnly,
+        Category="Handling",
+        meta=(ClampMin="0.05", EditCondition="bRequiresManualCycle"))
+    float ManualCycleDuration = 0.65f;
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Handling", meta=(ClampMin="1"))
     int32 MagazineSize = 30;
 
