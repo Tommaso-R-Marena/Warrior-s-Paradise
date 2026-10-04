@@ -7,6 +7,7 @@
 
 class AWPBattlefieldDirector;
 class AWPFragGrenade;
+class AWPSmokeGrenade;
 class UCameraComponent;
 class UStaticMeshComponent;
 class UWPHealthComponent;
@@ -54,6 +55,9 @@ public:
     UFUNCTION(BlueprintPure, Category="Combat")
     int32 GetGrenadesRemaining() const { return GrenadesRemaining; }
 
+    UFUNCTION(BlueprintPure, Category="Combat")
+    int32 GetSmokeGrenadesRemaining() const { return SmokeGrenadesRemaining; }
+
     UFUNCTION(BlueprintPure, Category="Movement")
     float GetStaminaNormalized() const
     {
@@ -65,6 +69,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Combat")
     bool ThrowGrenadeAt(const FVector& TargetLocation);
+
+    UFUNCTION(BlueprintCallable, Category="Combat")
+    bool ThrowSmokeGrenadeAt(const FVector& TargetLocation);
 
     UFUNCTION(BlueprintCallable, Category="Combat")
     bool TryReviveSoldier(AWPSoldierCharacter* Target);
@@ -100,8 +107,14 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="Combat|Grenade")
     TSubclassOf<AWPFragGrenade> GrenadeClass;
 
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Grenade")
+    TSubclassOf<AWPSmokeGrenade> SmokeGrenadeClass;
+
     UPROPERTY(EditDefaultsOnly, Category="Combat|Grenade", meta=(ClampMin="0"))
     int32 GrenadesRemaining = 2;
+
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Grenade", meta=(ClampMin="0"))
+    int32 SmokeGrenadesRemaining = 1;
 
     UPROPERTY(EditDefaultsOnly, Category="Combat|Grenade", meta=(ClampMin="100.0"))
     float GrenadeThrowSpeed = 1350.0f;
@@ -166,6 +179,7 @@ private:
     void StartAim();
     void StopAim();
     void ThrowGrenadeInput();
+    void ThrowSmokeGrenadeInput();
     void InteractInput();
     void IssueFollowOrder();
     void IssueAttackOrder();
