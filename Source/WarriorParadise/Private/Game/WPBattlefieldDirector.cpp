@@ -15,6 +15,7 @@
 #include "Game/WPCaptureObjective.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Controller.h"
+#include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
@@ -212,6 +213,7 @@ void AWPBattlefieldDirector::SpawnFriendlySquad()
         {
             Soldier->SetCombatTeam(EWPCombatTeam::Allies);
             Soldier->FinishSpawning(SpawnTransform);
+            FriendlySquad.Add(Soldier);
             ++FriendlySoldiersAlive;
         }
     }
@@ -282,7 +284,16 @@ void AWPBattlefieldDirector::NotifySoldierKilled(AWPSoldierCharacter* Soldier)
 
     if (Soldier->GetCombatTeam() == EWPCombatTeam::Allies)
     {
-        FriendlySoldiersAlive = FMath::Max(0, FriendlySoldiersAlive - 1);
+        if (FriendlySquad.Contains(Soldier))
+        {
+            FriendlySoldiersAlive = FMath::Max(0, FriendlySoldiersAlive - 1);
+        }
+
+        if (Soldier->IsPlayerControlled())
+        {
+            TransferPlayerControl(Soldier);
+        }
+
         return;
     }
 
@@ -338,6 +349,52 @@ void AWPBattlefieldDirector::HandleObjectiveCaptured(AWPCaptureObjective* Object
     {
         bBattleWon = true;
     }
+}
+
+void AWPBattlefieldDirector::TransferPlayerControl(AWPSoldierCharacter* FallenSoldier)
+{
+    if (!FallenSoldier)
+    {
+        return;
+    }
+
+    APlayerController* PlayerController = Cast<APlayerController>(FallenSoldier->GetController());
+    if (!PlayerController)
+    {
+        return;
+    }
+
+    AWPSoldierCharacter* BestCandidate = nullptr;
+    float BestDistanceSquared = TNumericLimits<float>::Max();
+
+    for (AWPSoldierCharacter* Candidate : FriendlySquad)
+    {
+        if (!Candidate ||
+            Candidate == FallenSoldier ||
+            !Candidate->GetHealthComponent() ||
+            Candidate->GetHealthComponent()->IsDead())
+        {
+            continue;
+        }
+
+        const float DistanceSquared = FVector::DistSquared(
+            FallenSoldier->GetActorLocation(),
+            Candidate->GetActorLocation());
+
+        if (DistanceSquared < BestDistanceSquared)
+        {
+            BestDistanceSquared = DistanceSquared;
+            BestCandidate = Candidate;
+        }
+    }
+
+    if (!BestCandidate)
+    {
+        return;
+    }
+
+    PlayerController->Possess(BestCandidate);
+    PlayerController->SetControlRotation(BestCandidate->GetActorRotation());
 }
 
 void AWPBattlefieldDirector::SpawnNextWave()
