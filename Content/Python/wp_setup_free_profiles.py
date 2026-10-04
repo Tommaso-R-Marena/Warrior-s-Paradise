@@ -299,9 +299,16 @@ def save(asset) -> None:
 def main() -> None:
     body = find_asset(
         unreal.SkeletalMesh,
+        ("metahuman", "body"),
         ("ww2", "soldier"),
         ("soldier",),
-        ("metahuman",),
+    )
+
+    locomotion_anim_blueprint = find_asset(
+        unreal.AnimBlueprint,
+        ("abp", "sandboxcharacter"),
+        ("game", "animation", "sample"),
+        ("motion", "matching"),
     )
 
     weapon_meshes = {
@@ -433,6 +440,31 @@ def main() -> None:
         )
         configure_visual_profile(visual, body, weapon_meshes[key])
         visuals[key] = visual
+
+    if body and locomotion_anim_blueprint:
+        try:
+            body_skeleton = body.get_editor_property("skeleton")
+            target_skeleton = locomotion_anim_blueprint.get_editor_property(
+                "target_skeleton"
+            )
+
+            if body_skeleton == target_skeleton:
+                anim_class = locomotion_anim_blueprint.generated_class()
+                for visual in visuals.values():
+                    set_prop(visual, "third_person_anim_class", anim_class)
+                log(
+                    "Assigned compatible Game Animation Sample/Motion Matching "
+                    "AnimBlueprint to free infantry visual profiles."
+                )
+            else:
+                warn(
+                    "A Motion Matching AnimBlueprint was found, but its target "
+                    "skeleton does not match the selected body. Retarget it in "
+                    "UE5, then rerun this script or assign the retargeted AnimBP "
+                    "to the visual profiles."
+                )
+        except Exception as exc:
+            warn(f"Could not verify animation skeleton compatibility: {exc}")
 
     rifle_presentation = create_or_load_data_asset(
         "DA_WP_Presentation_Rifle",
