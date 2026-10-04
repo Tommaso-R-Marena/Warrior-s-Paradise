@@ -19,4 +19,5 @@ private:
 
     FTimerHandle HeadlessSmokeTimer;
     bool bHeadlessSmokeInitialStateValid = false;
+    bool bHeadlessSuppressionStateValid = false;
 };
