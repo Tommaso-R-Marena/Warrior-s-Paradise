@@ -376,8 +376,8 @@ AWPEnemySoldier* AWPEnemySoldier::SelectManeuverElement(
         }
 
         if (FVector::DistSquared2D(
-                GetActorLocation(),
-                Candidate->GetActorLocation()) >
+                Candidate->GetActorLocation(),
+                Target->GetActorLocation()) >
             FMath::Square(CoordinationRadius))
         {
             continue;
