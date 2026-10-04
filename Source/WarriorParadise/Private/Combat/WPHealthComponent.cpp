@@ -31,6 +31,19 @@ float UWPHealthComponent::GetBleedoutRemaining() const
         GetWorld()->GetTimerManager().GetTimerRemaining(BleedoutTimerHandle));
 }
 
+bool UWPHealthComponent::Heal(float Amount)
+{
+    if (bDead || bDowned || Amount <= 0.0f || Health >= MaxHealth)
+    {
+        return false;
+    }
+
+    const float PreviousHealth = Health;
+    Health = FMath::Clamp(Health + Amount, 0.0f, MaxHealth);
+    OnHealthChanged.Broadcast(Health, Health - PreviousHealth);
+    return Health > PreviousHealth;
+}
+
 void UWPHealthComponent::RestoreToFull()
 {
     if (bDead || bDowned)
