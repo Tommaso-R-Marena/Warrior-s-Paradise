@@ -654,6 +654,13 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
     const float HealthNormalized = GetHealthComponent()->GetHealthNormalized();
     const FVector FlatDirection = FVector(ToTarget.X, ToTarget.Y, 0.0f).GetSafeNormal();
 
+    if (Distance <= 180.0f && TryMeleeAttack(Target))
+    {
+        GetWeaponComponent()->StopFire();
+        bPulseFiring = false;
+        return;
+    }
+
     if (!FlatDirection.IsNearlyZero())
     {
         const FRotator DesiredRotation = FlatDirection.Rotation();
