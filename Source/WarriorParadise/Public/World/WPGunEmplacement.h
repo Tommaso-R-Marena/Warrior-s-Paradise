@@ -41,6 +41,12 @@ public:
     UFUNCTION(BlueprintPure, Category="Emplacement")
     bool IsOccupied() const { return OperatorSoldier.IsValid(); }
 
+    UFUNCTION(BlueprintPure, Category="Emplacement")
+    float GetHealthNormalized() const
+    {
+        return MaxHealth > 0.0f ? Health / MaxHealth : 0.0f;
+    }
+
     UFUNCTION(BlueprintCallable, Category="Emplacement")
     bool TryUse(AWPSoldierCharacter* Soldier);
 
