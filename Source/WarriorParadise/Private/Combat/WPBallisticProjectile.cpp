@@ -44,12 +44,14 @@ void AWPBallisticProjectile::InitializeProjectile(
     float MuzzleVelocityCmPerSecond,
     float InDamage,
     float InMaximumTravelCm,
-    AController* InInstigatorController)
+    AController* InInstigatorController,
+    EWPCombatTeam InTeam)
 {
     const float Speed = FMath::Max(1000.0f, MuzzleVelocityCmPerSecond);
     Damage = FMath::Max(0.0f, InDamage);
     MaximumTravelCm = FMath::Max(1000.0f, InMaximumTravelCm);
     InstigatorController = InInstigatorController;
+    ProjectileTeam = InTeam;
 
     Movement->InitialSpeed = Speed;
     Movement->MaxSpeed = Speed;
@@ -99,7 +101,10 @@ void AWPBallisticProjectile::ApplyNearMissSuppression()
     for (const FOverlapResult& Result : Overlaps)
     {
         AWPSoldierCharacter* Soldier = Cast<AWPSoldierCharacter>(Result.GetActor());
-        if (!Soldier || Soldier == GetOwner() || !Soldier->GetSuppressionComponent())
+        if (!Soldier ||
+            Soldier == GetOwner() ||
+            Soldier->GetCombatTeam() == ProjectileTeam ||
+            !Soldier->GetSuppressionComponent())
         {
             continue;
         }
@@ -129,6 +134,12 @@ void AWPBallisticProjectile::HandleHit(
 
     if (AWPSoldierCharacter* Soldier = Cast<AWPSoldierCharacter>(OtherActor))
     {
+        if (Soldier->GetCombatTeam() == ProjectileTeam)
+        {
+            Destroy();
+            return;
+        }
+
         if (UWPSuppressionComponent* Suppression = Soldier->GetSuppressionComponent())
         {
             Suppression->AddSuppression(30.0f);
