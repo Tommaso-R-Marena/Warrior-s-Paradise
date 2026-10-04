@@ -192,4 +192,9 @@ private:
         const FVector& Location,
         const FVector& CoverNormal,
         float Quality = 1.0f);
+
+    void SpawnDestructibleCover(
+        const FVector& Location,
+        const FVector& Scale,
+        float Health = 180.0f);
 };
