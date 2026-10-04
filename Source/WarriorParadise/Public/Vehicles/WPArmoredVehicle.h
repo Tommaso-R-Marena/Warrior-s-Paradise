@@ -5,6 +5,7 @@
 #include "GameFramework/Pawn.h"
 #include "WPArmoredVehicle.generated.h"
 
+class AWPBattlefieldDirector;
 class AWPTankShell;
 class UBoxComponent;
 class UFloatingPawnMovement;
