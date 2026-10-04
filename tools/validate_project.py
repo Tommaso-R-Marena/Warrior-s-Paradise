@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED = [
+    "tools/check_compile_readiness.py",
     "WarriorParadise.uproject",
     "Config/DefaultEngine.ini",
     "Config/DefaultGame.ini",
