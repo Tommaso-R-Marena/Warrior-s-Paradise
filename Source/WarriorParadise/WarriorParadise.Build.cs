@@ -13,7 +13,8 @@ public class WarriorParadise : ModuleRules
             "Engine",
             "InputCore",
             "AIModule",
-            "NavigationSystem"
+            "NavigationSystem",
+            "Niagara"
         });
     }
 }
