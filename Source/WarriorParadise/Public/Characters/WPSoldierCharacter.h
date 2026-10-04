@@ -87,6 +87,9 @@ public:
     UFUNCTION(BlueprintPure, Category="Movement")
     bool IsProne() const { return bProne; }
 
+    UFUNCTION(BlueprintPure, Category="Movement")
+    bool IsCrouchedStance() const { return bIsCrouched; }
+
     UFUNCTION(BlueprintCallable, Category="Combat")
     bool ThrowGrenadeAt(const FVector& TargetLocation);
 
