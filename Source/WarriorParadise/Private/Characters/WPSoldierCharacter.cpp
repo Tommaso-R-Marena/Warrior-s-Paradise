@@ -304,6 +304,7 @@ bool AWPSoldierCharacter::TryMeleeAttack(AWPSoldierCharacter* Target)
     StopSprint();
     StopAim();
     WeaponComponent->StopFire();
+    WeaponComponent->CancelReload();
 
     NextMeleeTime = Time + MeleeCooldownSeconds;
     OnMeleeAttack.Broadcast();
@@ -596,6 +597,7 @@ void AWPSoldierCharacter::StartBandage()
     StopSprint();
     StopAim();
     WeaponComponent->StopFire();
+    WeaponComponent->CancelReload();
 
     bBandaging = true;
     OnBandageStarted.Broadcast();
@@ -874,6 +876,7 @@ void AWPSoldierCharacter::StopAim()
 void AWPSoldierCharacter::ThrowGrenadeInput()
 {
     CancelBandage();
+    WeaponComponent->CancelReload();
     FVector TargetLocation;
     if (GetViewTarget(TargetLocation, 6500.0f))
     {
@@ -884,6 +887,7 @@ void AWPSoldierCharacter::ThrowGrenadeInput()
 void AWPSoldierCharacter::ThrowSmokeGrenadeInput()
 {
     CancelBandage();
+    WeaponComponent->CancelReload();
     FVector TargetLocation;
     if (GetViewTarget(TargetLocation, 6000.0f))
     {
@@ -1003,6 +1007,7 @@ void AWPSoldierCharacter::HandleDowned()
     ExitProne();
     StopAim();
     WeaponComponent->StopFire();
+    WeaponComponent->CancelReload();
     GetCharacterMovement()->DisableMovement();
 }
 
