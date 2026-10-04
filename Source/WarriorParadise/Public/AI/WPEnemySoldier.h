@@ -77,6 +77,7 @@ private:
 
     AWPSoldierCharacter* FindBestTarget() const;
     AWPSoldierCharacter* FindDownedAlly(float MaximumRange) const;
+    AWPSoldierCharacter* FindBleedingAlly(float MaximumRange) const;
     AWPSoldierCharacter* FindAmmoTarget(float MaximumRange) const;
     AWPCoverPoint* FindBestCover(const AWPSoldierCharacter* Threat) const;
 
