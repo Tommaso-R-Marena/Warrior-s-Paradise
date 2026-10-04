@@ -52,7 +52,21 @@ void AWPCombatHUD::DrawHUD()
 
     const float Width = Canvas->SizeX;
     const float Height = Canvas->SizeY;
-    DrawCrosshair(Width * 0.5f, Height * 0.5f);
+
+    AWPSoldierCharacter* Soldier = Cast<AWPSoldierCharacter>(
+        UGameplayStatics::GetPlayerCharacter(this, 0));
+
+    const bool bDrawCrosshair =
+        Soldier &&
+        Soldier->IsCombatCapable() &&
+        Soldier->GetWeaponComponent() &&
+        !Soldier->GetWeaponComponent()->IsAiming();
+
+    if (bDrawCrosshair)
+    {
+        DrawCrosshair(Width * 0.5f, Height * 0.5f);
+    }
+
     DrawCombatReadout(Width, Height);
 }
 
@@ -91,10 +105,13 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
 
     DrawText(
         FString::Printf(
-            TEXT("%s   CONDITION %03d   STAMINA %03d"),
+            TEXT("%s   CONDITION %03d   STAMINA %03d   %s"),
             RoleLabel(Soldier->GetSoldierRole()),
             CurrentHealth,
-            FMath::RoundToInt(Soldier->GetStaminaNormalized() * 100.0f)),
+            FMath::RoundToInt(Soldier->GetStaminaNormalized() * 100.0f),
+            Soldier->IsProne()
+                ? TEXT("PRONE")
+                : (Soldier->bIsCrouched ? TEXT("CROUCH") : TEXT("STAND"))),
         FLinearColor::White,
         28.0f,
         Height - 58.0f,
@@ -114,13 +131,26 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
             false);
     }
 
+    if (Soldier->IsBandaging())
+    {
+        DrawText(
+            TEXT("BANDAGING"),
+            FLinearColor(0.45f, 0.92f, 0.55f, 1.0f),
+            28.0f,
+            Height - 108.0f,
+            GEngine->GetSmallFont(),
+            1.0f,
+            false);
+    }
+
     DrawText(
         FString::Printf(
-            TEXT("%02d / %03d   FRAG %d   SMOKE %d"),
+            TEXT("%02d / %03d   FRAG %d   SMOKE %d   MED %d"),
             CurrentAmmo,
             Reserve,
             Soldier->GetGrenadesRemaining(),
-            Soldier->GetSmokeGrenadesRemaining()),
+            Soldier->GetSmokeGrenadesRemaining(),
+            Soldier->GetMedkitsRemaining()),
         FLinearColor::White,
         Width - 245.0f,
         Height - 58.0f,
@@ -252,7 +282,7 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
     }
 
     DrawText(
-        TEXT("1 FOLLOW   2 ATTACK   3 HOLD   G FRAG   H SMOKE   E REVIVE   T ARTILLERY"),
+        TEXT("1 FOLLOW  2 ATTACK  3 HOLD  Z PRONE  F MELEE  V BANDAGE  G FRAG  H SMOKE  E REVIVE  T ARTILLERY"),
         FLinearColor(0.78f, 0.78f, 0.74f, 0.85f),
         Width * 0.5f - 260.0f,
         Height - 28.0f,
