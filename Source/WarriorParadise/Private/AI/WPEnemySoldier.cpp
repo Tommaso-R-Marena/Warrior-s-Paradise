@@ -64,14 +64,9 @@ void AWPEnemySoldier::BeginPlay()
     BattlefieldDirector = Cast<AWPBattlefieldDirector>(
         UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass()));
 
-    if (GetCombatTeam() == EWPCombatTeam::Axis)
-    {
-        GetHealthComponent()->SetCanBeDowned(false);
-    }
-    else
-    {
-        GetHealthComponent()->SetCanBeDowned(true);
-    }
+    // Both factions use the same wound lifecycle so medics have a real
+    // battlefield role and "eliminated" means final death, not merely 0 HP.
+    GetHealthComponent()->SetCanBeDowned(true);
 
     switch (GetSoldierRole())
     {
