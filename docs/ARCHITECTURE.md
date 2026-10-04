@@ -57,7 +57,10 @@ The tactical infantry layer provides:
 - gunshot investigation;
 - cover reservation;
 - suppression-state reactions with cover priority, degraded accuracy and pinned return-fire limits;
-- flanking;
+- deterministic shared-target maneuver election;
+- Base Of Fire and Maneuver tactical postures, with Assault role preference for the maneuver element;
+- target-centered election so soldiers fighting the same contact converge on one mover rather than independently self-electing;
+- independent flanking as a fallback when coordinated tactics are unavailable;
 - role behaviors, including medic prioritization of downed and bleeding allies;
 - grenades/smoke;
 - melee.
