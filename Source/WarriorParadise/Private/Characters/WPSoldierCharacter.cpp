@@ -130,6 +130,9 @@ void AWPSoldierCharacter::BeginPlay()
     Stamina = MaxStamina;
     ApplyLoadoutProfile();
 
+    HealthComponent->OnDamageReceived.AddDynamic(
+        this,
+        &AWPSoldierCharacter::HandleDamageReceived);
     HealthComponent->OnDowned.AddDynamic(this, &AWPSoldierCharacter::HandleDowned);
     HealthComponent->OnRevived.AddDynamic(this, &AWPSoldierCharacter::HandleRevived);
     HealthComponent->OnDeath.AddDynamic(this, &AWPSoldierCharacter::HandleDeath);
@@ -1483,6 +1486,16 @@ void AWPSoldierCharacter::HandleShotFired(float RecoilPitch, float RecoilYaw)
     FirstPersonCamera->SetFieldOfView(
         FirstPersonCamera->FieldOfView +
         RecoilCameraImpulseFOV * (bAiming ? 0.55f : 1.0f));
+}
+
+void AWPSoldierCharacter::HandleDamageReceived(
+    float Damage,
+    AActor* DamageCauser)
+{
+    if (Damage > 0.0f && bBandaging)
+    {
+        CancelBandage();
+    }
 }
 
 void AWPSoldierCharacter::HandleDowned()
