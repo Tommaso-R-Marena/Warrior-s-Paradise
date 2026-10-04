@@ -163,7 +163,8 @@
       "page_url": "https://opengameart.org/content/rigged-lowpoly-ww2-soldier",
       "download_url": "https://opengameart.org/sites/default/files/lowpolysoldier.zip",
       "destination": "characters/opengameart_ww2_soldier/lowpolysoldier.zip",
-      "purpose": "Development rig, retargeting validation and WWII silhouette placeholder"
+      "purpose": "Development rig, retargeting validation and WWII silhouette placeholder",
+      "extract_zip": true
     }
   ],
   "manual_free": [
