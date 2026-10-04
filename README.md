@@ -50,7 +50,10 @@ The repository now contains a substantial code-side combined-arms battle rather 
 - explicit **Steady / Pressured / Pinned** suppression states with hysteresis;
 - suppression degrades AI shot dispersion as well as fire confidence;
 - pressured troops seek cover sooner; pinned troops break contact, stop exposed firing and make only sparse return fire from cover;
-- basic lateral flanking;
+- deterministic **base-of-fire / maneuver** coordination around shared visible targets;
+- Assault troops are preferred as the maneuver element while Riflemen anchor covering fire;
+- maneuver troops flank toward a standoff position while base-of-fire troops seek/hold cover and increase firing pressure;
+- basic independent lateral flanking remains as a fallback when coordinated tactics are unavailable;
 - grenade decisions;
 - medic smoke/revive behavior;
 - engineer ammunition support;
