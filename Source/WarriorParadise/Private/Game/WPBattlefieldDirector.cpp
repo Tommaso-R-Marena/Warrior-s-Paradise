@@ -70,6 +70,7 @@ void AWPBattlefieldDirector::BeginPlay()
             Controller->SetControlRotation(StartRotation);
         }
 
+        FriendlySquad.AddUnique(Player);
         FriendlySoldiersAlive = 1;
     }
 
@@ -260,6 +261,66 @@ bool AWPBattlefieldDirector::GetRecentEnemyGunshot(
     }
 
     OutLocation = SoundLocation;
+    return true;
+}
+
+bool AWPBattlefieldDirector::SwitchPlayerToSquadmate(
+    AWPSoldierCharacter* CurrentSoldier)
+{
+    if (!CurrentSoldier || bBattleWon || bBattleLost)
+    {
+        return false;
+    }
+
+    APlayerController* PlayerController =
+        Cast<APlayerController>(CurrentSoldier->GetController());
+
+    if (!PlayerController)
+    {
+        return false;
+    }
+
+    AWPSoldierCharacter* NextHigher = nullptr;
+    AWPSoldierCharacter* Lowest = nullptr;
+    uint32 NextHigherId = MAX_uint32;
+    uint32 LowestId = MAX_uint32;
+    const uint32 CurrentId = CurrentSoldier->GetUniqueID();
+
+    for (AWPSoldierCharacter* Candidate : FriendlySquad)
+    {
+        if (!Candidate ||
+            Candidate == CurrentSoldier ||
+            !Candidate->IsCombatCapable())
+        {
+            continue;
+        }
+
+        const uint32 CandidateId = Candidate->GetUniqueID();
+
+        if (CandidateId < LowestId)
+        {
+            LowestId = CandidateId;
+            Lowest = Candidate;
+        }
+
+        if (CandidateId > CurrentId && CandidateId < NextHigherId)
+        {
+            NextHigherId = CandidateId;
+            NextHigher = Candidate;
+        }
+    }
+
+    AWPSoldierCharacter* Destination = NextHigher ? NextHigher : Lowest;
+    if (!Destination)
+    {
+        return false;
+    }
+
+    CurrentSoldier->GetWeaponComponent()->StopFire();
+    CurrentSoldier->GetWeaponComponent()->SetAiming(false);
+
+    PlayerController->Possess(Destination);
+    PlayerController->SetControlRotation(Destination->GetActorRotation());
     return true;
 }
 
