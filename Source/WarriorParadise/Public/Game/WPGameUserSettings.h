@@ -8,6 +8,7 @@ UENUM(BlueprintType)
 enum class EWPGraphicsPreset : uint8
 {
     Auto UMETA(DisplayName="Auto"),
+    Minimal UMETA(DisplayName="Minimal / Integrated"),
     Low UMETA(DisplayName="Low"),
     Medium UMETA(DisplayName="Medium"),
     High UMETA(DisplayName="High"),
@@ -69,4 +70,6 @@ private:
         int32 OverallQuality,
         float ResolutionScalePercent,
         float FrameRateLimit);
+
+    void ApplyMinimalRenderingOverrides(bool bEnable);
 };
