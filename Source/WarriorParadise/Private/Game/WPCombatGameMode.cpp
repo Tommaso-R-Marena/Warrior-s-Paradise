@@ -9,6 +9,7 @@
 #include "Game/WPRuntimeMode.h"
 #include "GenericPlatform/GenericPlatformMisc.h"
 #include "GameFramework/DamageType.h"
+#include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
@@ -210,13 +211,23 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
         bHeadlessBleedingStateValid &&
         bRuntimeStateValid;
 
+    int32 CoordinatedAITroops = 0;
+    for (TActorIterator<AWPEnemySoldier> It(GetWorld()); It; ++It)
+    {
+        const AWPEnemySoldier* Soldier = *It;
+        if (Soldier && Soldier->HasUsedCoordinatedTactic())
+        {
+            ++CoordinatedAITroops;
+        }
+    }
+
     UE_LOG(
         LogTemp,
         Display,
         TEXT(
             "WP_HEADLESS_SMOKE %s friendly=%d enemies=%d "
             "enemyArmor=%d enemyLight=%d objective=%d score=%d "
-            "won=%d lost=%d"),
+            "coordinatedAI=%d won=%d lost=%d"),
         bPassed ? TEXT("PASS") : TEXT("FAIL"),
         Director ? Director->GetFriendlySoldiersAlive() : -1,
         Director ? Director->GetRemainingEnemies() : -1,
@@ -224,6 +235,7 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
         Director ? Director->GetActiveEnemyLightVehicles() : -1,
         Director ? Director->GetActiveObjectiveNumber() : -1,
         Director ? Director->GetScore() : -1,
+        CoordinatedAITroops,
         Director ? Director->IsBattleWon() : false,
         Director ? Director->IsBattleLost() : false);
 
