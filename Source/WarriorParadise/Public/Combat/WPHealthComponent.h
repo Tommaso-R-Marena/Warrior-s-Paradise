@@ -5,6 +5,12 @@
 #include "WPHealthComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FWPHealthChangedSignature, float, NewHealth, float, Delta);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FWPDamageReceivedSignature,
+    float,
+    Damage,
+    AActor*,
+    DamageCauser);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPDownedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPRevivedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPDeathSignature);
@@ -19,6 +25,9 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category="Health")
     FWPHealthChangedSignature OnHealthChanged;
+
+    UPROPERTY(BlueprintAssignable, Category="Health|Presentation")
+    FWPDamageReceivedSignature OnDamageReceived;
 
     UPROPERTY(BlueprintAssignable, Category="Health")
     FWPDownedSignature OnDowned;
