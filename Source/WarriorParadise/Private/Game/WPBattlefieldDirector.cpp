@@ -20,6 +20,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Vehicles/WPArmoredVehicle.h"
 #include "World/WPDestructibleCover.h"
 
 AWPBattlefieldDirector::AWPBattlefieldDirector()
@@ -30,6 +31,7 @@ AWPBattlefieldDirector::AWPBattlefieldDirector()
     ObjectiveClass = AWPCaptureObjective::StaticClass();
     CoverPointClass = AWPCoverPoint::StaticClass();
     ArtilleryStrikeClass = AWPArtilleryStrike::StaticClass();
+    ArmoredVehicleClass = AWPArmoredVehicle::StaticClass();
 
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeAsset(TEXT("/Engine/BasicShapes/Cube.Cube"));
     if (CubeAsset.Succeeded())
@@ -681,7 +683,10 @@ void AWPBattlefieldDirector::NotifySoldierKilled(AWPSoldierCharacter* Soldier)
 
     if (bFinalCounterattack)
     {
-        bBattleWon = true;
+        if (ActiveEnemyVehicles <= 0)
+        {
+            bBattleWon = true;
+        }
         return;
     }
 
@@ -718,6 +723,14 @@ void AWPBattlefieldDirector::HandleObjectiveCaptured(AWPCaptureObjective* Object
         SquadOrderLocation = GetActiveObjectiveLocation();
         ++Wave;
 
+        if (ActiveObjectiveIndex >= 2 && !bAlliedArmorSpawned)
+        {
+            bAlliedArmorSpawned = SpawnArmoredVehicle(
+                EWPCombatTeam::Allies,
+                FVector(2350.0f, -450.0f, 110.0f),
+                FRotator(0.0f, -115.0f, 0.0f)) != nullptr;
+        }
+
         if (AxisTickets > 0)
         {
             SpawnEnemyGroup(4 + ActiveObjectiveIndex * 2, false);
@@ -733,9 +746,67 @@ void AWPBattlefieldDirector::HandleObjectiveCaptured(AWPCaptureObjective* Object
         SpawnEnemyGroup(12, false);
     }
 
-    if (RemainingEnemies == 0)
+    if (!bAxisArmorSpawned)
+    {
+        bAxisArmorSpawned = SpawnArmoredVehicle(
+            EWPCombatTeam::Axis,
+            FVector(-2350.0f, -4850.0f, 110.0f),
+            FRotator(0.0f, 65.0f, 0.0f)) != nullptr;
+    }
+
+    if (RemainingEnemies == 0 && ActiveEnemyVehicles == 0)
     {
         bBattleWon = true;
+    }
+}
+
+AWPArmoredVehicle* AWPBattlefieldDirector::SpawnArmoredVehicle(
+    EWPCombatTeam Team,
+    const FVector& Location,
+    const FRotator& Rotation)
+{
+    if (!GetWorld() || !ArmoredVehicleClass)
+    {
+        return nullptr;
+    }
+
+    const FTransform SpawnTransform(Rotation, Location);
+    AWPArmoredVehicle* Vehicle = GetWorld()->SpawnActorDeferred<AWPArmoredVehicle>(
+        ArmoredVehicleClass,
+        SpawnTransform,
+        nullptr,
+        nullptr,
+        ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn);
+
+    if (!Vehicle)
+    {
+        return nullptr;
+    }
+
+    Vehicle->SetCombatTeam(Team);
+    Vehicle->FinishSpawning(SpawnTransform);
+
+    if (Team == EWPCombatTeam::Axis)
+    {
+        ++ActiveEnemyVehicles;
+    }
+
+    return Vehicle;
+}
+
+void AWPBattlefieldDirector::NotifyVehicleDestroyed(EWPCombatTeam VehicleTeam)
+{
+    if (VehicleTeam == EWPCombatTeam::Axis)
+    {
+        ActiveEnemyVehicles = FMath::Max(0, ActiveEnemyVehicles - 1);
+        Score += 900;
+
+        if (bFinalCounterattack &&
+            RemainingEnemies == 0 &&
+            ActiveEnemyVehicles == 0)
+        {
+            bBattleWon = true;
+        }
     }
 }
 
