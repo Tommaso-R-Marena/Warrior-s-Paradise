@@ -520,6 +520,56 @@ bool AWPSoldierCharacter::TryReviveSoldier(AWPSoldierCharacter* Target)
     return Target->GetHealthComponent()->Revive();
 }
 
+bool AWPSoldierCharacter::TryTreatSoldier(
+    AWPSoldierCharacter* Target)
+{
+    if (!Target ||
+        Target == this ||
+        Target->GetCombatTeam() != CombatTeam ||
+        !IsCombatCapable() ||
+        MedkitsRemaining <= 0 ||
+        !Target->IsCombatCapable() ||
+        !Target->GetHealthComponent() ||
+        !Target->GetHealthComponent()->IsBleeding())
+    {
+        return false;
+    }
+
+    if (FVector::DistSquared(
+            GetActorLocation(),
+            Target->GetActorLocation()) >
+        FMath::Square(ReviveInteractionRange))
+    {
+        return false;
+    }
+
+    CancelBandage();
+    StopSprint();
+    StopAim();
+    WeaponComponent->StopFire();
+    WeaponComponent->CancelReload();
+
+    UWPHealthComponent* TargetHealth =
+        Target->GetHealthComponent();
+
+    const bool bStoppedBleeding =
+        TargetHealth->StopBleeding();
+    const bool bHealed =
+        TargetHealth->Heal(FieldDressingHealAmount);
+
+    if (!bStoppedBleeding && !bHealed)
+    {
+        return false;
+    }
+
+    MedkitsRemaining =
+        FMath::Max(0, MedkitsRemaining - 1);
+
+    Target->OnBandageStarted.Broadcast();
+    Target->OnBandageCompleted.Broadcast();
+    return true;
+}
+
 bool AWPSoldierCharacter::TryMeleeAttack(AWPSoldierCharacter* Target)
 {
     if (!Target ||
@@ -861,7 +911,8 @@ void AWPSoldierCharacter::StartBandage()
         bBandaging ||
         MedkitsRemaining <= 0 ||
         !HealthComponent ||
-        HealthComponent->GetHealth() >= HealthComponent->GetMaxHealth())
+        (!HealthComponent->IsBleeding() &&
+         HealthComponent->GetHealth() >= HealthComponent->GetMaxHealth()))
     {
         return;
     }
@@ -893,10 +944,21 @@ void AWPSoldierCharacter::FinishBandage()
 
     bBandaging = false;
 
-    if (HealthComponent &&
-        HealthComponent->Heal(BandageHealAmount))
+    bool bTreatmentApplied = false;
+    if (HealthComponent)
     {
-        MedkitsRemaining = FMath::Max(0, MedkitsRemaining - 1);
+        bTreatmentApplied =
+            HealthComponent->StopBleeding();
+
+        bTreatmentApplied =
+            HealthComponent->Heal(BandageHealAmount) ||
+            bTreatmentApplied;
+    }
+
+    if (bTreatmentApplied)
+    {
+        MedkitsRemaining =
+            FMath::Max(0, MedkitsRemaining - 1);
     }
 
     GetCharacterMovement()->MaxWalkSpeed =
@@ -1207,6 +1269,43 @@ void AWPSoldierCharacter::InteractInput()
     if (BestTarget)
     {
         TryReviveSoldier(BestTarget);
+        return;
+    }
+
+    AWPSoldierCharacter* BleedingTarget = nullptr;
+    float BleedingDistanceSquared =
+        FMath::Square(ReviveInteractionRange);
+
+    for (TActorIterator<AWPSoldierCharacter> It(GetWorld());
+         It;
+         ++It)
+    {
+        AWPSoldierCharacter* Candidate = *It;
+        if (!Candidate ||
+            Candidate == this ||
+            Candidate->GetCombatTeam() != CombatTeam ||
+            !Candidate->IsCombatCapable() ||
+            !Candidate->GetHealthComponent() ||
+            !Candidate->GetHealthComponent()->IsBleeding())
+        {
+            continue;
+        }
+
+        const float DistanceSquared =
+            FVector::DistSquared(
+                GetActorLocation(),
+                Candidate->GetActorLocation());
+
+        if (DistanceSquared <= BleedingDistanceSquared)
+        {
+            BleedingDistanceSquared = DistanceSquared;
+            BleedingTarget = Candidate;
+        }
+    }
+
+    if (BleedingTarget &&
+        TryTreatSoldier(BleedingTarget))
+    {
         return;
     }
 
