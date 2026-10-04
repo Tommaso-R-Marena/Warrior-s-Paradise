@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Combat/WPCombatTypes.h"
+#include "Presentation/WPEnvironmentVisualProfile.h"
 #include "GameFramework/Actor.h"
 #include "WPBattlefieldDirector.generated.h"
 
@@ -12,7 +13,9 @@ class AWPCaptureObjective;
 class AWPCoverPoint;
 class AWPEnemySoldier;
 class AWPSoldierCharacter;
+class UMaterialInterface;
 class UStaticMesh;
+class UWPBattlePresentationSet;
 
 UCLASS()
 class WARRIORPARADISE_API AWPBattlefieldDirector : public AActor
@@ -118,6 +121,15 @@ protected:
     virtual void BeginPlay() override;
 
 private:
+    UPROPERTY(EditDefaultsOnly, Category="Presentation")
+    TSoftObjectPtr<UWPBattlePresentationSet> BattlePresentationSetAsset;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UWPBattlePresentationSet> BattlePresentationSet;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UWPEnvironmentVisualProfile> EnvironmentVisualProfile;
+
     UPROPERTY(EditDefaultsOnly, Category="Battle")
     TSubclassOf<AWPEnemySoldier> AISoldierClass;
 
@@ -246,10 +258,13 @@ private:
     UFUNCTION()
     void HandleObjectiveCaptured(AWPCaptureObjective* Objective);
 
+    UMaterialInterface* ResolveSurfaceMaterial(EWPEnvironmentSurface Surface) const;
+
     void SpawnBox(
         const FVector& Location,
         const FVector& Scale,
-        const FRotator& Rotation = FRotator::ZeroRotator);
+        const FRotator& Rotation = FRotator::ZeroRotator,
+        EWPEnvironmentSurface Surface = EWPEnvironmentSurface::Concrete);
 
     void SpawnCoverPoint(
         const FVector& Location,
@@ -259,5 +274,6 @@ private:
     void SpawnDestructibleCover(
         const FVector& Location,
         const FVector& Scale,
-        float Health = 180.0f);
+        float Health = 180.0f,
+        EWPEnvironmentSurface Surface = EWPEnvironmentSurface::Wood);
 };
