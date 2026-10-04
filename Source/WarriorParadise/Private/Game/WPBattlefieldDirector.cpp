@@ -20,6 +20,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
+#include "World/WPDestructibleCover.h"
 
 AWPBattlefieldDirector::AWPBattlefieldDirector()
 {
@@ -198,6 +199,25 @@ void AWPBattlefieldDirector::SpawnBox(
     }
 }
 
+void AWPBattlefieldDirector::SpawnDestructibleCover(
+    const FVector& Location,
+    const FVector& Scale,
+    float Health)
+{
+    if (!GetWorld())
+    {
+        return;
+    }
+
+    if (AWPDestructibleCover* Cover = GetWorld()->SpawnActor<AWPDestructibleCover>(
+        AWPDestructibleCover::StaticClass(),
+        Location,
+        FRotator::ZeroRotator))
+    {
+        Cover->ConfigureCover(Scale, Health);
+    }
+}
+
 void AWPBattlefieldDirector::BuildBattlefield()
 {
     if (!GetWorld())
@@ -216,6 +236,13 @@ void AWPBattlefieldDirector::BuildBattlefield()
     SpawnBox(FVector(650.0f, -1100.0f, 60.0f), FVector(3.5f, 0.5f, 0.8f), FRotator(0.0f, -12.0f, 0.0f));
     SpawnBox(FVector(-850.0f, -2850.0f, 55.0f), FVector(5.0f, 0.45f, 0.7f));
     SpawnBox(FVector(900.0f, -3900.0f, 55.0f), FVector(4.5f, 0.45f, 0.7f));
+
+    SpawnDestructibleCover(FVector(-300.0f, 450.0f, 70.0f), FVector(1.4f, 0.55f, 0.75f), 150.0f);
+    SpawnDestructibleCover(FVector(320.0f, 300.0f, 70.0f), FVector(1.2f, 0.65f, 0.75f), 150.0f);
+    SpawnDestructibleCover(FVector(-350.0f, -1650.0f, 80.0f), FVector(1.6f, 0.7f, 0.85f), 190.0f);
+    SpawnDestructibleCover(FVector(450.0f, -2050.0f, 80.0f), FVector(1.5f, 0.65f, 0.85f), 190.0f);
+    SpawnDestructibleCover(FVector(-500.0f, -3300.0f, 80.0f), FVector(1.7f, 0.7f, 0.85f), 210.0f);
+    SpawnDestructibleCover(FVector(450.0f, -3650.0f, 80.0f), FVector(1.6f, 0.7f, 0.85f), 210.0f);
 
     SpawnBox(FVector(-5900.0f, 0.0f, 250.0f), FVector(1.0f, 60.0f, 3.0f));
     SpawnBox(FVector(5900.0f, 0.0f, 250.0f), FVector(1.0f, 60.0f, 3.0f));
