@@ -20,6 +20,18 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX")
     TSoftObjectPtr<UNiagaraSystem> BulletImpact;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX|Impact")
+    TSoftObjectPtr<UNiagaraSystem> WoodImpact;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX|Impact")
+    TSoftObjectPtr<UNiagaraSystem> StoneImpact;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX|Impact")
+    TSoftObjectPtr<UNiagaraSystem> MetalImpact;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX|Impact")
+    TSoftObjectPtr<UNiagaraSystem> FleshImpact;
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio")
     TSoftObjectPtr<USoundBase> FireSound;
 
@@ -37,6 +49,18 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio")
     TSoftObjectPtr<USoundBase> BulletImpactSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Impact")
+    TSoftObjectPtr<USoundBase> WoodImpactSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Impact")
+    TSoftObjectPtr<USoundBase> StoneImpactSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Impact")
+    TSoftObjectPtr<USoundBase> MetalImpactSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Impact")
+    TSoftObjectPtr<USoundBase> FleshImpactSound;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio")
     TSoftObjectPtr<USoundAttenuation> Attenuation;
