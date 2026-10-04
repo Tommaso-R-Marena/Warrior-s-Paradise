@@ -22,6 +22,7 @@
 #include "Presentation/WPWeaponPresentationComponent.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Vehicles/WPArmoredVehicle.h"
 #include "Vehicles/WPLightVehicle.h"
 #include "World/WPGunEmplacement.h"
 
@@ -1223,6 +1224,36 @@ void AWPSoldierCharacter::InteractInput()
     }
 
     if (BestEmplacement && BestEmplacement->TryUse(this))
+    {
+        return;
+    }
+
+    AWPArmoredVehicle* BestTank = nullptr;
+    float BestTankDistanceSquared = FMath::Square(420.0f);
+
+    for (TActorIterator<AWPArmoredVehicle> It(GetWorld()); It; ++It)
+    {
+        AWPArmoredVehicle* Tank = *It;
+        if (!Tank ||
+            Tank->GetCombatTeam() != CombatTeam ||
+            Tank->IsDestroyed() ||
+            Tank->IsOccupied())
+        {
+            continue;
+        }
+
+        const float DistanceSquared = FVector::DistSquared(
+            GetActorLocation(),
+            Tank->GetActorLocation());
+
+        if (DistanceSquared < BestTankDistanceSquared)
+        {
+            BestTankDistanceSquared = DistanceSquared;
+            BestTank = Tank;
+        }
+    }
+
+    if (BestTank && BestTank->TryEnter(this))
     {
         return;
     }
