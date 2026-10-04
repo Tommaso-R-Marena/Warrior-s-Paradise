@@ -343,7 +343,7 @@ def main() -> None:
 
     contracts = (
         ("Source/WarriorParadise/Public/Combat/WPSuppressionComponent.h", "EWPSuppressionState"),
-        ("Source/WarriorParadise/Public/Combat/WPSuppressionComponent.h", "PressedEnterThreshold".replace("Pressed", "Pressured")),
+        ("Source/WarriorParadise/Public/Combat/WPSuppressionComponent.h", "PressuredEnterThreshold"),
         ("Source/WarriorParadise/Public/Combat/WPSuppressionComponent.h", "PinnedEnterThreshold"),
         ("Source/WarriorParadise/Private/Combat/WPSuppressionComponent.cpp", "UpdateSuppressionState"),
         ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "EWPSuppressionState::Pinned"),
