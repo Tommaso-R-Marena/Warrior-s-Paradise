@@ -64,7 +64,7 @@ private:
     bool bHasRunInitialHardwareBenchmark = false;
 
     UPROPERTY(Config)
-    int32 WPSettingsVersion = 1;
+    int32 WPSettingsVersion = 2;
 
     void ApplyManualQuality(
         int32 OverallQuality,
