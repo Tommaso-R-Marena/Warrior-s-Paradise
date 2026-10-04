@@ -648,8 +648,11 @@ void AWPBattlefieldDirector::SpawnBox(
             Box->Tags.AddUnique(TEXT("WP_Surface_Concrete"));
             break;
 
-        case EWPEnvironmentSurface::Stone:
         case EWPEnvironmentSurface::Ground:
+            Box->Tags.AddUnique(TEXT("WP_Surface_Dirt"));
+            break;
+
+        case EWPEnvironmentSurface::Stone:
         default:
             Box->Tags.AddUnique(TEXT("WP_Surface_Stone"));
             break;
@@ -711,8 +714,11 @@ void AWPBattlefieldDirector::SpawnDestructibleCover(
                 Cover->Tags.AddUnique(TEXT("WP_Surface_Concrete"));
                 break;
 
-            case EWPEnvironmentSurface::Stone:
             case EWPEnvironmentSurface::Ground:
+                Cover->Tags.AddUnique(TEXT("WP_Surface_Dirt"));
+                break;
+
+            case EWPEnvironmentSurface::Stone:
             default:
                 Cover->Tags.AddUnique(TEXT("WP_Surface_Stone"));
                 break;
