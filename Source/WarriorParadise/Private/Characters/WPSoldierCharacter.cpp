@@ -482,6 +482,12 @@ bool AWPSoldierCharacter::ThrowSmokeGrenadeAt(const FVector& TargetLocation)
         LaunchVelocity.Rotation(),
         SpawnParameters))
     {
+        if (AWPBattlefieldDirector* Director = GetBattlefieldDirector())
+        {
+            Grenade->SetPresentationProfile(
+                Director->GetSmokePresentation());
+        }
+
         Grenade->InitializeSmokeGrenade(LaunchVelocity);
         --SmokeGrenadesRemaining;
         return true;
