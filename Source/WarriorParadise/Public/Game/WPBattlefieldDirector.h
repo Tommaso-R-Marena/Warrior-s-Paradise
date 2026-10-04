@@ -7,6 +7,7 @@
 
 class APlayerController;
 class AWPArtilleryStrike;
+class AWPArmoredVehicle;
 class AWPCaptureObjective;
 class AWPCoverPoint;
 class AWPEnemySoldier;
@@ -23,6 +24,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Battle")
     void NotifySoldierKilled(AWPSoldierCharacter* Soldier);
+
+    UFUNCTION(BlueprintCallable, Category="Battle")
+    void NotifyVehicleDestroyed(EWPCombatTeam VehicleTeam);
 
     UFUNCTION(BlueprintCallable, Category="Battle|Squad")
     void IssueSquadOrder(EWPSquadOrder NewOrder, const FVector& OrderLocation);
@@ -43,6 +47,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category="Battle")
     int32 GetFriendlySoldiersAlive() const { return FriendlySoldiersAlive; }
+
+    UFUNCTION(BlueprintPure, Category="Battle")
+    int32 GetActiveEnemyVehicles() const { return ActiveEnemyVehicles; }
 
     UFUNCTION(BlueprintPure, Category="Battle")
     int32 GetAlliedTickets() const { return AlliedTickets; }
@@ -99,6 +106,9 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="Battle|Support")
     TSubclassOf<AWPArtilleryStrike> ArtilleryStrikeClass;
 
+    UPROPERTY(EditDefaultsOnly, Category="Battle|Vehicles")
+    TSubclassOf<AWPArmoredVehicle> ArmoredVehicleClass;
+
     UPROPERTY(EditDefaultsOnly, Category="Battle")
     float InterWaveDelay = 4.5f;
 
@@ -116,6 +126,9 @@ private:
 
     UPROPERTY(VisibleInstanceOnly, Category="Battle")
     int32 FriendlySoldiersAlive = 0;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Battle")
+    int32 ActiveEnemyVehicles = 0;
 
     UPROPERTY(VisibleInstanceOnly, Category="Battle")
     int32 AlliedTickets = 14;
@@ -140,6 +153,12 @@ private:
 
     UPROPERTY(VisibleInstanceOnly, Category="Battle")
     bool bFinalCounterattack = false;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Battle")
+    bool bAlliedArmorSpawned = false;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Battle")
+    bool bAxisArmorSpawned = false;
 
     UPROPERTY(VisibleInstanceOnly, Category="Battle")
     bool bBattleWon = false;
@@ -185,6 +204,10 @@ private:
     void SpawnWave();
     void SpawnEnemyGroup(int32 Count, bool bResetEnemyCounter);
     void SpawnNextWave();
+    AWPArmoredVehicle* SpawnArmoredVehicle(
+        EWPCombatTeam Team,
+        const FVector& Location,
+        const FRotator& Rotation);
 
     bool TransferPlayerControl(AWPSoldierCharacter* FallenSoldier);
     void QueueFriendlyReplacement(APlayerController* ControllerNeedingPawn);
