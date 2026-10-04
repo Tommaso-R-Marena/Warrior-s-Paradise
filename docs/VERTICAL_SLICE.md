@@ -30,6 +30,9 @@ The target is **not an Enlisted clone**.
 - hit-location multipliers;
 - thin-cover penetration;
 - data-driven weapon definition assets;
+- distinct automatic, semi-automatic and manual-action weapon behavior;
+- Lee-Enfield/Kar98k bolt-action cycling with per-weapon action timing;
+- dedicated manual-cycle presentation hooks/audio seam and HUD action-state feedback;
 - magazines, reload/dry-fire/cancel events and resupply;
 - melee;
 - timed bandaging.
