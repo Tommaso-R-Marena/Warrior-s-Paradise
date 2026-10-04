@@ -123,6 +123,7 @@ private:
     float DesiredCombatRangeCm = 1500.0f;
 
     bool bDestroyed = false;
+    bool bPlayerFiring = false;
     float NextMachineGunTime = 0.0f;
     float NextTargetSearchTime = 0.0f;
     float SteeringInput = 0.0f;
@@ -134,7 +135,9 @@ private:
 
     void MoveForward(float Value);
     void Turn(float Value);
-    void FireInput();
+    void StartFire();
+    void StopFire();
+    void FirePlayerMachineGun();
     void InteractInput();
     void EmbarkNearbySquad(AWPSoldierCharacter* Driver);
     void DisembarkPassengers(bool bEmergency);
