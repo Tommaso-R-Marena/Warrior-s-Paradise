@@ -339,6 +339,9 @@ private:
     void HandleShotFired(float RecoilPitch, float RecoilYaw);
 
     UFUNCTION()
+    void HandleDamageReceived(float Damage, AActor* DamageCauser);
+
+    UFUNCTION()
     void HandleDowned();
 
     UFUNCTION()
