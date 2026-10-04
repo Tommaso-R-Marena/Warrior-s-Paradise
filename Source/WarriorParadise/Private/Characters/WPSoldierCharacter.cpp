@@ -1,13 +1,16 @@
 #include "Characters/WPSoldierCharacter.h"
 #include "Camera/CameraComponent.h"
+#include "Combat/WPFragGrenade.h"
 #include "Combat/WPHealthComponent.h"
 #include "Combat/WPSuppressionComponent.h"
 #include "Combat/WPWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "EngineUtils.h"
 #include "Game/WPBattlefieldDirector.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/Controller.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -20,6 +23,8 @@ AWPSoldierCharacter::AWPSoldierCharacter()
     GetCharacterMovement()->MaxWalkSpeedCrouched = 255.0f;
     GetCharacterMovement()->AirControl = 0.24f;
     GetCharacterMovement()->BrakingDecelerationWalking = 1750.0f;
+    GetCharacterMovement()->bUseRVOAvoidance = true;
+    GetCharacterMovement()->AvoidanceConsiderationRadius = 360.0f;
 
     bUseControllerRotationYaw = true;
     GetCharacterMovement()->bOrientRotationToMovement = false;
@@ -33,6 +38,8 @@ AWPSoldierCharacter::AWPSoldierCharacter()
     HealthComponent = CreateDefaultSubobject<UWPHealthComponent>(TEXT("HealthComponent"));
     WeaponComponent = CreateDefaultSubobject<UWPWeaponComponent>(TEXT("WeaponComponent"));
     SuppressionComponent = CreateDefaultSubobject<UWPSuppressionComponent>(TEXT("SuppressionComponent"));
+
+    GrenadeClass = AWPFragGrenade::StaticClass();
 
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeAsset(TEXT("/Engine/BasicShapes/Cube.Cube"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderAsset(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -69,9 +76,145 @@ void AWPSoldierCharacter::BeginPlay()
 
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
     FirstPersonCamera->SetFieldOfView(HipFOV);
+    ApplyRoleLoadout();
 
+    HealthComponent->OnDowned.AddDynamic(this, &AWPSoldierCharacter::HandleDowned);
+    HealthComponent->OnRevived.AddDynamic(this, &AWPSoldierCharacter::HandleRevived);
     HealthComponent->OnDeath.AddDynamic(this, &AWPSoldierCharacter::HandleDeath);
     WeaponComponent->OnShotFired.AddDynamic(this, &AWPSoldierCharacter::HandleShotFired);
+}
+
+void AWPSoldierCharacter::ApplyRoleLoadout()
+{
+    switch (SoldierRole)
+    {
+        case EWPSoldierRole::Assault:
+            WeaponComponent->Configure(23.0f, 720.0f, 1.45f);
+            GrenadesRemaining = FMath::Max(GrenadesRemaining, 1);
+            break;
+
+        case EWPSoldierRole::Medic:
+            WeaponComponent->Configure(30.0f, 450.0f, 1.12f);
+            GrenadesRemaining = FMath::Min(GrenadesRemaining, 1);
+            break;
+
+        case EWPSoldierRole::Engineer:
+            WeaponComponent->Configure(32.0f, 500.0f, 1.08f);
+            GrenadesRemaining = FMath::Max(GrenadesRemaining, 2);
+            break;
+
+        case EWPSoldierRole::Rifleman:
+        default:
+            WeaponComponent->Configure(34.0f, 500.0f, 0.95f);
+            GrenadesRemaining = FMath::Max(GrenadesRemaining, 2);
+            break;
+    }
+}
+
+bool AWPSoldierCharacter::IsDowned() const
+{
+    return HealthComponent && HealthComponent->IsDowned();
+}
+
+bool AWPSoldierCharacter::IsCombatCapable() const
+{
+    return HealthComponent && !HealthComponent->IsDead() && !HealthComponent->IsDowned();
+}
+
+AWPBattlefieldDirector* AWPSoldierCharacter::GetBattlefieldDirector() const
+{
+    return Cast<AWPBattlefieldDirector>(
+        UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass()));
+}
+
+bool AWPSoldierCharacter::GetViewTarget(FVector& OutTargetLocation, float MaxRangeCm) const
+{
+    if (!GetWorld())
+    {
+        return false;
+    }
+
+    FVector ViewLocation = GetActorLocation() + FVector(0.0f, 0.0f, BaseEyeHeight);
+    FRotator ViewRotation = GetActorRotation();
+
+    if (Controller)
+    {
+        Controller->GetPlayerViewPoint(ViewLocation, ViewRotation);
+    }
+
+    const FVector End = ViewLocation + ViewRotation.Vector() * MaxRangeCm;
+    FHitResult Hit;
+    FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(WPViewTarget), true, this);
+    QueryParams.AddIgnoredActor(this);
+
+    if (GetWorld()->LineTraceSingleByChannel(Hit, ViewLocation, End, ECC_Visibility, QueryParams))
+    {
+        OutTargetLocation = Hit.ImpactPoint;
+    }
+    else
+    {
+        OutTargetLocation = End;
+    }
+
+    return true;
+}
+
+bool AWPSoldierCharacter::ThrowGrenadeAt(const FVector& TargetLocation)
+{
+    if (!GetWorld() ||
+        !GrenadeClass ||
+        GrenadesRemaining <= 0 ||
+        !IsCombatCapable())
+    {
+        return false;
+    }
+
+    const FVector Start = GetActorLocation() + FVector(0.0f, 0.0f, BaseEyeHeight - 12.0f);
+    FVector ToTarget = TargetLocation - Start;
+    const float HorizontalDistance = FVector(ToTarget.X, ToTarget.Y, 0.0f).Size();
+
+    FVector LaunchDirection = ToTarget.GetSafeNormal();
+    FVector LaunchVelocity = LaunchDirection * GrenadeThrowSpeed;
+    LaunchVelocity.Z += FMath::Clamp(420.0f + HorizontalDistance * 0.10f, 420.0f, 760.0f);
+
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.Owner = this;
+    SpawnParameters.Instigator = this;
+    SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    if (AWPFragGrenade* Grenade = GetWorld()->SpawnActor<AWPFragGrenade>(
+        GrenadeClass,
+        Start + GetActorForwardVector() * 45.0f,
+        LaunchVelocity.Rotation(),
+        SpawnParameters))
+    {
+        Grenade->InitializeGrenade(CombatTeam, LaunchVelocity);
+        --GrenadesRemaining;
+        return true;
+    }
+
+    return false;
+}
+
+bool AWPSoldierCharacter::TryReviveSoldier(AWPSoldierCharacter* Target)
+{
+    if (!Target ||
+        Target == this ||
+        Target->GetCombatTeam() != CombatTeam ||
+        !IsCombatCapable() ||
+        !Target->GetHealthComponent() ||
+        !Target->GetHealthComponent()->IsDowned())
+    {
+        return false;
+    }
+
+    if (FVector::DistSquared(GetActorLocation(), Target->GetActorLocation()) >
+        FMath::Square(ReviveInteractionRange))
+    {
+        return false;
+    }
+
+    return Target->GetHealthComponent()->Revive();
 }
 
 void AWPSoldierCharacter::Tick(float DeltaSeconds)
@@ -126,11 +269,17 @@ void AWPSoldierCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
     PlayerInputComponent->BindAction(TEXT("Crouch"), IE_Released, this, &AWPSoldierCharacter::StopCrouch);
     PlayerInputComponent->BindAction(TEXT("Aim"), IE_Pressed, this, &AWPSoldierCharacter::StartAim);
     PlayerInputComponent->BindAction(TEXT("Aim"), IE_Released, this, &AWPSoldierCharacter::StopAim);
+    PlayerInputComponent->BindAction(TEXT("ThrowGrenade"), IE_Pressed, this, &AWPSoldierCharacter::ThrowGrenadeInput);
+    PlayerInputComponent->BindAction(TEXT("Interact"), IE_Pressed, this, &AWPSoldierCharacter::InteractInput);
+    PlayerInputComponent->BindAction(TEXT("SquadFollow"), IE_Pressed, this, &AWPSoldierCharacter::IssueFollowOrder);
+    PlayerInputComponent->BindAction(TEXT("SquadAttack"), IE_Pressed, this, &AWPSoldierCharacter::IssueAttackOrder);
+    PlayerInputComponent->BindAction(TEXT("SquadHold"), IE_Pressed, this, &AWPSoldierCharacter::IssueHoldOrder);
+    PlayerInputComponent->BindAction(TEXT("CallArtillery"), IE_Pressed, this, &AWPSoldierCharacter::CallArtilleryInput);
 }
 
 void AWPSoldierCharacter::MoveForward(float Value)
 {
-    if (!FMath::IsNearlyZero(Value))
+    if (IsCombatCapable() && !FMath::IsNearlyZero(Value))
     {
         AddMovementInput(GetActorForwardVector(), Value);
     }
@@ -138,7 +287,7 @@ void AWPSoldierCharacter::MoveForward(float Value)
 
 void AWPSoldierCharacter::MoveRight(float Value)
 {
-    if (!FMath::IsNearlyZero(Value))
+    if (IsCombatCapable() && !FMath::IsNearlyZero(Value))
     {
         AddMovementInput(GetActorRightVector(), Value);
     }
@@ -146,16 +295,27 @@ void AWPSoldierCharacter::MoveRight(float Value)
 
 void AWPSoldierCharacter::Turn(float Value)
 {
-    AddControllerYawInput(Value);
+    if (!HealthComponent->IsDead())
+    {
+        AddControllerYawInput(Value);
+    }
 }
 
 void AWPSoldierCharacter::LookUp(float Value)
 {
-    AddControllerPitchInput(Value);
+    if (!HealthComponent->IsDead())
+    {
+        AddControllerPitchInput(Value);
+    }
 }
 
 void AWPSoldierCharacter::StartSprint()
 {
+    if (!IsCombatCapable())
+    {
+        return;
+    }
+
     StopAim();
     GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
 }
@@ -167,7 +327,10 @@ void AWPSoldierCharacter::StopSprint()
 
 void AWPSoldierCharacter::StartCrouch()
 {
-    Crouch();
+    if (IsCombatCapable())
+    {
+        Crouch();
+    }
 }
 
 void AWPSoldierCharacter::StopCrouch()
@@ -177,7 +340,7 @@ void AWPSoldierCharacter::StopCrouch()
 
 void AWPSoldierCharacter::StartAim()
 {
-    if (!IsPlayerControlled() || HealthComponent->IsDead() || WeaponComponent->IsReloading())
+    if (!IsPlayerControlled() || !IsCombatCapable() || WeaponComponent->IsReloading())
     {
         return;
     }
@@ -192,9 +355,92 @@ void AWPSoldierCharacter::StopAim()
     WeaponComponent->SetAiming(false);
 }
 
+void AWPSoldierCharacter::ThrowGrenadeInput()
+{
+    FVector TargetLocation;
+    if (GetViewTarget(TargetLocation, 6500.0f))
+    {
+        ThrowGrenadeAt(TargetLocation);
+    }
+}
+
+void AWPSoldierCharacter::InteractInput()
+{
+    if (!GetWorld() || !IsCombatCapable())
+    {
+        return;
+    }
+
+    AWPSoldierCharacter* BestTarget = nullptr;
+    float BestDistanceSquared = FMath::Square(ReviveInteractionRange);
+
+    for (TActorIterator<AWPSoldierCharacter> It(GetWorld()); It; ++It)
+    {
+        AWPSoldierCharacter* Candidate = *It;
+        if (!Candidate ||
+            Candidate == this ||
+            Candidate->GetCombatTeam() != CombatTeam ||
+            !Candidate->IsDowned())
+        {
+            continue;
+        }
+
+        const float DistanceSquared = FVector::DistSquared(
+            GetActorLocation(),
+            Candidate->GetActorLocation());
+
+        if (DistanceSquared <= BestDistanceSquared)
+        {
+            BestDistanceSquared = DistanceSquared;
+            BestTarget = Candidate;
+        }
+    }
+
+    if (BestTarget)
+    {
+        TryReviveSoldier(BestTarget);
+    }
+}
+
+void AWPSoldierCharacter::IssueFollowOrder()
+{
+    if (AWPBattlefieldDirector* Director = GetBattlefieldDirector())
+    {
+        Director->IssueSquadOrder(EWPSquadOrder::Follow, GetActorLocation());
+    }
+}
+
+void AWPSoldierCharacter::IssueAttackOrder()
+{
+    if (AWPBattlefieldDirector* Director = GetBattlefieldDirector())
+    {
+        Director->IssueSquadOrder(EWPSquadOrder::AttackObjective, Director->GetActiveObjectiveLocation());
+    }
+}
+
+void AWPSoldierCharacter::IssueHoldOrder()
+{
+    if (AWPBattlefieldDirector* Director = GetBattlefieldDirector())
+    {
+        Director->IssueSquadOrder(EWPSquadOrder::HoldPosition, GetActorLocation());
+    }
+}
+
+void AWPSoldierCharacter::CallArtilleryInput()
+{
+    FVector TargetLocation;
+    if (GetViewTarget(TargetLocation, 9000.0f))
+    {
+        if (AWPBattlefieldDirector* Director = GetBattlefieldDirector())
+        {
+            Director->RequestArtillery(this, TargetLocation);
+        }
+    }
+}
+
 void AWPSoldierCharacter::HandleShotFired(float RecoilPitch, float RecoilYaw)
 {
-    if (!IsPlayerControlled() || HealthComponent->IsDead())
+    if (!IsPlayerControlled() || !IsCombatCapable())
     {
         return;
     }
@@ -203,20 +449,33 @@ void AWPSoldierCharacter::HandleShotFired(float RecoilPitch, float RecoilYaw)
     AddControllerYawInput(RecoilYaw);
 }
 
+void AWPSoldierCharacter::HandleDowned()
+{
+    StopAim();
+    WeaponComponent->StopFire();
+    GetCharacterMovement()->DisableMovement();
+}
+
+void AWPSoldierCharacter::HandleRevived()
+{
+    GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+    SuppressionComponent->ClearSuppression();
+}
+
 void AWPSoldierCharacter::HandleDeath()
 {
     StopAim();
     WeaponComponent->StopFire();
     GetCharacterMovement()->DisableMovement();
 
-    if (AWPBattlefieldDirector* Director = Cast<AWPBattlefieldDirector>(
-        UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass())))
+    if (AWPBattlefieldDirector* Director = GetBattlefieldDirector())
     {
         Director->NotifySoldierKilled(this);
     }
 
     if (!IsPlayerControlled())
     {
-        SetLifeSpan(2.0f);
+        SetLifeSpan(3.0f);
     }
 }
