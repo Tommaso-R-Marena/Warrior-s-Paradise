@@ -71,8 +71,8 @@ AWPArmoredVehicle::AWPArmoredVehicle()
     Movement->TurningBoost = 4.0f;
 
     CrewCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("CrewCamera"));
-    CrewCamera->SetupAttachment(TurretVisual);
-    CrewCamera->SetRelativeLocation(FVector(-55.0f, 0.0f, 75.0f));
+    CrewCamera->SetupAttachment(BarrelVisual);
+    CrewCamera->SetRelativeLocation(FVector(-75.0f, 0.0f, 32.0f));
     CrewCamera->SetRelativeRotation(FRotator(-4.0f, 0.0f, 0.0f));
     CrewCamera->bUsePawnControlRotation = false;
 
