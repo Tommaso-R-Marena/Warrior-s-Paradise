@@ -963,6 +963,40 @@ def main() -> None:
     if sky_cubemap:
         set_prop(environment, "sky_cubemap", sky_cubemap)
 
+    cloud_material = find_asset(
+        unreal.MaterialInterface,
+        ("volumetric", "cloud"),
+        ("cloud", "volume"),
+    )
+    ambient_loop = find_asset(
+        unreal.SoundBase,
+        ("battlefield", "ambience"),
+        ("war", "ambience"),
+        ("outdoor", "ambience"),
+        ("village", "ambience"),
+    )
+    wind_loop = find_asset(
+        unreal.SoundBase,
+        ("wind", "ambience"),
+        ("wind",),
+    )
+    distant_battle = find_asset(
+        unreal.SoundBase,
+        ("distant", "battle"),
+        ("distant", "gunfire"),
+        ("distant", "artillery"),
+        ("battle", "distant"),
+    )
+
+    if cloud_material:
+        set_prop(environment, "cloud_material", cloud_material)
+    if ambient_loop:
+        set_prop(environment, "ambient_loop", ambient_loop)
+    if wind_loop:
+        set_prop(environment, "wind_loop", wind_loop)
+    if distant_battle:
+        set_prop(environment, "distant_battle_one_shot", distant_battle)
+
     for slot, property_name in {
         "ground": "ground_material",
         "plaster": "plaster_material",
