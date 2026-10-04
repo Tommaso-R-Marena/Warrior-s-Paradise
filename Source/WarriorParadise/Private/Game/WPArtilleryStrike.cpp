@@ -70,8 +70,23 @@ void AWPArtilleryStrike::FireImpact()
 
         if (Distance <= BlastRadiusCm)
         {
+            FHitResult OcclusionHit;
+            FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(WPArtilleryOcclusion), true, this);
+            QueryParams.AddIgnoredActor(this);
+
+            const FVector TargetLocation = Soldier->GetActorLocation() + FVector(0.0f, 0.0f, 45.0f);
+            const bool bBlocked = GetWorld()->LineTraceSingleByChannel(
+                OcclusionHit,
+                ImpactLocation,
+                TargetLocation,
+                ECC_Visibility,
+                QueryParams) &&
+                OcclusionHit.GetActor() != Soldier;
+
             const float DistanceAlpha = 1.0f - FMath::Clamp(Distance / BlastRadiusCm, 0.0f, 1.0f);
-            const float Damage = MaximumDamage * FMath::Square(DistanceAlpha);
+            const float CoverScale = bBlocked ? 0.32f : 1.0f;
+            const float Damage = MaximumDamage * FMath::Square(DistanceAlpha) * CoverScale;
+
             UGameplayStatics::ApplyDamage(
                 Soldier,
                 Damage,
