@@ -1,6 +1,7 @@
 #include "UI/WPCombatHUD.h"
 #include "Characters/WPSoldierCharacter.h"
 #include "Combat/WPHealthComponent.h"
+#include "Combat/WPSuppressionComponent.h"
 #include "Combat/WPWeaponComponent.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
@@ -48,6 +49,9 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
     const int32 CurrentHealth = Health ? FMath::CeilToInt(Health->GetHealth()) : 0;
     const int32 CurrentAmmo = Weapon ? Weapon->GetAmmoInMagazine() : 0;
     const int32 Reserve = Weapon ? Weapon->GetReserveAmmo() : 0;
+    const int32 SuppressionPercent = Soldier->GetSuppressionComponent()
+        ? FMath::RoundToInt(Soldier->GetSuppressionComponent()->GetNormalizedSuppression() * 100.0f)
+        : 0;
 
     DrawText(
         FString::Printf(TEXT("CONDITION  %03d"), CurrentHealth),
@@ -57,6 +61,18 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
         GEngine->GetMediumFont(),
         1.0f,
         false);
+
+    if (SuppressionPercent > 2)
+    {
+        DrawText(
+            FString::Printf(TEXT("SUPPRESSION %d%%"), SuppressionPercent),
+            FLinearColor(1.0f, 0.55f, 0.16f, 1.0f),
+            28.0f,
+            Height - 86.0f,
+            GEngine->GetSmallFont(),
+            1.0f,
+            false);
+    }
 
     DrawText(
         FString::Printf(TEXT("%02d / %03d"), CurrentAmmo, Reserve),
