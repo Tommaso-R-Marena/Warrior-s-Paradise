@@ -152,6 +152,7 @@ See [Free Content Workflow](docs/FREE_CONTENT_WORKFLOW.md), [Free Asset Bootstra
 Warrior's Paradise now treats performance tiers as a core product requirement rather than a post-launch optimization.
 
 - **Auto** runs UE 5.8's hardware benchmark once on first launch and stores its per-group recommendation.
+- **Minimal / Integrated** targets machines without a discrete GPU: UE Low scalability, 50% internal resolution, 30 FPS, Lumen GI/reflections off, virtual shadow maps off, volumetric clouds off and FXAA.
 - **Low** targets performance-first older dedicated GPUs at 67% internal resolution and UE Low rendering groups.
 - **Medium** targets mainstream PCs at 78%.
 - **High** is the main high-fidelity/60-FPS design target at 90%; UE 5.8's High Lumen tier is designed around a 60-FPS budget.
@@ -160,6 +161,24 @@ Warrior's Paradise now treats performance tiers as a core product requirement ra
 Low deliberately retains partial foliage density so quality settings do not create a gameplay concealment advantage. Core ballistics, cover, smoke occlusion, AI, armor and objective simulation are unchanged across presets.
 
 See [Scalability and Performance Presets](docs/SCALABILITY.md).
+
+## GPU-less simulation
+
+Warrior's Paradise now has a true renderless development/test path using Unreal Engine's NullRHI. It keeps the battlefield simulation, AI, objectives, ballistics, vehicles, emplacements and combat state running while skipping presentation-only work.
+
+```powershell
+.\tools\build_local.ps1 -Clean -HeadlessSmoke
+```
+
+This launches UE 5.8 with `-nullrhi`, runs a timed gameplay smoke contract and returns a process-level PASS/FAIL code. The self-hosted Unreal compile workflow runs the same smoke test after compilation.
+
+For a visually playable laptop with integrated graphics but no discrete GPU:
+
+```powershell
+.\tools\build_local.ps1 -LaunchIntegrated
+```
+
+A truly GPU-less run is intentionally non-visual; visual gameplay still requires some compatible graphics adapter. See [GPU-less and Integrated Graphics Modes](docs/GPU_LESS_MODE.md).
 
 ## Engine and run
 
@@ -203,9 +222,9 @@ Optional packaged Win64 build:
 .\tools\build_local.ps1 -Package
 ```
 
-The validator now checks the **71-file** source surface plus Python tooling, plugin requirements, free-asset/license metadata, smoke/soldier/weapon/vehicle presentation, enterable buildings, material-specific impacts, tracers/decals and the free-content bootstrap contract.
+The validator now checks the **73-file** source surface plus Python tooling, plugin requirements, free-asset/license metadata, smoke/soldier/weapon/vehicle presentation, enterable buildings, material-specific impacts, tracers/decals and the free-content bootstrap contract.
 
-`main` now includes a manual **UE 5.8 compile gate** at `.github/workflows/unreal-compile.yml`. It is designed for a Windows x64 self-hosted GitHub Actions runner so it does not consume GitHub-hosted Actions minutes. The gate runs repository validation, removes project build intermediates when requested, builds both `WarriorParadiseEditor` and the `WarriorParadise` Win64 game target, prints Unreal Build Tool diagnostics on failure, and publishes a PASS/FAIL job summary. A **full Unreal C++ compile/playtest has still not been executed**; connecting a Windows runner with UE 5.8 installed is the next hard validation gate.
+`main` now includes a manual **UE 5.8 compile gate** at `.github/workflows/unreal-compile.yml`. It is designed for a Windows x64 self-hosted GitHub Actions runner so it does not consume GitHub-hosted Actions minutes. The gate runs repository validation, removes project build intermediates when requested, builds both `WarriorParadiseEditor` and the `WarriorParadise` Win64 game target, runs a GPU-less NullRHI gameplay smoke test, prints Unreal Build Tool diagnostics on failure, and publishes a PASS/FAIL job summary. A **full Unreal C++ compile/playtest has still not been executed**; connecting a Windows runner with UE 5.8 installed is the next hard validation gate.
 
 ## What remains before this is visually Enlisted-quality
 
