@@ -53,6 +53,8 @@ The repository now contains a substantial code-side combined-arms battle rather 
 - deterministic **base-of-fire / maneuver** coordination around shared visible targets;
 - Assault troops are preferred as the maneuver element while Riflemen anchor covering fire;
 - maneuver troops flank toward a standoff position while base-of-fire troops seek/hold cover and increase firing pressure;
+- AI checks a body-width safety corridor before firing, immediately holds fire when a friendly crosses the lane, and sidesteps to reopen the lane when exposed;
+- downed friendlies also block AI fire lanes, preventing covering fire from being dumped through casualties;
 - basic independent lateral flanking remains as a fallback when coordinated tactics are unavailable;
 - grenade decisions;
 - medic smoke/revive behavior;
