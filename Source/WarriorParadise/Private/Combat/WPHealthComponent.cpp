@@ -184,9 +184,9 @@ void UWPHealthComponent::TryStartBleedingFromDamage(
     const float HealthSeverity = bLowHealth
         ? FMath::GetMappedRangeValueClamped(
             FVector2D(
-                LowHealthBleedingThreshold,
-                0.0f),
-            FVector2D(0.35f, 0.85f),
+                0.0f,
+                LowHealthBleedingThreshold),
+            FVector2D(0.85f, 0.35f),
             HealthNormalized)
         : 0.0f;
 
