@@ -173,7 +173,12 @@ void AWPLightVehicle::SetupPlayerInputComponent(
         TEXT("Fire"),
         IE_Pressed,
         this,
-        &AWPLightVehicle::FireInput);
+        &AWPLightVehicle::StartFire);
+    PlayerInputComponent->BindAction(
+        TEXT("Fire"),
+        IE_Released,
+        this,
+        &AWPLightVehicle::StopFire);
     PlayerInputComponent->BindAction(
         TEXT("Interact"),
         IE_Pressed,
@@ -205,7 +210,17 @@ void AWPLightVehicle::Turn(float Value)
     SetActorRotation(Rotation);
 }
 
-void AWPLightVehicle::FireInput()
+void AWPLightVehicle::StartFire()
+{
+    bPlayerFiring = true;
+}
+
+void AWPLightVehicle::StopFire()
+{
+    bPlayerFiring = false;
+}
+
+void AWPLightVehicle::FirePlayerMachineGun()
 {
     if (bDestroyed ||
         VehicleType != EWPLightVehicleType::ArmoredCar ||
@@ -214,28 +229,37 @@ void AWPLightVehicle::FireInput()
         return;
     }
 
-    FVector Start = WeaponVisual->GetComponentLocation() +
+    const FVector Start =
+        WeaponVisual->GetComponentLocation() +
         WeaponVisual->GetForwardVector() * 100.0f;
-    FVector End = Start + DriverCamera->GetForwardVector() * MachineGunRangeCm;
+    const FVector TraceStart = DriverCamera->GetComponentLocation();
+    const FVector TraceEnd =
+        TraceStart +
+        DriverCamera->GetForwardVector() * MachineGunRangeCm;
 
     FHitResult Hit;
-    FCollisionQueryParams Params(SCENE_QUERY_STAT(WPLightVehiclePlayerAim), true, this);
+    FCollisionQueryParams Params(
+        SCENE_QUERY_STAT(WPLightVehiclePlayerAim),
+        true,
+        this);
     Params.AddIgnoredActor(this);
 
-    FVector AimPoint = End;
+    FVector AimPoint = TraceEnd;
     if (GetWorld()->LineTraceSingleByChannel(
         Hit,
-        DriverCamera->GetComponentLocation(),
-        End,
+        TraceStart,
+        TraceEnd,
         ECC_Visibility,
         Params))
     {
         AimPoint = Hit.ImpactPoint;
     }
 
-    FireMachineGun(nullptr);
+    const FVector Direction =
+        (AimPoint - Start).GetSafeNormal();
 
-    const FVector Direction = (AimPoint - Start).GetSafeNormal();
+    WeaponVisual->SetWorldRotation(Direction.Rotation());
+
     FActorSpawnParameters SpawnParameters;
     SpawnParameters.Owner = this;
     SpawnParameters.Instigator = this;
@@ -250,12 +274,46 @@ void AWPLightVehicle::FireInput()
             SpawnParameters))
     {
         Projectile->InitializeProjectile(
-            Direction,
+            FMath::VRandCone(
+                Direction,
+                FMath::DegreesToRadians(0.8f)),
             82000.0f,
             20.0f,
             MachineGunRangeCm,
             nullptr,
             CombatTeam);
+    }
+
+    if (VisualProfile)
+    {
+        const FVector Muzzle =
+            WeaponVisual->GetComponentLocation() +
+            WeaponVisual->GetForwardVector() * 90.0f;
+
+        if (UNiagaraSystem* System =
+            VisualProfile->MachineGunMuzzleFlash.LoadSynchronous())
+        {
+            UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                this,
+                System,
+                Muzzle,
+                Direction.Rotation());
+        }
+
+        if (USoundBase* Sound =
+            VisualProfile->MachineGunSound.LoadSynchronous())
+        {
+            UGameplayStatics::PlaySoundAtLocation(
+                this,
+                Sound,
+                Muzzle,
+                VisualProfile->WeaponVolume,
+                FMath::FRandRange(0.97f, 1.03f),
+                0.0f,
+                VisualProfile->Attenuation.LoadSynchronous(),
+                nullptr,
+                nullptr);
+        }
     }
 }
 
@@ -287,6 +345,7 @@ bool AWPLightVehicle::TryEnter(AWPSoldierCharacter* Soldier)
     Soldier->GetWeaponComponent()->StopFire();
     Soldier->SetActorHiddenInGame(true);
     Soldier->SetActorEnableCollision(false);
+    Soldier->SetActorTickEnabled(false);
     Soldier->GetCharacterMovement()->DisableMovement();
 
     EmbarkNearbySquad(Soldier);
@@ -326,6 +385,7 @@ void AWPLightVehicle::EmbarkNearbySquad(AWPSoldierCharacter* Driver)
         Candidate->GetWeaponComponent()->StopFire();
         Candidate->SetActorHiddenInGame(true);
         Candidate->SetActorEnableCollision(false);
+        Candidate->SetActorTickEnabled(false);
         Candidate->GetCharacterMovement()->DisableMovement();
         Passengers.Add(Candidate);
     }
@@ -336,15 +396,13 @@ void AWPLightVehicle::RestoreSoldierFromVehicle(
     const FVector& ExitLocation,
     bool bEmergency)
 {
-    if (!Soldier || !Soldier->GetHealthComponent()->IsDead())
+    if (!Soldier)
     {
-        if (!Soldier)
-        {
-            return;
-        }
+        return;
     }
 
     Soldier->SetActorHiddenInGame(false);
+    Soldier->SetActorTickEnabled(true);
     Soldier->SetActorEnableCollision(true);
     Soldier->SetActorLocation(
         ExitLocation,
@@ -561,13 +619,25 @@ void AWPLightVehicle::Tick(float DeltaSeconds)
 
     if (bDestroyed ||
         !GetWorld() ||
-        IsPlayerControlled() ||
         VehicleType != EWPLightVehicleType::ArmoredCar)
     {
         return;
     }
 
     const float Time = GetWorld()->GetTimeSeconds();
+
+    if (IsPlayerControlled())
+    {
+        if (bPlayerFiring &&
+            VehicleType == EWPLightVehicleType::ArmoredCar &&
+            Time >= NextMachineGunTime)
+        {
+            FirePlayerMachineGun();
+            NextMachineGunTime =
+                Time + MachineGunIntervalSeconds;
+        }
+        return;
+    }
 
     if (!CurrentTarget.IsValid() &&
         Time >= NextTargetSearchTime)
@@ -672,6 +742,7 @@ void AWPLightVehicle::DestroyVehicle()
     }
 
     bDestroyed = true;
+    bPlayerFiring = false;
 
     if (EngineAudioComponent)
     {
