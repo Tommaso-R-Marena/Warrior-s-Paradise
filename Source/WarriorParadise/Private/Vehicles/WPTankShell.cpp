@@ -61,19 +61,27 @@ void AWPTankShell::HandleHit(
         }
     }
 
-    if (const AWPArmoredVehicle* Vehicle = Cast<AWPArmoredVehicle>(OtherActor))
+    if (AWPArmoredVehicle* Vehicle = Cast<AWPArmoredVehicle>(OtherActor))
     {
         if (Vehicle->GetCombatTeam() == ShellTeam)
         {
             Destroy();
             return;
         }
+
+        Vehicle->ApplyShellImpact(
+            DirectArmorDamage,
+            Hit.ImpactPoint,
+            Movement->Velocity.GetSafeNormal());
+
+        Explode(Hit.ImpactPoint, Vehicle);
+        return;
     }
 
-    Explode(Hit.ImpactPoint);
+    Explode(Hit.ImpactPoint, OtherActor);
 }
 
-void AWPTankShell::Explode(const FVector& ImpactLocation)
+void AWPTankShell::Explode(const FVector& ImpactLocation, AActor* DirectHitActor)
 {
     if (!GetWorld())
     {
@@ -115,7 +123,10 @@ void AWPTankShell::Explode(const FVector& ImpactLocation)
     for (TActorIterator<AWPArmoredVehicle> It(GetWorld()); It; ++It)
     {
         AWPArmoredVehicle* Vehicle = *It;
-        if (!Vehicle || Vehicle->GetCombatTeam() == ShellTeam || Vehicle == GetOwner())
+        if (!Vehicle ||
+            Vehicle->GetCombatTeam() == ShellTeam ||
+            Vehicle == GetOwner() ||
+            Vehicle == DirectHitActor)
         {
             continue;
         }
@@ -154,5 +165,6 @@ void AWPTankShell::Explode(const FVector& ImpactLocation)
         }
     }
 
+    OnImpact.Broadcast(ImpactLocation);
     Destroy();
 }
