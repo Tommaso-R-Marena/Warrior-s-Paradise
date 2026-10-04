@@ -7,6 +7,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
+#include "Engine/World.h"
 #include "Game/WPBattlefieldDirector.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -512,6 +513,69 @@ FVector AWPEnemySoldier::GetManeuverDestination(
         Target->GetActorLocation() -
         Forward * Standoff +
         Lateral * FlankDistance;
+}
+
+bool AWPEnemySoldier::HasClearFireLaneTo(
+    const AWPSoldierCharacter* Target) const
+{
+    if (!Target ||
+        !GetWorld() ||
+        FireLaneSafetyRadius <= 0.0f)
+    {
+        return Target != nullptr;
+    }
+
+    const FVector Start =
+        GetActorLocation() +
+        FVector(0.0f, 0.0f, 58.0f);
+    const FVector End =
+        Target->GetActorLocation() +
+        FVector(0.0f, 0.0f, 45.0f);
+
+    TArray<FHitResult> Hits;
+
+    FCollisionObjectQueryParams ObjectQuery;
+    ObjectQuery.AddObjectTypesToQuery(ECC_Pawn);
+
+    FCollisionQueryParams QueryParams(
+        SCENE_QUERY_STAT(WPFireLaneSafety),
+        false,
+        this);
+    QueryParams.AddIgnoredActor(this);
+    QueryParams.AddIgnoredActor(Target);
+
+    GetWorld()->SweepMultiByObjectType(
+        Hits,
+        Start,
+        End,
+        FQuat::Identity,
+        ObjectQuery,
+        FCollisionShape::MakeSphere(
+            FireLaneSafetyRadius),
+        QueryParams);
+
+    for (const FHitResult& Hit : Hits)
+    {
+        const AWPSoldierCharacter* Soldier =
+            Cast<AWPSoldierCharacter>(
+                Hit.GetActor());
+
+        if (!Soldier ||
+            Soldier == this ||
+            Soldier == Target ||
+            !Soldier->IsCombatCapable())
+        {
+            continue;
+        }
+
+        if (Soldier->GetCombatTeam() ==
+            GetCombatTeam())
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool AWPEnemySoldier::HasLineOfSightTo(const AActor* Target) const
@@ -1142,6 +1206,40 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
             FMath::Sin(Time * 0.85f + static_cast<float>(GetUniqueID())) * StrafeStrength);
     }
 
+    const bool bClearFireLane =
+        bTargetVisible &&
+        HasClearFireLaneTo(Target);
+
+    if (!bClearFireLane &&
+        bPulseFiring)
+    {
+        GetWeaponComponent()->StopFire();
+        bPulseFiring = false;
+        bHasHeldFireForFriendly = true;
+    }
+
+    if (!bClearFireLane &&
+        bTargetVisible &&
+        !bAtCover &&
+        !bPinned &&
+        TacticalPosture !=
+            EWPAITacticalPosture::Maneuver)
+    {
+        FVector LaneShift(
+            -FlatDirection.Y,
+            FlatDirection.X,
+            0.0f);
+
+        if ((GetUniqueID() & 1U) != 0U)
+        {
+            LaneShift *= -1.0f;
+        }
+
+        AddMovementInput(
+            LaneShift,
+            FireLaneShiftStrength);
+    }
+
     if (!bPinned)
     {
         HandleGrenadeOpportunity(Target, Distance);
@@ -1196,6 +1294,7 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
         if (Distance <= MaximumEngagementRange &&
             bTargetVisible &&
+            bClearFireLane &&
             FireChance > 0.0f &&
             FMath::FRand() <= FireChance)
         {
