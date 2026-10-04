@@ -15,6 +15,7 @@ public:
 private:
     void DrawCrosshair(float CenterX, float CenterY);
     void DrawCombatReadout(float Width, float Height);
+    void DrawTankReadout(float Width, float Height);
     void DrawVehicleReadout(float Width, float Height);
     void DrawEmplacementReadout(float Width, float Height);
 };
