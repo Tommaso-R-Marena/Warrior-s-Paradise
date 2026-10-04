@@ -4,8 +4,11 @@
 #include "Game/WPBattlefieldDirector.h"
 #include "Game/WPGameUserSettings.h"
 #include "Game/WPPlayerController.h"
+#include "Game/WPRuntimeMode.h"
+#include "GenericPlatform/GenericPlatformMisc.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "TimerManager.h"
 #include "UI/WPCombatHUD.h"
 
 AWPCombatGameMode::AWPCombatGameMode()
@@ -24,11 +27,24 @@ void AWPCombatGameMode::StartPlay()
         return;
     }
 
-    if (UWPGameUserSettings* Settings =
-        UWPGameUserSettings::Get())
+    if (!WPRuntimeMode::IsHeadlessSimulation())
     {
-        Settings->LoadSettings(false);
-        Settings->EnsureInitialHardwareBenchmark();
+        if (UWPGameUserSettings* Settings =
+            UWPGameUserSettings::Get())
+        {
+            Settings->LoadSettings(false);
+
+            if (WPRuntimeMode::WantsIntegratedGraphics())
+            {
+                Settings->ApplyGraphicsPreset(
+                    EWPGraphicsPreset::Minimal,
+                    false);
+            }
+            else
+            {
+                Settings->EnsureInitialHardwareBenchmark();
+            }
+        }
     }
 
     APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
@@ -49,6 +65,98 @@ void AWPCombatGameMode::StartPlay()
 
     if (!UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass()))
     {
-        GetWorld()->SpawnActor<AWPBattlefieldDirector>(AWPBattlefieldDirector::StaticClass());
+        GetWorld()->SpawnActor<AWPBattlefieldDirector>(
+            AWPBattlefieldDirector::StaticClass());
     }
+
+    if (WPRuntimeMode::IsHeadlessSmokeTest())
+    {
+        StartHeadlessSmokeTest();
+    }
+}
+
+void AWPCombatGameMode::StartHeadlessSmokeTest()
+{
+    if (!GetWorld())
+    {
+        FGenericPlatformMisc::RequestExitWithStatus(
+            false,
+            2,
+            TEXT("Warrior's Paradise headless smoke: no world"));
+        return;
+    }
+
+    AWPBattlefieldDirector* Director = Cast<AWPBattlefieldDirector>(
+        UGameplayStatics::GetActorOfClass(
+            this,
+            AWPBattlefieldDirector::StaticClass()));
+
+    bHeadlessSmokeInitialStateValid =
+        Director != nullptr &&
+        Director->GetFriendlySoldiersAlive() >= 6 &&
+        Director->GetRemainingEnemies() > 0 &&
+        Director->GetActiveObjectiveNumber() > 0;
+
+    const float Duration =
+        WPRuntimeMode::GetHeadlessSmokeDurationSeconds();
+
+    UE_LOG(
+        LogTemp,
+        Display,
+        TEXT(
+            "WP_HEADLESS_SMOKE START initial=%s duration=%.1f "
+            "friendly=%d enemies=%d objective=%d"),
+        bHeadlessSmokeInitialStateValid ? TEXT("PASS") : TEXT("FAIL"),
+        Duration,
+        Director ? Director->GetFriendlySoldiersAlive() : -1,
+        Director ? Director->GetRemainingEnemies() : -1,
+        Director ? Director->GetActiveObjectiveNumber() : -1);
+
+    GetWorld()->GetTimerManager().SetTimer(
+        HeadlessSmokeTimer,
+        this,
+        &AWPCombatGameMode::FinishHeadlessSmokeTest,
+        Duration,
+        false);
+}
+
+void AWPCombatGameMode::FinishHeadlessSmokeTest()
+{
+    AWPBattlefieldDirector* Director = Cast<AWPBattlefieldDirector>(
+        UGameplayStatics::GetActorOfClass(
+            this,
+            AWPBattlefieldDirector::StaticClass()));
+
+    const bool bRuntimeStateValid =
+        Director != nullptr &&
+        Director->GetFriendlySoldiersAlive() > 0 &&
+        Director->GetActiveObjectiveNumber() > 0;
+
+    const bool bPassed =
+        bHeadlessSmokeInitialStateValid &&
+        bRuntimeStateValid;
+
+    UE_LOG(
+        LogTemp,
+        Display,
+        TEXT(
+            "WP_HEADLESS_SMOKE %s friendly=%d enemies=%d "
+            "enemyArmor=%d enemyLight=%d objective=%d score=%d "
+            "won=%d lost=%d"),
+        bPassed ? TEXT("PASS") : TEXT("FAIL"),
+        Director ? Director->GetFriendlySoldiersAlive() : -1,
+        Director ? Director->GetRemainingEnemies() : -1,
+        Director ? Director->GetActiveEnemyVehicles() : -1,
+        Director ? Director->GetActiveEnemyLightVehicles() : -1,
+        Director ? Director->GetActiveObjectiveNumber() : -1,
+        Director ? Director->GetScore() : -1,
+        Director ? Director->IsBattleWon() : false,
+        Director ? Director->IsBattleLost() : false);
+
+    FGenericPlatformMisc::RequestExitWithStatus(
+        false,
+        bPassed ? 0 : 2,
+        bPassed
+            ? TEXT("Warrior's Paradise headless smoke passed")
+            : TEXT("Warrior's Paradise headless smoke failed"));
 }
