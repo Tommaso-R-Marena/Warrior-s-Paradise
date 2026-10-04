@@ -237,6 +237,12 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
         set_prop(asset, "tracer_effect", tracer)
 
     material_effects = {
+        "dirt_impact": find_asset(
+            niagara_class,
+            ("dirt", "impact"),
+            ("soil", "impact"),
+            ("dust", "impact"),
+        ),
         "wood_impact": find_asset(
             niagara_class,
             ("wood", "impact"),
@@ -300,6 +306,12 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
         ("impact", "metal"),
         ("impact",),
     )
+    dirt_impact = find_asset(
+        sound_class,
+        ("dirt", "impact"),
+        ("bullet", "dirt"),
+        ("soil", "impact"),
+    )
     wood_impact = find_asset(
         sound_class,
         ("wood", "impact"),
@@ -332,6 +344,11 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
         ("bullet", "decal"),
         ("impact", "decal"),
     )
+    dirt_decal = find_asset(
+        decal_class,
+        ("dirt", "bullet", "decal"),
+        ("ground", "impact", "decal"),
+    )
     wood_decal = find_asset(
         decal_class,
         ("wood", "bullet", "decal"),
@@ -351,6 +368,8 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
 
     if generic_decal:
         set_prop(asset, "generic_impact_decal", generic_decal)
+    if dirt_decal:
+        set_prop(asset, "dirt_impact_decal", dirt_decal)
     if wood_decal:
         set_prop(asset, "wood_impact_decal", wood_decal)
     if stone_decal:
@@ -366,6 +385,8 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
         set_prop(asset, "dry_fire_sound", dry)
     if bullet_impact:
         set_prop(asset, "bullet_impact_sound", bullet_impact)
+    if dirt_impact:
+        set_prop(asset, "dirt_impact_sound", dirt_impact)
     if wood_impact:
         set_prop(asset, "wood_impact_sound", wood_impact)
     if stone_impact:
@@ -526,6 +547,34 @@ def configure_soldier_presentation(asset) -> None:
             unreal.SoundBase,
             ("bandage", "complete"),
             ("medical", "complete"),
+        ),
+        "footstep_dirt": find_asset(
+            unreal.SoundBase,
+            ("footstep", "dirt"),
+            ("step", "dirt"),
+            ("foot", "soil"),
+        ),
+        "footstep_wood": find_asset(
+            unreal.SoundBase,
+            ("footstep", "wood"),
+            ("step", "wood"),
+        ),
+        "footstep_stone": find_asset(
+            unreal.SoundBase,
+            ("footstep", "stone"),
+            ("footstep", "concrete"),
+            ("step", "stone"),
+        ),
+        "footstep_metal": find_asset(
+            unreal.SoundBase,
+            ("footstep", "metal"),
+            ("step", "metal"),
+        ),
+        "crawl_sound": find_asset(
+            unreal.SoundBase,
+            ("crawl",),
+            ("cloth", "movement"),
+            ("gear", "movement"),
         ),
     }
 
