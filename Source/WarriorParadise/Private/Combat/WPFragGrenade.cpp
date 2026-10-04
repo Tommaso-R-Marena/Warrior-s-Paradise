@@ -7,6 +7,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
+#include "World/WPDestructibleCover.h"
 
 AWPFragGrenade::AWPFragGrenade()
 {
@@ -116,6 +117,29 @@ void AWPFragGrenade::Explode()
                 this,
                 UDamageType::StaticClass());
         }
+    }
+
+    for (TActorIterator<AWPDestructibleCover> It(GetWorld()); It; ++It)
+    {
+        AWPDestructibleCover* Cover = *It;
+        if (!Cover)
+        {
+            continue;
+        }
+
+        const float Distance = FVector::Dist(ExplosionLocation, Cover->GetActorLocation());
+        if (Distance > BlastRadiusCm)
+        {
+            continue;
+        }
+
+        const float DistanceAlpha = 1.0f - FMath::Clamp(Distance / BlastRadiusCm, 0.0f, 1.0f);
+        UGameplayStatics::ApplyDamage(
+            Cover,
+            MaximumDamage * 0.9f * FMath::Square(DistanceAlpha),
+            GetInstigatorController(),
+            this,
+            UDamageType::StaticClass());
     }
 
     OnExploded.Broadcast(ExplosionLocation);
