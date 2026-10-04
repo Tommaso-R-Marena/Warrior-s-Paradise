@@ -57,21 +57,21 @@ public:
         switch (Role)
         {
             case EWPSoldierRole::Assault:
-                return bAllies ? AlliedAssault : AxisAssault;
+                return bAllies ? AlliedAssault.Get() : AxisAssault.Get();
             case EWPSoldierRole::Medic:
-                return bAllies ? AlliedMedic : AxisMedic;
+                return bAllies ? AlliedMedic.Get() : AxisMedic.Get();
             case EWPSoldierRole::Engineer:
-                return bAllies ? AlliedEngineer : AxisEngineer;
+                return bAllies ? AlliedEngineer.Get() : AxisEngineer.Get();
             case EWPSoldierRole::Rifleman:
             default:
-                return bAllies ? AlliedRifleman : AxisRifleman;
+                return bAllies ? AlliedRifleman.Get() : AxisRifleman.Get();
         }
     }
 
     UWPVehicleVisualProfile* GetVehicleVisual(EWPCombatTeam Team) const
     {
         return Team == EWPCombatTeam::Allies
-            ? AlliedVehicle
-            : AxisVehicle;
+            ? AlliedVehicle.Get()
+            : AxisVehicle.Get();
     }
 };
