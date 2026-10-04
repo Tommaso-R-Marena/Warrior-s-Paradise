@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Combat/WPCombatTypes.h"
 #include "GameFramework/Character.h"
 #include "WPSoldierCharacter.generated.h"
 
@@ -26,6 +27,12 @@ public:
     UFUNCTION(BlueprintPure, Category="Combat")
     UWPWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
 
+    UFUNCTION(BlueprintPure, Category="Combat")
+    EWPCombatTeam GetCombatTeam() const { return CombatTeam; }
+
+    UFUNCTION(BlueprintCallable, Category="Combat")
+    void SetCombatTeam(EWPCombatTeam NewTeam) { CombatTeam = NewTeam; }
+
 protected:
     virtual void BeginPlay() override;
 
@@ -37,6 +44,9 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat")
     TObjectPtr<UWPWeaponComponent> WeaponComponent;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat")
+    EWPCombatTeam CombatTeam = EWPCombatTeam::Allies;
 
 private:
     UPROPERTY(VisibleAnywhere, Category="View")
