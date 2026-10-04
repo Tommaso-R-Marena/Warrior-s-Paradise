@@ -85,6 +85,10 @@ def main() -> None:
         "ThrowGrenade",
         "ThrowSmoke",
         "Interact",
+        "Prone",
+        "Melee",
+        "Bandage",
+        "SwitchSoldier",
         "SquadFollow",
         "SquadAttack",
         "SquadHold",
@@ -101,22 +105,37 @@ def main() -> None:
         ("Source/WarriorParadise/Private/Combat/WPBallisticProjectile.cpp", "GetHitLocationMultiplier"),
         ("Source/WarriorParadise/Private/Combat/WPBallisticProjectile.cpp", "AddSuppression(NearMissSuppression)"),
         ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", 'BindAction(TEXT("ThrowSmoke")'),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", 'BindAction(TEXT("SwitchSoldier")'),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "EnterProne"),
         ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "TryReviveSoldier"),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "TryMeleeAttack"),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "StartBandage"),
         ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "SetAccuracyMultiplier"),
         ("Source/WarriorParadise/Private/Combat/WPHealthComponent.cpp", "EnterDownedState"),
+        ("Source/WarriorParadise/Private/Combat/WPHealthComponent.cpp", "Heal(float Amount)"),
+        ("Source/WarriorParadise/Private/Combat/WPWeaponComponent.cpp", "CancelReload"),
+        ("Source/WarriorParadise/Private/Combat/WPWeaponComponent.cpp", "OnProjectileSpawned.Broadcast"),
         ("Source/WarriorParadise/Private/Combat/WPSmokeCloud.cpp", "SetRadialFogExtinction"),
         ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "FindBestCover"),
-        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "GetSharedEnemyContact"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "GetRecentEnemyContactLocation"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "GetRecentEnemyGunshot"),
         ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "HandleMedicSupport"),
         ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "HandleEngineerSupport"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "HandleObjectiveCaptured"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "TransferPlayerControl"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnQueuedFriendlyReplacement"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "IsFriendlySpawnLocationSafe"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "ReportGunshot"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SwitchPlayerToSquadmate"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "RequestArtillery"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnArmoredVehicle"),
+        ("Source/WarriorParadise/Private/Game/WPCaptureObjective.cpp", "bContested ="),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "DefaultPawnClass = AWPEnemySoldier::StaticClass()"),
         ("Source/WarriorParadise/Private/World/WPDestructibleCover.cpp", "BreakCover"),
         ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "FireCannon"),
         ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "FireMachineGun"),
+        ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "ApplyShellImpact"),
+        ("Source/WarriorParadise/Private/Vehicles/WPTankShell.cpp", "DirectArmorDamage"),
     )
 
     for relative_path, expected in contracts:
@@ -138,7 +157,7 @@ def main() -> None:
 
     print(
         "Warrior's Paradise validation passed "
-        f"({checked} source files; combat, squad, smoke, support, destruction, and armor contracts checked)."
+        f"({checked} source files; stance, medicine, perception, squad switching, combat, smoke, support, destruction, and armor contracts checked)."
     )
 
 
