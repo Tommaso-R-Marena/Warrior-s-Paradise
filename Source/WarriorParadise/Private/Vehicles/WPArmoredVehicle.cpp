@@ -20,6 +20,7 @@
 AWPArmoredVehicle::AWPArmoredVehicle()
 {
     PrimaryActorTick.bCanEverTick = true;
+    Tags.AddUnique(TEXT("WP_Surface_Metal"));
 
     CollisionRoot = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionRoot"));
     SetRootComponent(CollisionRoot);
