@@ -64,6 +64,7 @@ void AWPSmokeGrenade::DeploySmoke()
             GetActorLocation(),
             FRotator::ZeroRotator))
         {
+            Smoke->SetPresentationProfile(PresentationProfile);
             Smoke->InitializeSmoke(SmokeRadiusCm, SmokeDurationSeconds);
         }
     }
