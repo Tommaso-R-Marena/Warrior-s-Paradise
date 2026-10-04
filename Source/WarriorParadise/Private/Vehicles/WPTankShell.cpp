@@ -32,9 +32,27 @@ AWPTankShell::AWPTankShell()
     Movement->MaxSpeed = 26000.0f;
 }
 
-void AWPTankShell::InitializeShell(EWPCombatTeam InTeam, const FVector& Velocity)
+void AWPTankShell::InitializeShell(
+    EWPCombatTeam InTeam,
+    const FVector& Velocity,
+    EWPArmorShellType InShellType)
 {
     ShellTeam = InTeam;
+    ShellType = InShellType;
+
+    if (ShellType == EWPArmorShellType::HighExplosive)
+    {
+        MaximumDamage = HEMaximumDamage;
+        DirectArmorDamage = HEDirectArmorDamage;
+        BlastRadiusCm = HEBlastRadiusCm;
+    }
+    else
+    {
+        MaximumDamage = APMaximumDamage;
+        DirectArmorDamage = APDirectArmorDamage;
+        BlastRadiusCm = APBlastRadiusCm;
+    }
+
     Movement->Velocity = Velocity;
     Movement->InitialSpeed = Velocity.Size();
     Movement->MaxSpeed = FMath::Max(Movement->InitialSpeed, 26000.0f);
@@ -72,7 +90,8 @@ void AWPTankShell::HandleHit(
         Vehicle->ApplyShellImpact(
             DirectArmorDamage,
             Hit.ImpactPoint,
-            Movement->Velocity.GetSafeNormal());
+            Movement->Velocity.GetSafeNormal(),
+            ShellType);
 
         Explode(Hit.ImpactPoint, Vehicle);
         return;
