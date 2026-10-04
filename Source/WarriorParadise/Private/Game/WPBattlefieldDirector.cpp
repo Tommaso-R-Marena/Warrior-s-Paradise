@@ -3,12 +3,16 @@
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/LightComponent.h"
 #include "Components/SkyLightComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "Engine/SkyLight.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/Controller.h"
+#include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -27,7 +31,25 @@ AWPBattlefieldDirector::AWPBattlefieldDirector()
 void AWPBattlefieldDirector::BeginPlay()
 {
     Super::BeginPlay();
+
     BuildBattlefield();
+
+    if (ACharacter* Player = UGameplayStatics::GetPlayerCharacter(this, 0))
+    {
+        const FRotator StartRotation(0.0f, -90.0f, 0.0f);
+        Player->SetActorLocationAndRotation(
+            FVector(0.0f, 3200.0f, 140.0f),
+            StartRotation,
+            false,
+            nullptr,
+            ETeleportType::TeleportPhysics);
+
+        if (AController* Controller = Player->GetController())
+        {
+            Controller->SetControlRotation(StartRotation);
+        }
+    }
+
     SpawnWave();
 }
 
@@ -44,11 +66,12 @@ void AWPBattlefieldDirector::SpawnBox(const FVector& Location, const FVector& Sc
         return;
     }
 
+    UStaticMeshComponent* MeshComponent = Box->GetStaticMeshComponent();
+    MeshComponent->SetMobility(EComponentMobility::Movable);
+    MeshComponent->SetStaticMesh(CubeMesh);
+    MeshComponent->SetCollisionProfileName(TEXT("BlockAll"));
+    MeshComponent->SetCastShadow(true);
     Box->SetActorScale3D(Scale);
-    Box->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
-    Box->GetStaticMeshComponent()->SetStaticMesh(CubeMesh);
-    Box->GetStaticMeshComponent()->SetCollisionProfileName(TEXT("BlockAll"));
-    Box->GetStaticMeshComponent()->SetCastShadow(true);
 }
 
 void AWPBattlefieldDirector::BuildBattlefield()
@@ -58,7 +81,7 @@ void AWPBattlefieldDirector::BuildBattlefield()
         return;
     }
 
-    SpawnBox(FVector(0.0f, 0.0f, -60.0f), FVector(60.0f, 60.0f, 0.6f));
+    SpawnBox(FVector(0.0f, 0.0f, -30.0f), FVector(60.0f, 60.0f, 0.6f));
 
     SpawnBox(FVector(-1750.0f, -500.0f, 280.0f), FVector(7.0f, 5.0f, 3.4f));
     SpawnBox(FVector(1650.0f, -1450.0f, 320.0f), FVector(8.0f, 6.0f, 3.8f));
@@ -90,6 +113,7 @@ void AWPBattlefieldDirector::BuildBattlefield()
     {
         Sky->GetLightComponent()->SetIntensity(0.75f);
         Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+        Sky->GetLightComponent()->RecaptureSky();
     }
 
     AExponentialHeightFog* Fog = GetWorld()->SpawnActor<AExponentialHeightFog>();
@@ -98,6 +122,7 @@ void AWPBattlefieldDirector::BuildBattlefield()
         Fog->GetComponent()->SetFogDensity(0.012f);
         Fog->GetComponent()->SetFogHeightFalloff(0.22f);
         Fog->GetComponent()->SetFogInscatteringColor(FLinearColor(0.46f, 0.48f, 0.49f));
+        Fog->GetComponent()->SetVolumetricFog(true);
     }
 }
 
@@ -132,8 +157,15 @@ void AWPBattlefieldDirector::SpawnWave()
             FMath::FRandRange(-240.0f, 240.0f),
             0.0f);
 
-        if (GetWorld()->SpawnActor<AWPEnemySoldier>(EnemyClass, Base + Jitter, FRotator::ZeroRotator))
+        const FTransform SpawnTransform(FRotator::ZeroRotator, Base + Jitter);
+        if (AWPEnemySoldier* Enemy = GetWorld()->SpawnActorDeferred<AWPEnemySoldier>(
+            EnemyClass,
+            SpawnTransform,
+            nullptr,
+            nullptr,
+            ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn))
         {
+            Enemy->FinishSpawning(SpawnTransform);
             ++RemainingEnemies;
         }
     }
