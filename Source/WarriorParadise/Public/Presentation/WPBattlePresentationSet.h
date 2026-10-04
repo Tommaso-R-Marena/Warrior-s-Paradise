@@ -6,6 +6,7 @@
 #include "WPBattlePresentationSet.generated.h"
 
 class UWPEnvironmentVisualProfile;
+class UWPExplosionPresentationProfile;
 class UWPInfantryLoadoutProfile;
 class UWPVehicleVisualProfile;
 
@@ -48,6 +49,12 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Environment")
     TObjectPtr<UWPEnvironmentVisualProfile> Environment;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Explosions")
+    TObjectPtr<UWPExplosionPresentationProfile> FragExplosion;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Explosions")
+    TObjectPtr<UWPExplosionPresentationProfile> ArtilleryExplosion;
+
     UWPInfantryLoadoutProfile* GetInfantryLoadout(
         EWPCombatTeam Team,
         EWPSoldierRole Role) const
@@ -73,5 +80,15 @@ public:
         return Team == EWPCombatTeam::Allies
             ? AlliedVehicle.Get()
             : AxisVehicle.Get();
+    }
+
+    UWPExplosionPresentationProfile* GetFragExplosion() const
+    {
+        return FragExplosion.Get();
+    }
+
+    UWPExplosionPresentationProfile* GetArtilleryExplosion() const
+    {
+        return ArtilleryExplosion.Get();
     }
 };
