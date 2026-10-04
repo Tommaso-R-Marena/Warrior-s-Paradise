@@ -20,6 +20,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     float,
     HealthNormalized);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FWPVehicleSubsystemDamageSignature,
+    EWPVehicleSubsystem,
+    Subsystem,
+    float,
+    HealthNormalized);
+
 UCLASS()
 class WARRIORPARADISE_API AWPArmoredVehicle : public APawn
 {
@@ -67,11 +74,24 @@ public:
     UPROPERTY(BlueprintAssignable, Category="Vehicle|Presentation")
     FWPVehicleDamageSignature OnVehicleDamaged;
 
+    UPROPERTY(BlueprintAssignable, Category="Vehicle|Presentation")
+    FWPVehicleSubsystemDamageSignature OnSubsystemDamaged;
+
     UFUNCTION(BlueprintCallable, Category="Vehicle|Armor")
     void ApplyShellImpact(
         float BaseDamage,
         const FVector& ImpactLocation,
-        const FVector& ShotDirection);
+        const FVector& ShotDirection,
+        EWPArmorShellType ShellType);
+
+    UFUNCTION(BlueprintPure, Category="Vehicle|Armor")
+    float GetSubsystemHealthNormalized(EWPVehicleSubsystem Subsystem) const;
+
+    UFUNCTION(BlueprintPure, Category="Vehicle|Armor")
+    bool IsImmobilized() const
+    {
+        return EngineHealth <= 0.0f || TrackHealth <= 0.0f;
+    }
 
 protected:
     virtual void BeginPlay() override;
@@ -122,6 +142,33 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="Vehicle|Combat")
     float DesiredVehicleRangeCm = 2300.0f;
 
+    UPROPERTY(EditDefaultsOnly, Category="Vehicle|Subsystems")
+    float EngineMaxHealth = 260.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Vehicle|Subsystems")
+    float TrackMaxHealth = 220.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Vehicle|Subsystems")
+    float TurretMaxHealth = 240.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Vehicle|Subsystems")
+    float AmmoRackMaxHealth = 180.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Vehicle|Subsystems")
+    float AmmoRackCatastrophicDamage = 620.0f;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Vehicle|Subsystems")
+    float EngineHealth = 260.0f;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Vehicle|Subsystems")
+    float TrackHealth = 220.0f;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Vehicle|Subsystems")
+    float TurretHealth = 240.0f;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Vehicle|Subsystems")
+    float AmmoRackHealth = 180.0f;
+
     float NextCannonTime = 0.0f;
     float NextMachineGunTime = 0.0f;
     float NextTargetScanTime = 0.0f;
@@ -135,6 +182,10 @@ private:
     FVector GetTargetAimPoint(const AActor* Target) const;
     void FireCannon(AActor* Target);
     void FireMachineGun(AActor* Target);
+    void DamageSubsystem(
+        EWPVehicleSubsystem Subsystem,
+        float Damage);
+    void UpdateSubsystemEffects();
     void DestroyVehicle();
 
     UFUNCTION()
