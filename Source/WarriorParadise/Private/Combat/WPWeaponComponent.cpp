@@ -206,7 +206,6 @@ void UWPWeaponComponent::BeginManualCycle()
     }
 
     bCyclingAction = true;
-    bAiming = false;
     OnManualCycleStarted.Broadcast();
     OnWeaponStateChanged.Broadcast();
 
