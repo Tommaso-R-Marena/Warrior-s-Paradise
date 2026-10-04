@@ -71,22 +71,57 @@ The director owns battle-scale authority:
 - contact/sound memory;
 - tickets and replacements;
 - spawn safety/front movement;
-- artillery;
-- vehicle deployment;
+- artillery and limited air support;
+- heavy/light vehicle deployment;
+- defensive emplacements;
+- ambient/scripted aircraft missions;
 - score/victory/defeat;
 - player possession transfers.
 
 ### AWPArmoredVehicle / AWPTankShell
 
-Own combined-arms fallback simulation:
+Own heavy-armor simulation:
 
-- vehicle movement and visible-target acquisition;
-- objective advance;
-- turret/cannon/coax;
-- smoke occlusion;
-- small-arms armor immunity;
-- directional armor shell response;
-- vehicle destruction.
+- autonomous or player-crewed tank operation;
+- hull movement, turret traverse/elevation, cannon and coax;
+- AP / HE shell selection;
+- directional armor;
+- engine / track / turret / ammo-rack subsystem damage;
+- mobility/turret degradation and catastrophic rack damage;
+- smoke-aware target acquisition;
+- combined-arms targeting of infantry, tanks, light vehicles and gun positions.
+
+### AWPLightVehicle
+
+Owns transport and light-vehicle gameplay:
+
+- transport truck / armored-car configurations;
+- player possession;
+- nearby squad embark/disembark;
+- emergency ejection;
+- autonomous armored-car movement/targeting;
+- smoke-aware MG combat.
+
+### AWPGunEmplacement
+
+Owns usable battlefield weapons:
+
+- HMG and AT-gun configurations;
+- player possession;
+- autonomous unoccupied operation;
+- constrained yaw/pitch traverse;
+- smoke-aware acquisition;
+- ballistic HMG and AP/HE AT fire.
+
+### AWPAirSupportAircraft / AWPAirBomb
+
+Own scripted/AI air missions:
+
+- flyby / strafe / bombing mission modes;
+- real moving aircraft actors;
+- ballistic strafing projectiles;
+- physical falling bombs;
+- shared infantry suppression and combined-arms blast damage.
 
 ### AWPDestructibleCover / smoke / artillery
 
@@ -102,6 +137,7 @@ Gameplay remains authoritative in C++, while production content is selected thro
 - `UWPWeaponPresentationComponent` handles muzzle/shot/reload, tracer, material-specific impact VFX/audio and decals;
 - `UWPSoldierPresentationComponent` handles hit/downed/revive/death/melee/bandage VFX, spatial audio and optional montages;
 - `UWPVehicleVisualProfile` binds tank meshes plus cannon/coax/impact/destruction presentation;
+- `UWPLightVehicleVisualProfile`, `UWPEmplacementVisualProfile` and `UWPAirSupportVisualProfile` bind transport, gun-position and aircraft presentation;
 - `UWPEnvironmentVisualProfile` binds PBR surfaces, scenery, building overlays, HDRI/cloud and ambience resources;
 - explosion/smoke profiles keep support-weapon presentation separate from damage/sight rules.
 
