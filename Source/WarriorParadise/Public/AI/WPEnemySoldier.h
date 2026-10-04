@@ -8,6 +8,15 @@ class AWPCoverPoint;
 class AWPBattlefieldDirector;
 class UStaticMeshComponent;
 
+UENUM(BlueprintType)
+enum class EWPAITacticalPosture : uint8
+{
+    Independent UMETA(DisplayName="Independent"),
+    BaseOfFire UMETA(DisplayName="Base Of Fire"),
+    Maneuver UMETA(DisplayName="Maneuver"),
+    Pinned UMETA(DisplayName="Pinned")
+};
+
 UCLASS()
 class WARRIORPARADISE_API AWPEnemySoldier : public AWPSoldierCharacter
 {
@@ -18,6 +27,18 @@ public:
 
     virtual void Tick(float DeltaSeconds) override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+    UFUNCTION(BlueprintPure, Category="AI|Tactics")
+    EWPAITacticalPosture GetTacticalPosture() const
+    {
+        return TacticalPosture;
+    }
+
+    UFUNCTION(BlueprintPure, Category="AI|Tactics")
+    bool HasUsedCoordinatedTactic() const
+    {
+        return bHasUsedCoordinatedTactic;
+    }
 
 protected:
     virtual void BeginPlay() override;
@@ -53,6 +74,15 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="AI|Cover")
     float CoverTriggerSuppression = 0.38f;
 
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="500.0"))
+    float CoordinationRadius = 2400.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="200.0"))
+    float ManeuverFlankDistance = 850.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="0.1"))
+    float BaseOfFirePulseMultiplier = 1.55f;
+
     UPROPERTY(EditDefaultsOnly, Category="AI|Grenade")
     float GrenadeMinimumRange = 650.0f;
 
@@ -70,6 +100,11 @@ private:
     float NextEngineerSupplyTime = 0.0f;
     float StopFireTime = 0.0f;
     bool bPulseFiring = false;
+    bool bHasUsedCoordinatedTactic = false;
+
+    UPROPERTY(VisibleInstanceOnly, Category="AI|Tactics")
+    EWPAITacticalPosture TacticalPosture =
+        EWPAITacticalPosture::Independent;
 
     TWeakObjectPtr<AWPSoldierCharacter> CurrentTarget;
     TWeakObjectPtr<AWPCoverPoint> CurrentCover;
@@ -80,9 +115,15 @@ private:
     AWPSoldierCharacter* FindBleedingAlly(float MaximumRange) const;
     AWPSoldierCharacter* FindAmmoTarget(float MaximumRange) const;
     AWPCoverPoint* FindBestCover(const AWPSoldierCharacter* Threat) const;
+    AWPEnemySoldier* SelectManeuverElement(
+        const AWPSoldierCharacter* Target,
+        int32& OutEligibleShooters) const;
 
     bool HasLineOfSightTo(const AActor* Target) const;
+    float GetManeuverSelectionScore() const;
     FVector GetStrategicDestination() const;
+    FVector GetManeuverDestination(
+        const AWPSoldierCharacter* Target) const;
     FVector GetFormationOffset() const;
     void MoveTacticallyToward(const FVector& Destination, float InputScale = 1.0f);
     void ReleaseCover();
