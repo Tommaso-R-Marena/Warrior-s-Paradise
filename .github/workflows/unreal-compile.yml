@@ -48,6 +48,7 @@ jobs:
           git fetch --force --depth=1 origin "${env:GITHUB_SHA}"
           git reset --hard FETCH_HEAD
           git clean -ffdx
+          git remote set-url origin "https://github.com/${env:GITHUB_REPOSITORY}.git"
 
       - name: Runner preflight
         run: |
@@ -125,6 +126,8 @@ jobs:
         env:
           JOB_STATUS: ${{ job.status }}
           COMMIT_SHA: ${{ github.sha }}
+          WP_CONFIGURATION: ${{ inputs.configuration }}
+          WP_CLEAN: ${{ inputs.clean }}
         run: |
           if ($env:JOB_STATUS -eq "success") {
             $verdict = "PASS"
@@ -138,9 +141,9 @@ jobs:
           @"
           ## Warrior's Paradise UE 5.8 compile: $verdict
 
-          - Commit: `$env:COMMIT_SHA`
-          - Configuration: `${{ inputs.configuration }}`
-          - Clean build requested: `${{ inputs.clean }}`
+          - Commit: $env:COMMIT_SHA
+          - Configuration: $env:WP_CONFIGURATION
+          - Clean build requested: $env:WP_CLEAN
           - Result: **$verdict**
           - $detail
           "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
