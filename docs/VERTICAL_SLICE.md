@@ -33,7 +33,9 @@ Implemented in the repository foundation:
 
 - first-person locomotion;
 - sprint, crouch, jump, and mouse look;
-- automatic hitscan weapon;
+- physical projectile ballistics with gravity and configurable muzzle velocity;
+- baseline ADS with aim-dependent dispersion and FOV interpolation;
+- procedural recoil response;
 - magazines and reloads;
 - damage and death;
 - hostile soldiers with movement, facing, line-of-sight checks, and burst fire;
@@ -47,13 +49,15 @@ This milestone intentionally has no production art dependency. It proves the com
 
 ## M1 — production weapon feel
 
+Baseline projectile travel, ADS, and recoil now exist. Production work still includes:
+
 - data-driven weapon definitions;
-- animation-driven ADS;
-- recoil curves and recovery;
+- skeletal first-person weapon rigs;
+- animation-driven ADS and reloads;
+- recoil curves, recovery, and stance coupling;
 - weapon inertia and procedural sway;
-- camera impulse;
-- rifle projectile ballistics;
-- material-aware penetration;
+- camera impulse and suppression response;
+- material-aware penetration and ricochet;
 - muzzle flash, smoke, shell ejection, impact VFX, decals, and spatial audio;
 - per-surface impact response;
 - weapon inspection/debug overlay.
