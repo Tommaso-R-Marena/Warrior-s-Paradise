@@ -342,6 +342,12 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "FireLaneSafetyRadius"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "HasHeldFireForFriendly"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "HasClearFireLaneTo"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "WPFireLaneSafety"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "bHasHeldFireForFriendly = true"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "friendlyFireHolds=%d"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "EWPAITacticalPosture"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "BaseOfFirePulseMultiplier"),
         ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "SelectManeuverElement"),
@@ -551,7 +557,7 @@ def main() -> None:
         "feedback, tracers, decals, surface impacts, enterable buildings, "
         "crewable tanks, subsystem armor damage, transports, armored cars, "
         "emplacements, scripted air support, battlefield ambience, spatial-audio, "
-        "destruction, squad, coordinated fire-and-maneuver, suppression-state behavior, bleeding/field-treatment, support, first-run auto benchmark and Minimal/Low/Medium/High/Ultra scalability contracts checked)."
+        "destruction, squad, coordinated fire-and-maneuver, friendly fire-lane discipline, suppression-state behavior, bleeding/field-treatment, support, first-run auto benchmark and Minimal/Low/Medium/High/Ultra scalability contracts checked)."
     )
 
 
