@@ -314,6 +314,26 @@
       "acquisition": "Free Fab download; FBX",
       "distribution": "Keep raw asset private/local; do not redistribute standalone.",
       "purpose": "Period-correct German SMG production candidate"
+    },
+    {
+      "id": "fab_free_lee_enfield_mkiii",
+      "name": "Lee Enfield MKIII",
+      "source": "Fab",
+      "license": "Fab Standard License",
+      "page_url": "https://www.fab.com/listings/c197bffc-ec25-44e1-8d86-aba7445317f6",
+      "acquisition": "Free Fab download; OBJ plus converted GLB/glTF/USDZ",
+      "distribution": "Keep raw asset private/local; do not redistribute standalone.",
+      "purpose": "Period-correct Allied/British bolt-action rifle candidate with 4K PBR textures"
+    },
+    {
+      "id": "fab_free_ppsh41_lowpoly",
+      "name": "PPSH 41 Low-poly PBR",
+      "source": "Fab",
+      "license": "Fab Standard License",
+      "page_url": "https://www.fab.com/listings/85c01da0-7d19-4f61-9929-5318c22a136a",
+      "acquisition": "Free Fab download; FBX plus converted GLB/glTF/USDZ",
+      "distribution": "Keep raw asset private/local; do not redistribute standalone.",
+      "purpose": "Period-correct Soviet automatic weapon candidate with 2K PBR texture set"
     }
   ]
 }
