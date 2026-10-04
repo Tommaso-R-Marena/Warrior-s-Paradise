@@ -45,7 +45,7 @@ Owns physical bullet travel, gravity, damage, hit-location scaling, suppression 
 
 Health owns damage, partial healing, downed/bleedout/revive/final death and damage-source events.
 
-Suppression owns accumulation/decay and a normalized presentation/AI signal.
+Suppression owns accumulation/decay plus a hysteretic state machine: **Steady → Pressured → Pinned**. The normalized value still drives camera/accuracy effects, while the discrete state prevents AI behavior from oscillating around a single threshold. Pinned AI abandons offensive movement, prioritizes/holds cover, degrades shot dispersion and only attempts sparse return fire from cover.
 
 ### AWPEnemySoldier / AWPCoverPoint
 
@@ -56,7 +56,7 @@ The tactical infantry layer provides:
 - location-based shared contacts;
 - gunshot investigation;
 - cover reservation;
-- suppression reactions;
+- suppression-state reactions with cover priority, degraded accuracy and pinned return-fire limits;
 - flanking;
 - role behaviors;
 - grenades/smoke;
