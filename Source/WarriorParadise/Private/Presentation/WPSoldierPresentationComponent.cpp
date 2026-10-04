@@ -2,6 +2,7 @@
 #include "Animation/AnimMontage.h"
 #include "Characters/WPSoldierCharacter.h"
 #include "Combat/WPHealthComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
@@ -11,7 +12,8 @@
 
 UWPSoldierPresentationComponent::UWPSoldierPresentationComponent()
 {
-    PrimaryComponentTick.bCanEverTick = false;
+    PrimaryComponentTick.bCanEverTick = true;
+    PrimaryComponentTick.TickInterval = 0.04f;
 }
 
 void UWPSoldierPresentationComponent::BeginPlay()
@@ -44,7 +46,21 @@ void UWPSoldierPresentationComponent::BeginPlay()
         Settings.OcclusionInterpolationTime = 0.08f;
     }
 
+    if (SoldierOwner.IsValid())
+    {
+        LastMovementSampleLocation = SoldierOwner->GetActorLocation();
+    }
+
     BindEvents();
+}
+
+void UWPSoldierPresentationComponent::TickComponent(
+    float DeltaTime,
+    ELevelTick TickType,
+    FActorComponentTickFunction* ThisTickFunction)
+{
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    UpdateMovementFoley();
 }
 
 void UWPSoldierPresentationComponent::SetPresentationProfile(
@@ -153,6 +169,135 @@ void UWPSoldierPresentationComponent::SpawnEffectAtSoldier(
         true,
         ENCPoolMethod::AutoRelease,
         true);
+}
+
+void UWPSoldierPresentationComponent::UpdateMovementFoley()
+{
+    AWPSoldierCharacter* Soldier = SoldierOwner.Get();
+
+    if (!Soldier || !PresentationProfile)
+    {
+        return;
+    }
+
+    const FVector CurrentLocation = Soldier->GetActorLocation();
+    const float SampleDistance = FVector::Dist2D(
+        CurrentLocation,
+        LastMovementSampleLocation);
+
+    LastMovementSampleLocation = CurrentLocation;
+
+    if (!Soldier->IsCombatCapable() ||
+        !Soldier->GetCharacterMovement() ||
+        Soldier->GetCharacterMovement()->IsFalling() ||
+        Soldier->GetVelocity().Size2D() < 35.0f)
+    {
+        MovementDistanceAccumulator = 0.0f;
+        return;
+    }
+
+    if (SampleDistance > 300.0f)
+    {
+        MovementDistanceAccumulator = 0.0f;
+        return;
+    }
+
+    MovementDistanceAccumulator += SampleDistance;
+
+    float TriggerDistance = PresentationProfile->WalkStepDistanceCm;
+
+    if (Soldier->IsProne())
+    {
+        TriggerDistance = PresentationProfile->CrawlSoundDistanceCm;
+    }
+    else if (Soldier->IsSprinting())
+    {
+        TriggerDistance = PresentationProfile->SprintStepDistanceCm;
+    }
+    else if (Soldier->IsCrouchedStance())
+    {
+        TriggerDistance = PresentationProfile->CrouchStepDistanceCm;
+    }
+
+    if (MovementDistanceAccumulator < TriggerDistance)
+    {
+        return;
+    }
+
+    MovementDistanceAccumulator =
+        FMath::Fmod(MovementDistanceAccumulator, TriggerDistance);
+
+    if (Soldier->IsProne())
+    {
+        PlayWorldSound(
+            PresentationProfile->CrawlSound.LoadSynchronous(),
+            PresentationProfile->FootstepVolume * 0.72f);
+        return;
+    }
+
+    PlayFootstep();
+}
+
+void UWPSoldierPresentationComponent::PlayFootstep()
+{
+    AWPSoldierCharacter* Soldier = SoldierOwner.Get();
+
+    if (!Soldier || !PresentationProfile || !GetWorld())
+    {
+        return;
+    }
+
+    const FVector Start =
+        Soldier->GetActorLocation() + FVector(0.0f, 0.0f, 30.0f);
+    const FVector End =
+        Soldier->GetActorLocation() - FVector(0.0f, 0.0f, 160.0f);
+
+    FHitResult Hit;
+    FCollisionQueryParams Params(
+        SCENE_QUERY_STAT(WPFootstepSurface),
+        false,
+        Soldier);
+    Params.AddIgnoredActor(Soldier);
+
+    AActor* SurfaceActor = nullptr;
+    if (GetWorld()->LineTraceSingleByChannel(
+        Hit,
+        Start,
+        End,
+        ECC_Visibility,
+        Params))
+    {
+        SurfaceActor = Hit.GetActor();
+    }
+
+    TSoftObjectPtr<USoundBase> Footstep =
+        PresentationProfile->FootstepDirt;
+
+    if (SurfaceActor)
+    {
+        if (SurfaceActor->ActorHasTag(TEXT("WP_Surface_Wood")))
+        {
+            Footstep = PresentationProfile->FootstepWood;
+        }
+        else if (SurfaceActor->ActorHasTag(TEXT("WP_Surface_Metal")))
+        {
+            Footstep = PresentationProfile->FootstepMetal;
+        }
+        else if (SurfaceActor->ActorHasTag(TEXT("WP_Surface_Stone")) ||
+                 SurfaceActor->ActorHasTag(TEXT("WP_Surface_Brick")) ||
+                 SurfaceActor->ActorHasTag(TEXT("WP_Surface_Plaster")) ||
+                 SurfaceActor->ActorHasTag(TEXT("WP_Surface_Concrete")))
+        {
+            Footstep = PresentationProfile->FootstepStone;
+        }
+    }
+
+    if (USoundBase* Sound = Footstep.LoadSynchronous())
+    {
+        PlayWorldSound(
+            Sound,
+            PresentationProfile->FootstepVolume);
+    }
 }
 
 void UWPSoldierPresentationComponent::HandleDamageReceived(
