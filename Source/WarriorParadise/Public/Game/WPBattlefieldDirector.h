@@ -16,6 +16,7 @@ class AWPSoldierCharacter;
 class UMaterialInterface;
 class UStaticMesh;
 class UWPBattlePresentationSet;
+class UWPExplosionPresentationProfile;
 
 UCLASS()
 class WARRIORPARADISE_API AWPBattlefieldDirector : public AActor
@@ -116,6 +117,12 @@ public:
 
     UFUNCTION(BlueprintPure, Category="Battle")
     bool IsBattleLost() const { return bBattleLost; }
+
+    UFUNCTION(BlueprintPure, Category="Battle|Presentation")
+    UWPExplosionPresentationProfile* GetFragExplosionPresentation() const;
+
+    UFUNCTION(BlueprintPure, Category="Battle|Presentation")
+    UWPExplosionPresentationProfile* GetArtilleryExplosionPresentation() const;
 
 protected:
     virtual void BeginPlay() override;
