@@ -614,6 +614,15 @@ void AWPSoldierCharacter::Tick(float DeltaSeconds)
     const float Suppression = SuppressionComponent
         ? SuppressionComponent->GetNormalizedSuppression()
         : 0.0f;
+    const EWPSuppressionState SuppressionState = SuppressionComponent
+        ? SuppressionComponent->GetSuppressionState()
+        : EWPSuppressionState::Steady;
+
+    if (SuppressionState == EWPSuppressionState::Pinned &&
+        bSprinting)
+    {
+        StopSprint();
+    }
 
     if (IsCombatCapable())
     {
