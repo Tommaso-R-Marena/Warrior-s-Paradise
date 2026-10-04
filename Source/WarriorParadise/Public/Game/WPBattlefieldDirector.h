@@ -267,6 +267,10 @@ private:
     void HandleObjectiveCaptured(AWPCaptureObjective* Objective);
 
     UMaterialInterface* ResolveSurfaceMaterial(EWPEnvironmentSurface Surface) const;
+    bool SpawnBuildingVisual(
+        const FVector& Location,
+        const FVector& BoxScale,
+        const FRotator& Rotation);
 
     void SpawnBox(
         const FVector& Location,
