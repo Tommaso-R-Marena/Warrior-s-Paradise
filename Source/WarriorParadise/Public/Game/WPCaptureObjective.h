@@ -45,6 +45,15 @@ public:
     UFUNCTION(BlueprintPure, Category="Objective")
     bool IsCaptured() const { return bCaptured; }
 
+    UFUNCTION(BlueprintPure, Category="Objective")
+    bool IsContested() const { return bContested; }
+
+    UFUNCTION(BlueprintPure, Category="Objective")
+    int32 GetAlliedPresence() const { return AlliedPresence; }
+
+    UFUNCTION(BlueprintPure, Category="Objective")
+    int32 GetAxisPresence() const { return AxisPresence; }
+
 private:
     UPROPERTY(VisibleAnywhere, Category="Objective")
     TObjectPtr<USphereComponent> Zone;
@@ -72,6 +81,15 @@ private:
 
     UPROPERTY(VisibleInstanceOnly, Category="Objective")
     bool bCaptured = false;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Objective")
+    bool bContested = false;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Objective")
+    int32 AlliedPresence = 0;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Objective")
+    int32 AxisPresence = 0;
 
     void UpdatePresentation();
 };
