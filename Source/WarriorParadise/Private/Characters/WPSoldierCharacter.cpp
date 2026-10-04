@@ -6,7 +6,9 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Game/WPBattlefieldDirector.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 
 AWPSoldierCharacter::AWPSoldierCharacter()
@@ -206,6 +208,12 @@ void AWPSoldierCharacter::HandleDeath()
     StopAim();
     WeaponComponent->StopFire();
     GetCharacterMovement()->DisableMovement();
+
+    if (AWPBattlefieldDirector* Director = Cast<AWPBattlefieldDirector>(
+        UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass())))
+    {
+        Director->NotifySoldierKilled(this);
+    }
 
     if (!IsPlayerControlled())
     {
