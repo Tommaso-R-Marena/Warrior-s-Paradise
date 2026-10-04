@@ -152,7 +152,7 @@ See [Free Content Workflow](docs/FREE_CONTENT_WORKFLOW.md), [Free Asset Bootstra
 | 3 | Squad Hold |
 | T | Designate artillery |
 | Y | Designate air support |
-| F10 | Cycle Low / Medium / High / Ultra graphics |
+| F10 | Cycle Minimal / Low / Medium / High / Ultra graphics |
 | F9 | Auto-detect graphics from hardware benchmark |
 
 ## Graphics scalability
