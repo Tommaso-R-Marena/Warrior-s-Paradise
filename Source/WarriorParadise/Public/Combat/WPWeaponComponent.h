@@ -6,6 +6,7 @@
 
 class AController;
 class AWPBallisticProjectile;
+class UWPWeaponDefinition;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPWeaponStateChangedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FWPShotFiredSignature, float, RecoilPitch, float, RecoilYaw);
@@ -40,6 +41,9 @@ public:
     void Configure(float InDamage, float InRoundsPerMinute, float InSpreadDegrees);
 
     UFUNCTION(BlueprintCallable, Category="Weapon")
+    void ApplyWeaponDefinition(const UWPWeaponDefinition* Definition);
+
+    UFUNCTION(BlueprintCallable, Category="Weapon")
     void AddReserveAmmo(int32 Amount);
 
     UFUNCTION(BlueprintCallable, Category="Weapon")
@@ -64,6 +68,9 @@ protected:
     virtual void BeginPlay() override;
 
 private:
+    UPROPERTY(EditDefaultsOnly, Category="Weapon|Definition")
+    TObjectPtr<UWPWeaponDefinition> DefaultWeaponDefinition;
+
     UPROPERTY(EditDefaultsOnly, Category="Weapon|Ballistics")
     TSubclassOf<AWPBallisticProjectile> ProjectileClass;
 
