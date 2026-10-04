@@ -40,6 +40,12 @@ public:
         return bHasUsedCoordinatedTactic;
     }
 
+    UFUNCTION(BlueprintPure, Category="AI|Tactics")
+    bool HasHeldFireForFriendly() const
+    {
+        return bHasHeldFireForFriendly;
+    }
+
 protected:
     virtual void BeginPlay() override;
 
@@ -80,6 +86,12 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="200.0"))
     float ManeuverFlankDistance = 850.0f;
 
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="0.0"))
+    float FireLaneSafetyRadius = 52.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="0.0"))
+    float FireLaneShiftStrength = 0.34f;
+
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="0.1"))
     float BaseOfFirePulseMultiplier = 1.55f;
 
@@ -101,6 +113,7 @@ private:
     float StopFireTime = 0.0f;
     bool bPulseFiring = false;
     bool bHasUsedCoordinatedTactic = false;
+    bool bHasHeldFireForFriendly = false;
 
     UPROPERTY(VisibleInstanceOnly, Category="AI|Tactics")
     EWPAITacticalPosture TacticalPosture =
@@ -120,6 +133,8 @@ private:
         int32& OutEligibleShooters) const;
 
     bool HasLineOfSightTo(const AActor* Target) const;
+    bool HasClearFireLaneTo(
+        const AWPSoldierCharacter* Target) const;
     float GetManeuverSelectionScore() const;
     FVector GetStrategicDestination() const;
     FVector GetManeuverDestination(
