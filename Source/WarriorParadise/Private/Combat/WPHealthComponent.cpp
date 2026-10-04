@@ -1,5 +1,7 @@
 #include "Combat/WPHealthComponent.h"
+#include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "TimerManager.h"
 
 UWPHealthComponent::UWPHealthComponent()
 {
@@ -19,7 +21,7 @@ void UWPHealthComponent::BeginPlay()
 
 void UWPHealthComponent::RestoreToFull()
 {
-    if (bDead)
+    if (bDead || bDowned)
     {
         return;
     }
@@ -27,6 +29,34 @@ void UWPHealthComponent::RestoreToFull()
     const float Delta = MaxHealth - Health;
     Health = MaxHealth;
     OnHealthChanged.Broadcast(Health, Delta);
+}
+
+bool UWPHealthComponent::Revive()
+{
+    if (bDead || !bDowned)
+    {
+        return false;
+    }
+
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().ClearTimer(BleedoutTimerHandle);
+    }
+
+    const float PreviousHealth = Health;
+    bDowned = false;
+    Health = FMath::Clamp(ReviveHealth, 1.0f, MaxHealth);
+    OnHealthChanged.Broadcast(Health, Health - PreviousHealth);
+    OnRevived.Broadcast();
+    return true;
+}
+
+void UWPHealthComponent::ForceDeath()
+{
+    if (!bDead)
+    {
+        FinalizeDeath();
+    }
 }
 
 void UWPHealthComponent::HandleTakeAnyDamage(
@@ -41,13 +71,68 @@ void UWPHealthComponent::HandleTakeAnyDamage(
         return;
     }
 
+    if (bDowned)
+    {
+        if (Damage >= DownedFinisherDamage)
+        {
+            FinalizeDeath();
+        }
+        return;
+    }
+
     const float PreviousHealth = Health;
     Health = FMath::Clamp(Health - Damage, 0.0f, MaxHealth);
     OnHealthChanged.Broadcast(Health, Health - PreviousHealth);
 
     if (Health <= 0.0f)
     {
-        bDead = true;
-        OnDeath.Broadcast();
+        if (bCanBeDowned)
+        {
+            EnterDownedState();
+        }
+        else
+        {
+            FinalizeDeath();
+        }
     }
+}
+
+void UWPHealthComponent::EnterDownedState()
+{
+    if (bDead || bDowned)
+    {
+        return;
+    }
+
+    bDowned = true;
+    Health = 0.0f;
+    OnDowned.Broadcast();
+
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().SetTimer(
+            BleedoutTimerHandle,
+            this,
+            &UWPHealthComponent::FinalizeDeath,
+            BleedoutSeconds,
+            false);
+    }
+}
+
+void UWPHealthComponent::FinalizeDeath()
+{
+    if (bDead)
+    {
+        return;
+    }
+
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().ClearTimer(BleedoutTimerHandle);
+    }
+
+    bDead = true;
+    bDowned = false;
+    Health = 0.0f;
+    OnDeath.Broadcast();
 }
