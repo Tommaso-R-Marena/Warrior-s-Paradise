@@ -187,6 +187,15 @@ void AWPBattlefieldDirector::SpawnBox(
     MeshComponent->SetCollisionProfileName(TEXT("BlockAll"));
     MeshComponent->SetCastShadow(true);
     Box->SetActorScale3D(Scale);
+
+    const bool bThinHorizontalCover =
+        Scale.Z > 0.65f &&
+        (Scale.X <= 0.65f || Scale.Y <= 0.65f);
+
+    if (bThinHorizontalCover)
+    {
+        Box->Tags.AddUnique(TEXT("WP_Penetrable"));
+    }
 }
 
 void AWPBattlefieldDirector::BuildBattlefield()
