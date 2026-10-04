@@ -9,7 +9,12 @@ class AWPBallisticProjectile;
 class UWPWeaponDefinition;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPWeaponStateChangedSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPWeaponSimpleEventSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FWPShotFiredSignature, float, RecoilPitch, float, RecoilYaw);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FWPProjectileSpawnedSignature,
+    AWPBallisticProjectile*,
+    Projectile);
 
 UCLASS(ClassGroup=(Combat), meta=(BlueprintSpawnableComponent))
 class WARRIORPARADISE_API UWPWeaponComponent : public UActorComponent
@@ -24,6 +29,18 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category="Weapon")
     FWPShotFiredSignature OnShotFired;
+
+    UPROPERTY(BlueprintAssignable, Category="Weapon|Presentation")
+    FWPWeaponSimpleEventSignature OnReloadStarted;
+
+    UPROPERTY(BlueprintAssignable, Category="Weapon|Presentation")
+    FWPWeaponSimpleEventSignature OnReloadCompleted;
+
+    UPROPERTY(BlueprintAssignable, Category="Weapon|Presentation")
+    FWPWeaponSimpleEventSignature OnDryFire;
+
+    UPROPERTY(BlueprintAssignable, Category="Weapon|Presentation")
+    FWPProjectileSpawnedSignature OnProjectileSpawned;
 
     UFUNCTION(BlueprintCallable, Category="Weapon")
     void StartFire();
