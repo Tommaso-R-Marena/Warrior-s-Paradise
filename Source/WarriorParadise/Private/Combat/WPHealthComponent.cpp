@@ -19,6 +19,18 @@ void UWPHealthComponent::BeginPlay()
     }
 }
 
+float UWPHealthComponent::GetBleedoutRemaining() const
+{
+    if (!bDowned || !GetWorld())
+    {
+        return 0.0f;
+    }
+
+    return FMath::Max(
+        0.0f,
+        GetWorld()->GetTimerManager().GetTimerRemaining(BleedoutTimerHandle));
+}
+
 void UWPHealthComponent::RestoreToFull()
 {
     if (bDead || bDowned)
