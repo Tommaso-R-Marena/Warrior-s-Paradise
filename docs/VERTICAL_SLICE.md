@@ -34,7 +34,7 @@ The target is **not an Enlisted clone**.
 - melee;
 - timed bandaging.
 
-Production skeletal rigs, AnimBPs, authentic weapon data, material response, audio and VFX remain content work.
+The code now includes production visual/loadout profiles, Motion Matching discovery, weapon/soldier presentation components, tracers, decals, surface-specific impacts and spatial-audio hooks. Final asset selection, skeleton retargeting and art-direction tuning remain content work.
 
 ### Squad warfare — implemented baseline
 
@@ -73,14 +73,17 @@ Production skeletal rigs, AnimBPs, authentic weapon data, material response, aud
 - final counterattack;
 - battle score, victory and defeat.
 
-### Battlefield interaction — implemented fallback
+### Battlefield interaction / free environment — implemented baseline
 
-- runtime village/cover blockout;
+- runtime village/cover blockout with enterable building collision shells;
+- optional free rural-building visual overlays that do not replace gameplay collision;
 - reservable cover points;
 - penetrable thin cover;
 - destructible cover with physics-debris fallback;
-- tactical Local Fog Volume smoke used by visual and AI sight;
-- sun/skylight/volumetric atmosphere.
+- tactical Local Fog Volume smoke used by visual and AI sight, with optional Niagara/audio overlay;
+- data-driven dirt/plaster/brick/stone/wood/metal/roof/concrete PBR material slots;
+- optional CC0 tree/crate/barrel dressing;
+- sun/skylight/volumetric atmosphere with optional HDRI/cloud/ambience resources.
 
 ### Combined arms — implemented fallback
 
@@ -95,26 +98,22 @@ Production skeletal rigs, AnimBPs, authentic weapon data, material response, aud
 - smoke-aware sight;
 - vehicle destruction and victory accounting.
 
-## Production presentation contract
+## Production presentation contract — implemented
 
-The C++ layer now exposes events for the expensive presentation systems rather than hard-coding temporary effects into simulation. See `docs/PRESENTATION_BINDINGS.md`.
+The C++ layer exposes gameplay events **and** concrete data-driven presentation components/profiles for weapons, soldiers, smoke, explosions, tanks and environment content. The free-content generator discovers installed free resources and creates `DA_WP_BattlePresentation_Free`. See `docs/PRESENTATION_BINDINGS.md` and `docs/FREE_CONTENT_WORKFLOW.md`.
 
 ## Production content still required
 
-These are necessary before the phrase “Enlisted-quality graphics/presentation” is justified:
+The branch can now *consume* the major production categories, but the final coherent asset set is not committed/generated in this environment. Before “Enlisted-quality graphics/presentation” is justified we still need:
 
-- production skeletal characters, hands and weapons;
-- authored animation sets and AnimBPs;
-- authentic vehicles;
-- high-density terrain/buildings/interiors/foliage;
-- Nanite/HLOD/streaming setup where appropriate;
-- PBR physical-material library;
-- Niagara combat VFX;
-- weapon/explosion/vehicle/voice/foley audio;
-- decals, dirt, damage and battlefield dressing;
-- authored navigation and cover pass;
-- Chaos destruction for hero structures;
-- UMG presentation polish.
+- install/acquire the chosen free Epic/Fab/Sonniss resources under their provider terms;
+- final high-fidelity soldier/uniform/hands/weapon selection;
+- UE5 retargeted Motion Matching/reload/action animation on the chosen skeleton;
+- coherent period-correct vehicle presentation;
+- authored village/terrain/interior/foliage composition beyond the runtime fallback;
+- tuned Niagara/audio/decal choices rather than heuristic first matches;
+- hero destruction/UMG polish and any missing custom art;
+- real UE 5.8 compilation, PIE testing, packaged-build validation and performance tuning.
 
 ## Hard validation gate
 
