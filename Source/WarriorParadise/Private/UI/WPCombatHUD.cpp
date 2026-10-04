@@ -135,9 +135,10 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
     {
         DrawText(
             FString::Printf(
-                TEXT("WAVE %d   HOSTILES %d   SQUAD %d   RESERVES A:%d X:%d   SCORE %d"),
+                TEXT("WAVE %d   HOSTILES %d   ARMOR %d   SQUAD %d   RESERVES A:%d X:%d   SCORE %d"),
                 Director->GetWave(),
                 Director->GetRemainingEnemies(),
+                Director->GetActiveEnemyVehicles(),
                 Director->GetFriendlySoldiersAlive(),
                 Director->GetAlliedTickets(),
                 Director->GetAxisTickets(),
