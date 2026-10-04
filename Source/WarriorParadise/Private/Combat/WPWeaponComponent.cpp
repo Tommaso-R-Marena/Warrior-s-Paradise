@@ -58,8 +58,10 @@ void UWPWeaponComponent::ApplyWeaponDefinition(const UWPWeaponDefinition* Defini
     RecoilPitchDegrees = FMath::Max(0.0f, Definition->RecoilPitchDegrees);
     RecoilYawDegrees = FMath::Max(0.0f, Definition->RecoilYawDegrees);
 
-    AmmoInMagazine = FMath::Min(AmmoInMagazine, MagazineSize);
-    ReserveAmmo = FMath::Min(ReserveAmmo, MaximumReserveAmmo);
+    StopFire();
+    CancelReload();
+    AmmoInMagazine = MagazineSize;
+    ReserveAmmo = StartingReserveAmmo;
     OnWeaponStateChanged.Broadcast();
 }
 
