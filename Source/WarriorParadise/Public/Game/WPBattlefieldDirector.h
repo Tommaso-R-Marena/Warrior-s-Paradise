@@ -30,6 +30,11 @@ public:
     UFUNCTION(BlueprintCallable, Category="Battle|Support")
     bool RequestArtillery(AWPSoldierCharacter* Caller, const FVector& TargetLocation);
 
+    void ReportEnemyContact(EWPCombatTeam ReportingTeam, AWPSoldierCharacter* Contact);
+    AWPSoldierCharacter* GetSharedEnemyContact(
+        EWPCombatTeam ReportingTeam,
+        float MaximumAgeSeconds = 4.0f) const;
+
     UFUNCTION(BlueprintPure, Category="Battle")
     int32 GetWave() const { return Wave; }
 
@@ -158,6 +163,10 @@ private:
     int32 ReplacementRoleCursor = 0;
     float NextArtilleryAvailableTime = 0.0f;
     TWeakObjectPtr<APlayerController> PendingPlayerRespawnController;
+    TWeakObjectPtr<AWPSoldierCharacter> AlliedSharedContact;
+    TWeakObjectPtr<AWPSoldierCharacter> AxisSharedContact;
+    float AlliedSharedContactTime = -1000.0f;
+    float AxisSharedContactTime = -1000.0f;
 
     FTimerHandle NextWaveTimer;
     FTimerHandle FriendlyReplacementTimer;
