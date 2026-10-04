@@ -10,6 +10,14 @@ class UBoxComponent;
 class UFloatingPawnMovement;
 class UStaticMeshComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPVehicleSimpleEventSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FWPVehicleDamageSignature,
+    float,
+    Damage,
+    float,
+    HealthNormalized);
+
 UCLASS()
 class WARRIORPARADISE_API AWPArmoredVehicle : public APawn
 {
@@ -32,6 +40,24 @@ public:
 
     UFUNCTION(BlueprintPure, Category="Vehicle")
     bool IsDestroyed() const { return bDestroyed; }
+
+    UPROPERTY(BlueprintAssignable, Category="Vehicle|Presentation")
+    FWPVehicleSimpleEventSignature OnCannonFired;
+
+    UPROPERTY(BlueprintAssignable, Category="Vehicle|Presentation")
+    FWPVehicleSimpleEventSignature OnMachineGunFired;
+
+    UPROPERTY(BlueprintAssignable, Category="Vehicle|Presentation")
+    FWPVehicleSimpleEventSignature OnVehicleDestroyed;
+
+    UPROPERTY(BlueprintAssignable, Category="Vehicle|Presentation")
+    FWPVehicleDamageSignature OnVehicleDamaged;
+
+    UFUNCTION(BlueprintCallable, Category="Vehicle|Armor")
+    void ApplyShellImpact(
+        float BaseDamage,
+        const FVector& ImpactLocation,
+        const FVector& ShotDirection);
 
 protected:
     virtual void BeginPlay() override;
@@ -81,8 +107,10 @@ private:
 
     float NextCannonTime = 0.0f;
     float NextMachineGunTime = 0.0f;
+    float NextTargetScanTime = 0.0f;
     bool bDestroyed = false;
     TWeakObjectPtr<AActor> CurrentTarget;
+    TWeakObjectPtr<AWPBattlefieldDirector> BattlefieldDirector;
 
     AActor* FindBestTarget() const;
     bool HasLineOfSightTo(const AActor* Target) const;
