@@ -76,6 +76,7 @@ void AWPSoldierCharacter::BeginPlay()
 
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
     FirstPersonCamera->SetFieldOfView(HipFOV);
+    Stamina = MaxStamina;
     ApplyRoleLoadout();
 
     HealthComponent->OnDowned.AddDynamic(this, &AWPSoldierCharacter::HandleDowned);
@@ -226,6 +227,48 @@ void AWPSoldierCharacter::Tick(float DeltaSeconds)
         return;
     }
 
+    const float Time = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+    const float Speed2D = GetVelocity().Size2D();
+    const float SpeedAlpha = FMath::Clamp(
+        Speed2D / FMath::Max(1.0f, SprintSpeed),
+        0.0f,
+        1.0f);
+
+    if (bSprinting && IsCombatCapable() && Speed2D > 25.0f)
+    {
+        Stamina = FMath::Max(0.0f, Stamina - SprintDrainPerSecond * DeltaSeconds);
+        LastSprintActivityTime = Time;
+
+        if (Stamina <= KINDA_SMALL_NUMBER)
+        {
+            StopSprint();
+        }
+    }
+    else if (Time - LastSprintActivityTime >= StaminaRegenDelay)
+    {
+        Stamina = FMath::Min(MaxStamina, Stamina + StaminaRegenPerSecond * DeltaSeconds);
+    }
+
+    const float Suppression = SuppressionComponent
+        ? SuppressionComponent->GetNormalizedSuppression()
+        : 0.0f;
+
+    float AccuracyMultiplier = 1.0f;
+    AccuracyMultiplier *= FMath::Lerp(1.0f, 2.0f, SpeedAlpha);
+    AccuracyMultiplier *= FMath::Lerp(1.0f, 1.65f, Suppression);
+
+    if (bIsCrouched)
+    {
+        AccuracyMultiplier *= 0.72f;
+    }
+
+    if (bSprinting)
+    {
+        AccuracyMultiplier *= 1.35f;
+    }
+
+    WeaponComponent->SetAccuracyMultiplier(AccuracyMultiplier);
+
     const float TargetFOV = bAiming ? AimFOV : HipFOV;
     FirstPersonCamera->SetFieldOfView(FMath::FInterpTo(
         FirstPersonCamera->FieldOfView,
@@ -233,8 +276,22 @@ void AWPSoldierCharacter::Tick(float DeltaSeconds)
         DeltaSeconds,
         AimInterpSpeed));
 
-    const FVector BodyTarget = bAiming ? AimBodyLocation : HipBodyLocation;
-    const FVector BarrelTarget = bAiming ? AimBarrelLocation : HipBarrelLocation;
+    const float AimSwayScale = bAiming ? 0.38f : 1.0f;
+    const float SwayAmplitude = BaseWeaponSwayCm *
+        AimSwayScale *
+        (1.0f + SpeedAlpha * 1.8f + Suppression * 1.25f);
+
+    const float SwayPhase = Time * FMath::Lerp(1.6f, 3.1f, SpeedAlpha);
+    const FVector SwayOffset(
+        0.0f,
+        FMath::Sin(SwayPhase) * SwayAmplitude,
+        FMath::Cos(SwayPhase * 0.82f) * SwayAmplitude * 0.55f);
+
+    const FVector BodyTarget =
+        (bAiming ? AimBodyLocation : HipBodyLocation) + SwayOffset;
+
+    const FVector BarrelTarget =
+        (bAiming ? AimBarrelLocation : HipBarrelLocation) + SwayOffset * 0.72f;
 
     ViewWeaponBody->SetRelativeLocation(FMath::VInterpTo(
         ViewWeaponBody->GetRelativeLocation(),
@@ -311,18 +368,26 @@ void AWPSoldierCharacter::LookUp(float Value)
 
 void AWPSoldierCharacter::StartSprint()
 {
-    if (!IsCombatCapable())
+    if (!IsCombatCapable() || Stamina <= 8.0f)
     {
         return;
     }
 
     StopAim();
+    UnCrouch();
+    bSprinting = true;
     GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
 }
 
 void AWPSoldierCharacter::StopSprint()
 {
+    bSprinting = false;
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+
+    if (GetWorld())
+    {
+        LastSprintActivityTime = GetWorld()->GetTimeSeconds();
+    }
 }
 
 void AWPSoldierCharacter::StartCrouch()
@@ -451,6 +516,7 @@ void AWPSoldierCharacter::HandleShotFired(float RecoilPitch, float RecoilYaw)
 
 void AWPSoldierCharacter::HandleDowned()
 {
+    StopSprint();
     StopAim();
     WeaponComponent->StopFire();
     GetCharacterMovement()->DisableMovement();
@@ -458,6 +524,8 @@ void AWPSoldierCharacter::HandleDowned()
 
 void AWPSoldierCharacter::HandleRevived()
 {
+    bSprinting = false;
+    Stamina = FMath::Max(Stamina, MaxStamina * 0.5f);
     GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
     SuppressionComponent->ClearSuppression();
