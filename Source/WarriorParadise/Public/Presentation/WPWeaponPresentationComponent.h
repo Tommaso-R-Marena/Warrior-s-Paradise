@@ -8,6 +8,7 @@ class AWPBallisticProjectile;
 class AWPSoldierCharacter;
 class UWPWeaponComponent;
 class UWPWeaponPresentationProfile;
+class USoundAttenuation;
 class USoundBase;
 
 UCLASS(ClassGroup=(Presentation), meta=(BlueprintSpawnableComponent))
@@ -30,6 +31,9 @@ protected:
 private:
     UPROPERTY(EditDefaultsOnly, Category="Presentation")
     TObjectPtr<UWPWeaponPresentationProfile> PresentationProfile;
+
+    UPROPERTY(Transient)
+    TObjectPtr<USoundAttenuation> RuntimeAttenuation;
 
     TWeakObjectPtr<AWPSoldierCharacter> SoldierOwner;
     TWeakObjectPtr<UWPWeaponComponent> WeaponComponent;
