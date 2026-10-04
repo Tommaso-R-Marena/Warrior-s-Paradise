@@ -81,6 +81,15 @@ public:
     UFUNCTION(BlueprintPure, Category="Battle")
     FVector GetActiveObjectiveLocation() const;
 
+    UFUNCTION(BlueprintPure, Category="Battle")
+    bool IsActiveObjectiveContested() const;
+
+    UFUNCTION(BlueprintPure, Category="Battle")
+    int32 GetActiveObjectiveAlliedPresence() const;
+
+    UFUNCTION(BlueprintPure, Category="Battle")
+    int32 GetActiveObjectiveAxisPresence() const;
+
     UFUNCTION(BlueprintPure, Category="Battle|Squad")
     EWPSquadOrder GetSquadOrder() const { return CurrentSquadOrder; }
 
