@@ -79,6 +79,10 @@ void AWPArmoredVehicle::BeginPlay()
 {
     Super::BeginPlay();
     Health = MaxHealth;
+    EngineHealth = EngineMaxHealth;
+    TrackHealth = TrackMaxHealth;
+    TurretHealth = TurretMaxHealth;
+    AmmoRackHealth = AmmoRackMaxHealth;
     ApplyVisualProfile();
     BattlefieldDirector = Cast<AWPBattlefieldDirector>(
         UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass()));
@@ -258,7 +262,15 @@ void AWPArmoredVehicle::FireCannon(AActor* Target)
             this,
             &AWPArmoredVehicle::HandleTankShellImpact);
 
-        Shell->InitializeShell(CombatTeam, AimDirection * 22000.0f);
+        const EWPArmorShellType ShellType =
+            Cast<AWPArmoredVehicle>(Target)
+                ? EWPArmorShellType::ArmorPiercing
+                : EWPArmorShellType::HighExplosive;
+
+        Shell->InitializeShell(
+            CombatTeam,
+            AimDirection * 22000.0f,
+            ShellType);
 
         if (VisualProfile)
         {
@@ -438,21 +450,28 @@ void AWPArmoredVehicle::Tick(float DeltaSeconds)
             DeltaSeconds,
             1.2f));
 
-        const FRotator DesiredTurretRotation = (TargetLocation - TurretVisual->GetComponentLocation()).Rotation();
+        const FRotator DesiredTurretRotation =
+            (TargetLocation - TurretVisual->GetComponentLocation()).Rotation();
+
+        const float TurretHealthNormalized =
+            GetSubsystemHealthNormalized(EWPVehicleSubsystem::Turret);
+        const float TurretTurnSpeed =
+            FMath::Lerp(0.45f, 2.7f, TurretHealthNormalized);
+
         TurretVisual->SetWorldRotation(FMath::RInterpTo(
             TurretVisual->GetComponentRotation(),
             FRotator(0.0f, DesiredTurretRotation.Yaw, 0.0f),
             DeltaSeconds,
-            2.7f));
+            TurretTurnSpeed));
 
         BarrelVisual->SetWorldRotation(FMath::RInterpTo(
             BarrelVisual->GetComponentRotation(),
             DesiredTurretRotation,
             DeltaSeconds,
-            2.7f));
+            TurretTurnSpeed));
     }
 
-    if (Distance > DesiredVehicleRangeCm)
+    if (Distance > DesiredVehicleRangeCm && !IsImmobilized())
     {
         AddMovementInput(FlatDirection, 0.72f, true);
     }
@@ -465,10 +484,20 @@ void AWPArmoredVehicle::Tick(float DeltaSeconds)
         return;
     }
 
-    if (Distance <= CannonRangeCm && Time >= NextCannonTime)
+    if (Distance <= CannonRangeCm &&
+        Time >= NextCannonTime &&
+        TurretHealth > 0.0f)
     {
         FireCannon(Target);
-        NextCannonTime = Time + CannonCooldownSeconds + FMath::FRandRange(0.0f, 1.0f);
+
+        const float TurretHealthNormalized =
+            GetSubsystemHealthNormalized(EWPVehicleSubsystem::Turret);
+
+        NextCannonTime =
+            Time +
+            CannonCooldownSeconds *
+                FMath::Lerp(1.75f, 1.0f, TurretHealthNormalized) +
+            FMath::FRandRange(0.0f, 1.0f);
     }
 
     if (Distance <= MachineGunRangeCm && Time >= NextMachineGunTime)
@@ -482,7 +511,8 @@ void AWPArmoredVehicle::Tick(float DeltaSeconds)
 void AWPArmoredVehicle::ApplyShellImpact(
     float BaseDamage,
     const FVector& ImpactLocation,
-    const FVector& ShotDirection)
+    const FVector& ShotDirection,
+    EWPArmorShellType ShellType)
 {
     if (bDestroyed || BaseDamage <= 0.0f)
     {
@@ -509,14 +539,177 @@ void AWPArmoredVehicle::ApplyShellImpact(
         ArmorDamageScale *= 0.90f;
     }
 
+    if (ShellType == EWPArmorShellType::HighExplosive)
+    {
+        ArmorDamageScale *= 0.72f;
+    }
+
     const float EffectiveDamage = BaseDamage * ArmorDamageScale;
     Health = FMath::Max(0.0f, Health - EffectiveDamage);
     OnVehicleDamaged.Broadcast(EffectiveDamage, GetHealthNormalized());
+
+    const FVector LocalImpact =
+        GetActorTransform().InverseTransformPosition(ImpactLocation);
+
+    const float SubsystemDamage =
+        EffectiveDamage *
+        (ShellType == EWPArmorShellType::ArmorPiercing ? 0.72f : 0.38f);
+
+    if (FMath::Abs(LocalImpact.Y) >= 72.0f &&
+        LocalImpact.Z <= 35.0f)
+    {
+        DamageSubsystem(
+            EWPVehicleSubsystem::Tracks,
+            SubsystemDamage * 1.2f);
+    }
+
+    if (LocalImpact.X <= -70.0f &&
+        LocalImpact.Z <= 70.0f)
+    {
+        DamageSubsystem(
+            EWPVehicleSubsystem::Engine,
+            SubsystemDamage);
+    }
+
+    if (LocalImpact.Z >= 70.0f)
+    {
+        DamageSubsystem(
+            EWPVehicleSubsystem::Turret,
+            SubsystemDamage * 0.9f);
+    }
+
+    if (FMath::Abs(LocalImpact.Y) >= 58.0f &&
+        LocalImpact.X >= -65.0f &&
+        LocalImpact.X <= 85.0f &&
+        LocalImpact.Z >= 5.0f &&
+        LocalImpact.Z <= 80.0f)
+    {
+        DamageSubsystem(
+            EWPVehicleSubsystem::AmmoRack,
+            SubsystemDamage * 0.8f);
+    }
+
+    UpdateSubsystemEffects();
 
     if (Health <= 0.0f)
     {
         DestroyVehicle();
     }
+}
+
+float AWPArmoredVehicle::GetSubsystemHealthNormalized(
+    EWPVehicleSubsystem Subsystem) const
+{
+    switch (Subsystem)
+    {
+        case EWPVehicleSubsystem::Engine:
+            return EngineMaxHealth > 0.0f
+                ? EngineHealth / EngineMaxHealth
+                : 0.0f;
+
+        case EWPVehicleSubsystem::Tracks:
+            return TrackMaxHealth > 0.0f
+                ? TrackHealth / TrackMaxHealth
+                : 0.0f;
+
+        case EWPVehicleSubsystem::Turret:
+            return TurretMaxHealth > 0.0f
+                ? TurretHealth / TurretMaxHealth
+                : 0.0f;
+
+        case EWPVehicleSubsystem::AmmoRack:
+        default:
+            return AmmoRackMaxHealth > 0.0f
+                ? AmmoRackHealth / AmmoRackMaxHealth
+                : 0.0f;
+    }
+}
+
+void AWPArmoredVehicle::DamageSubsystem(
+    EWPVehicleSubsystem Subsystem,
+    float Damage)
+{
+    if (Damage <= 0.0f || bDestroyed)
+    {
+        return;
+    }
+
+    float* HealthValue = nullptr;
+    float MaxValue = 1.0f;
+
+    switch (Subsystem)
+    {
+        case EWPVehicleSubsystem::Engine:
+            HealthValue = &EngineHealth;
+            MaxValue = EngineMaxHealth;
+            break;
+
+        case EWPVehicleSubsystem::Tracks:
+            HealthValue = &TrackHealth;
+            MaxValue = TrackMaxHealth;
+            break;
+
+        case EWPVehicleSubsystem::Turret:
+            HealthValue = &TurretHealth;
+            MaxValue = TurretMaxHealth;
+            break;
+
+        case EWPVehicleSubsystem::AmmoRack:
+            HealthValue = &AmmoRackHealth;
+            MaxValue = AmmoRackMaxHealth;
+            break;
+    }
+
+    if (!HealthValue)
+    {
+        return;
+    }
+
+    const float Previous = *HealthValue;
+    *HealthValue = FMath::Max(0.0f, *HealthValue - Damage);
+
+    if (*HealthValue < Previous)
+    {
+        OnSubsystemDamaged.Broadcast(
+            Subsystem,
+            MaxValue > 0.0f ? *HealthValue / MaxValue : 0.0f);
+    }
+
+    if (Subsystem == EWPVehicleSubsystem::AmmoRack &&
+        Previous > 0.0f &&
+        *HealthValue <= 0.0f)
+    {
+        Health = FMath::Max(
+            0.0f,
+            Health - AmmoRackCatastrophicDamage);
+
+        OnVehicleDamaged.Broadcast(
+            AmmoRackCatastrophicDamage,
+            GetHealthNormalized());
+    }
+}
+
+void AWPArmoredVehicle::UpdateSubsystemEffects()
+{
+    const float EngineFactor =
+        FMath::Lerp(
+            0.35f,
+            1.0f,
+            GetSubsystemHealthNormalized(EWPVehicleSubsystem::Engine));
+
+    const float TrackFactor =
+        FMath::Lerp(
+            0.20f,
+            1.0f,
+            GetSubsystemHealthNormalized(EWPVehicleSubsystem::Tracks));
+
+    Movement->MaxSpeed =
+        (EngineHealth <= 0.0f || TrackHealth <= 0.0f)
+            ? 0.0f
+            : 500.0f * FMath::Min(EngineFactor, TrackFactor);
+
+    Movement->Acceleration =
+        650.0f * FMath::Min(EngineFactor, TrackFactor);
 }
 
 void AWPArmoredVehicle::HandleTankShellImpact(FVector ImpactLocation)
