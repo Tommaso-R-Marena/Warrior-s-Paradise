@@ -13,6 +13,7 @@ class USceneComponent;
 class USkeletalMeshComponent;
 class UStaticMeshComponent;
 class UWPHealthComponent;
+class UWPInfantryLoadoutProfile;
 class UWPInfantryVisualProfile;
 class UWPSuppressionComponent;
 class UWPWeaponComponent;
@@ -60,6 +61,12 @@ public:
 
     UFUNCTION(BlueprintPure, Category="Presentation")
     bool HasProductionVisuals() const { return bProductionVisualsActive; }
+
+    UFUNCTION(BlueprintCallable, Category="Presentation")
+    void SetLoadoutProfile(UWPInfantryLoadoutProfile* NewProfile);
+
+    UFUNCTION(BlueprintCallable, Category="Presentation")
+    void ApplyLoadoutProfile();
 
     UFUNCTION(BlueprintCallable, Category="Presentation")
     void ApplyVisualProfile();
@@ -138,6 +145,9 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat")
     EWPSoldierRole SoldierRole = EWPSoldierRole::Rifleman;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Presentation", meta=(AllowPrivateAccess="true"))
+    TObjectPtr<UWPInfantryLoadoutProfile> LoadoutProfile;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Presentation", meta=(AllowPrivateAccess="true"))
     TObjectPtr<UWPInfantryVisualProfile> VisualProfile;
