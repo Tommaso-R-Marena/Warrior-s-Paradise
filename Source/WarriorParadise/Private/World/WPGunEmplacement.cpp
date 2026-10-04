@@ -298,6 +298,34 @@ bool AWPGunEmplacement::HasLineOfSightTo(const AActor* Target) const
     return Hit.GetActor() == Target;
 }
 
+bool AWPGunEmplacement::CanAimAt(
+    const FVector& TargetLocation) const
+{
+    const FVector Direction =
+        (TargetLocation - GunVisual->GetComponentLocation())
+            .GetSafeNormal();
+
+    if (Direction.IsNearlyZero())
+    {
+        return false;
+    }
+
+    const FVector LocalDirection =
+        GetActorTransform()
+            .InverseTransformVectorNoScale(Direction);
+
+    const FRotator LocalRotation =
+        LocalDirection.Rotation();
+
+    return FMath::Abs(
+               FMath::FindDeltaAngleDegrees(
+                   0.0f,
+                   LocalRotation.Yaw)) <=
+            MaximumYawDegrees &&
+        LocalRotation.Pitch >= MinimumPitchDegrees &&
+        LocalRotation.Pitch <= MaximumPitchDegrees;
+}
+
 AActor* AWPGunEmplacement::FindBestTarget() const
 {
     if (!GetWorld())
@@ -320,6 +348,7 @@ AActor* AWPGunEmplacement::FindBestTarget() const
             if (!Vehicle ||
                 Vehicle->GetCombatTeam() == CombatTeam ||
                 Vehicle->IsDestroyed() ||
+                !CanAimAt(Vehicle->GetActorLocation()) ||
                 !HasLineOfSightTo(Vehicle))
             {
                 continue;
@@ -342,6 +371,7 @@ AActor* AWPGunEmplacement::FindBestTarget() const
             if (!Vehicle ||
                 Vehicle->GetCombatTeam() == CombatTeam ||
                 Vehicle->IsDestroyed() ||
+                !CanAimAt(Vehicle->GetActorLocation()) ||
                 !HasLineOfSightTo(Vehicle))
             {
                 continue;
@@ -365,6 +395,9 @@ AActor* AWPGunEmplacement::FindBestTarget() const
         if (!Soldier ||
             Soldier->GetCombatTeam() == CombatTeam ||
             !Soldier->IsCombatCapable() ||
+            !CanAimAt(
+                Soldier->GetActorLocation() +
+                FVector(0.0f, 0.0f, 50.0f)) ||
             !HasLineOfSightTo(Soldier))
         {
             continue;
