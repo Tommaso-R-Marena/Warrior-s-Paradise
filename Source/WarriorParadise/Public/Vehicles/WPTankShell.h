@@ -8,6 +8,11 @@
 class USphereComponent;
 class UProjectileMovementComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FWPTankShellImpactSignature,
+    FVector,
+    ImpactLocation);
+
 UCLASS()
 class WARRIORPARADISE_API AWPTankShell : public AActor
 {
@@ -15,6 +20,9 @@ class WARRIORPARADISE_API AWPTankShell : public AActor
 
 public:
     AWPTankShell();
+
+    UPROPERTY(BlueprintAssignable, Category="Shell|Presentation")
+    FWPTankShellImpactSignature OnImpact;
 
     void InitializeShell(EWPCombatTeam InTeam, const FVector& Velocity);
 
@@ -27,6 +35,9 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category="Shell")
     float MaximumDamage = 320.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Shell")
+    float DirectArmorDamage = 520.0f;
 
     UPROPERTY(EditDefaultsOnly, Category="Shell")
     float BlastRadiusCm = 600.0f;
@@ -44,5 +55,5 @@ private:
         FVector NormalImpulse,
         const FHitResult& Hit);
 
-    void Explode(const FVector& ImpactLocation);
+    void Explode(const FVector& ImpactLocation, AActor* DirectHitActor = nullptr);
 };
