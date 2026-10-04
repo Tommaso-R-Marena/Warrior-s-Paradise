@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "redistributable_root": "ExternalAssets",
+    "unreal_import_root": "/Game/External",
+    "prefer_redistributable": true,
+    "notes": [
+      "CC0 and MIT source content may be vendored when useful.",
+      "Fab, Epic sample and Sonniss raw files are local/private dependencies unless their license explicitly permits raw redistribution.",
+      "Every acquired file should be recorded in ExternalAssets/asset-lock.json."
+    ]
+  },
+  "polyhaven": {
+    "api_base": "https://api.polyhaven.com",
+    "license": "CC0-1.0",
+    "api_attribution": "Powered by Poly Haven",
+    "default_resolution": "2k",
+    "buckets": [
+      {"slot": "ground_mud", "type": 1, "queries": ["mud ground", "muddy ground", "dirt ground", "soil"]},
+      {"slot": "ground_gravel", "type": 1, "queries": ["gravel ground", "gravel path", "stone ground"]},
+      {"slot": "road_cobble", "type": 1, "queries": ["cobblestone", "cobble road", "stone paving"]},
+      {"slot": "wall_plaster", "type": 1, "queries": ["weathered plaster", "plaster wall", "stucco wall"]},
+      {"slot": "wall_brick", "type": 1, "queries": ["old brick wall", "weathered brick", "brick wall"]},
+      {"slot": "wall_stone", "type": 1, "queries": ["stone wall", "old stone", "masonry wall"]},
+      {"slot": "roof_tile", "type": 1, "queries": ["roof tiles", "terracotta roof", "old roof"]},
+      {"slot": "wood_weathered", "type": 1, "queries": ["weathered wood", "old wood planks", "wood boards"]},
+      {"slot": "metal_rusted", "type": 1, "queries": ["rusted metal", "weathered metal", "rust"]},
+      {"slot": "concrete_worn", "type": 1, "queries": ["worn concrete", "old concrete", "concrete floor"]},
+      {"slot": "foliage_tree", "type": 2, "queries": ["deciduous tree", "oak tree", "forest tree"]},
+      {"slot": "prop_crate", "type": 2, "queries": ["wooden crate", "crate", "wood box"]},
+      {"slot": "prop_barrel", "type": 2, "queries": ["barrel", "wood barrel", "metal barrel"]},
+      {"slot": "hdri_overcast", "type": 0, "queries": ["overcast field", "cloudy countryside", "overcast"]},
+      {"slot": "hdri_sunset", "type": 0, "queries": ["sunset field", "rural sunset", "golden hour"]}
+    ]
+  },
+  "direct_cc0": [
+    {
+      "id": "opengameart_rigged_ww2_soldier",
+      "name": "Rigged Lowpoly WW2 Soldier",
+      "source": "OpenGameArt",
+      "license": "CC0-1.0",
+      "page_url": "https://opengameart.org/content/rigged-lowpoly-ww2-soldier",
+      "download_url": "https://opengameart.org/sites/default/files/lowpolysoldier.zip",
+      "destination": "characters/opengameart_ww2_soldier/lowpolysoldier.zip",
+      "purpose": "Development rig, retargeting validation and WWII silhouette placeholder"
+    }
+  ],
+  "manual_free": [
+    {
+      "id": "epic_game_animation_sample",
+      "name": "Game Animation Sample Project",
+      "source": "Epic Games",
+      "page_url": "https://dev.epicgames.com/documentation/unreal-engine/game-animation-sample-project-in-unreal-engine",
+      "acquisition": "Fab/Epic Games Launcher; migrate required animation assets into the project",
+      "distribution": "Do not mirror raw marketplace/sample files in a public repository; acquire through Epic and migrate locally.",
+      "purpose": "Motion Matching locomotion, traversal and high-fidelity humanoid animation foundation"
+    },
+    {
+      "id": "metahuman",
+      "name": "MetaHuman",
+      "source": "Epic Games",
+      "page_url": "https://dev.epicgames.com/documentation/metahuman/metahuman-documentation",
+      "acquisition": "Create and assemble inside Unreal Engine/MetaHuman tooling",
+      "distribution": "Keep generated/licensed content under applicable Epic terms.",
+      "purpose": "High-fidelity human heads/bodies and production humanoid rig"
+    },
+    {
+      "id": "quaternius_animation_1",
+      "name": "Universal Animation Library",
+      "source": "Quaternius",
+      "license": "CC0-1.0",
+      "page_url": "https://quaternius.com/packs/universalanimationlibrary.html",
+      "acquisition": "Download free FBX/GLB export from source page",
+      "distribution": "CC0; may be vendored if desired.",
+      "purpose": "120+ supplementary locomotion, crawl, gun, death and utility animations"
+    },
+    {
+      "id": "quaternius_animation_2",
+      "name": "Universal Animation Library 2",
+      "source": "Quaternius",
+      "license": "CC0-1.0",
+      "page_url": "https://quaternius.com/packs/universalanimationlibrary2.html",
+      "acquisition": "Download free FBX/GLB export from source page",
+      "distribution": "CC0; may be vendored if desired.",
+      "purpose": "130+ supplementary melee, parkour and action animations"
+    },
+    {
+      "id": "quaternius_base_characters",
+      "name": "Universal Base Characters",
+      "source": "Quaternius",
+      "license": "CC0-1.0",
+      "page_url": "https://quaternius.com/packs/universalbasecharacters.html",
+      "acquisition": "Download free FBX/glTF export from source page",
+      "distribution": "CC0; may be vendored if desired.",
+      "purpose": "Free rigged humanoid development base while MetaHuman production characters are prepared"
+    },
+    {
+      "id": "quaternius_tanks",
+      "name": "Animated Tanks Pack",
+      "source": "Quaternius",
+      "license": "CC0-1.0",
+      "page_url": "https://quaternius.com/packs/animatedtanks.html",
+      "acquisition": "Download free FBX pack from source page",
+      "distribution": "CC0; may be vendored if desired.",
+      "purpose": "Immediate animated tank placeholder replacement"
+    },
+    {
+      "id": "quaternius_guns",
+      "name": "Ultimate Guns Pack",
+      "source": "Quaternius",
+      "license": "CC0-1.0",
+      "page_url": "https://quaternius.com/packs/ultimategun.html",
+      "acquisition": "Download free FBX pack from source page",
+      "distribution": "CC0; may be vendored if desired.",
+      "purpose": "Immediate firearm placeholder replacement and first-person pipeline testing"
+    },
+    {
+      "id": "metaworldos_ww2_tanks",
+      "name": "WWII Tank Pack",
+      "source": "MetaWorldOS",
+      "license": "CC0-1.0",
+      "page_url": "https://metaworldos.itch.io/wwii-tank-pack-glb-models",
+      "acquisition": "Download free 809 MB GLB pack from itch.io",
+      "distribution": "CC0; may be used commercially and modified.",
+      "purpose": "Panther, Panzer IV, Sherman, IS-2 and battlefield props"
+    },
+    {
+      "id": "fab_rural_cabins",
+      "name": "Modular Rural Cabins",
+      "source": "Fab",
+      "license": "Fab Standard License",
+      "page_url": "https://www.fab.com/listings/508fe84a-4976-4cfe-9a40-c2b9533da601",
+      "acquisition": "Add free asset to Fab library and install to project",
+      "distribution": "Keep raw asset private/local; do not redistribute standalone.",
+      "purpose": "AAA rural buildings, enterable interiors and foliage"
+    },
+    {
+      "id": "fab_realistic_explosions",
+      "name": "FREE! Realistic Niagara Explosions Pack",
+      "source": "Fab",
+      "license": "Fab Standard License",
+      "page_url": "https://www.fab.com/listings/a48b3fa2-2ebf-42c2-8892-fa20a1eff289",
+      "acquisition": "Add free asset to Fab library and install to project",
+      "distribution": "Keep raw asset private/local; do not redistribute standalone.",
+      "purpose": "15 volumetric explosion/smoke Niagara effects"
+    },
+    {
+      "id": "fab_fire_explosion_starter",
+      "name": "Realistic Fire & Explosion VFX Vol.1 - FREE Starter Pack",
+      "source": "Fab",
+      "license": "Fab Standard License",
+      "page_url": "https://www.fab.com/listings/2adf4e4e-5f1d-4543-9e8c-192fe3c9a8ed",
+      "acquisition": "Add free asset to Fab library and install to project",
+      "distribution": "Keep raw asset private/local; do not redistribute standalone.",
+      "purpose": "10 configurable Niagara fire/explosion effects"
+    },
+    {
+      "id": "fab_muzzle_flash",
+      "name": "Muzzle Flash (Niagara System)",
+      "source": "Fab",
+      "license": "Fab Standard License",
+      "page_url": "https://www.fab.com/listings/435b3bcb-d7f5-467d-99aa-2edc97a6c5fd",
+      "acquisition": "Add free asset to Fab library and install to project",
+      "distribution": "Keep raw asset private/local; do not redistribute standalone.",
+      "purpose": "Production muzzle-flash baseline"
+    },
+    {
+      "id": "sonniss_gdc_2026",
+      "name": "GDC Game Audio Bundle 2026",
+      "source": "Sonniss",
+      "license": "Sonniss GDC Bundle License",
+      "page_url": "https://gdc.sonniss.com/",
+      "acquisition": "Download locally from Sonniss",
+      "distribution": "Raw files may not be redistributed as a sound library; ship only synchronized in the game.",
+      "purpose": "Professional explosions, impacts, debris, machinery, ambience and foley"
+    }
+  ]
+}
