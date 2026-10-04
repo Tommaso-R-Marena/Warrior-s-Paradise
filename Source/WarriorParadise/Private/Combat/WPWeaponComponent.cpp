@@ -1,5 +1,6 @@
 #include "Combat/WPWeaponComponent.h"
 #include "Combat/WPBallisticProjectile.h"
+#include "Combat/WPWeaponDefinition.h"
 #include "Characters/WPSoldierCharacter.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
@@ -16,6 +17,12 @@ UWPWeaponComponent::UWPWeaponComponent()
 void UWPWeaponComponent::BeginPlay()
 {
     Super::BeginPlay();
+
+    if (DefaultWeaponDefinition)
+    {
+        ApplyWeaponDefinition(DefaultWeaponDefinition);
+    }
+
     AmmoInMagazine = MagazineSize;
     ReserveAmmo = StartingReserveAmmo;
 }
@@ -25,7 +32,35 @@ void UWPWeaponComponent::Configure(float InDamage, float InRoundsPerMinute, floa
     Damage = FMath::Max(1.0f, InDamage);
     RoundsPerMinute = FMath::Max(60.0f, InRoundsPerMinute);
     HipSpreadDegrees = FMath::Max(0.0f, InSpreadDegrees);
-    AimSpreadDegrees = FMath::Min(HipSpreadDegrees, FMath::Max(0.05f, HipSpreadDegrees * 0.25f));
+    AimSpreadDegrees = FMath::Min(
+        HipSpreadDegrees,
+        FMath::Max(0.05f, HipSpreadDegrees * 0.25f));
+}
+
+void UWPWeaponComponent::ApplyWeaponDefinition(const UWPWeaponDefinition* Definition)
+{
+    if (!Definition)
+    {
+        return;
+    }
+
+    Damage = FMath::Max(1.0f, Definition->Damage);
+    MuzzleVelocityCmPerSecond = FMath::Max(1000.0f, Definition->MuzzleVelocityCmPerSecond);
+    RangeCm = FMath::Max(1000.0f, Definition->RangeCm);
+    HipSpreadDegrees = FMath::Max(0.0f, Definition->HipSpreadDegrees);
+    AimSpreadDegrees = FMath::Max(0.0f, Definition->AimSpreadDegrees);
+    RoundsPerMinute = FMath::Max(60.0f, Definition->RoundsPerMinute);
+    bAutomatic = Definition->bAutomatic;
+    MagazineSize = FMath::Max(1, Definition->MagazineSize);
+    StartingReserveAmmo = FMath::Max(0, Definition->StartingReserveAmmo);
+    MaximumReserveAmmo = FMath::Max(StartingReserveAmmo, Definition->MaximumReserveAmmo);
+    ReloadDuration = FMath::Max(0.1f, Definition->ReloadDuration);
+    RecoilPitchDegrees = FMath::Max(0.0f, Definition->RecoilPitchDegrees);
+    RecoilYawDegrees = FMath::Max(0.0f, Definition->RecoilYawDegrees);
+
+    AmmoInMagazine = FMath::Min(AmmoInMagazine, MagazineSize);
+    ReserveAmmo = FMath::Min(ReserveAmmo, MaximumReserveAmmo);
+    OnWeaponStateChanged.Broadcast();
 }
 
 void UWPWeaponComponent::SetAiming(bool bNewAiming)
