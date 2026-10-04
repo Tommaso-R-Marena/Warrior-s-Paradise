@@ -7,6 +7,7 @@
 #include "Engine/Engine.h"
 #include "Game/WPBattlefieldDirector.h"
 #include "Kismet/GameplayStatics.h"
+#include "Vehicles/WPArmoredVehicle.h"
 #include "Vehicles/WPLightVehicle.h"
 #include "World/WPGunEmplacement.h"
 
@@ -74,6 +75,15 @@ void AWPCombatHUD::DrawHUD()
         }
 
         DrawCombatReadout(Width, Height);
+        return;
+    }
+
+    if (Cast<AWPArmoredVehicle>(PlayerPawn))
+    {
+        DrawCrosshair(
+            Width * 0.5f,
+            Height * 0.5f);
+        DrawTankReadout(Width, Height);
         return;
     }
 
@@ -345,6 +355,60 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
         false);
 }
 
+
+void AWPCombatHUD::DrawTankReadout(
+    float Width,
+    float Height)
+{
+    AWPArmoredVehicle* Tank =
+        Cast<AWPArmoredVehicle>(
+            UGameplayStatics::GetPlayerPawn(this, 0));
+
+    if (!Tank || !GEngine)
+    {
+        return;
+    }
+
+    const TCHAR* ShellLabel =
+        Tank->GetSelectedShellType() ==
+            EWPArmorShellType::ArmorPiercing
+            ? TEXT("AP")
+            : TEXT("HE");
+
+    DrawText(
+        FString::Printf(
+            TEXT("TANK   HULL %03d   ENG %03d   TRACK %03d   TURRET %03d   RACK %03d"),
+            FMath::RoundToInt(Tank->GetHealthNormalized() * 100.0f),
+            FMath::RoundToInt(
+                Tank->GetSubsystemHealthNormalized(
+                    EWPVehicleSubsystem::Engine) * 100.0f),
+            FMath::RoundToInt(
+                Tank->GetSubsystemHealthNormalized(
+                    EWPVehicleSubsystem::Tracks) * 100.0f),
+            FMath::RoundToInt(
+                Tank->GetSubsystemHealthNormalized(
+                    EWPVehicleSubsystem::Turret) * 100.0f),
+            FMath::RoundToInt(
+                Tank->GetSubsystemHealthNormalized(
+                    EWPVehicleSubsystem::AmmoRack) * 100.0f)),
+        FLinearColor::White,
+        28.0f,
+        Height - 58.0f,
+        GEngine->GetMediumFont(),
+        0.95f,
+        false);
+
+    DrawText(
+        FString::Printf(
+            TEXT("SHELL %s   W/S DRIVE  A/D TURN  MOUSE TURRET  LMB CANNON  RMB COAX  R CHANGE SHELL  E EXIT"),
+            ShellLabel),
+        FLinearColor(0.78f, 0.88f, 1.0f, 1.0f),
+        Width * 0.5f - 310.0f,
+        Height - 28.0f,
+        GEngine->GetSmallFont(),
+        0.9f,
+        false);
+}
 
 void AWPCombatHUD::DrawVehicleReadout(
     float Width,
