@@ -1,4 +1,5 @@
 #include "Game/WPCombatGameMode.h"
+#include "AI/WPEnemySoldier.h"
 #include "Characters/WPSoldierCharacter.h"
 #include "Game/WPBattlefieldDirector.h"
 #include "GameFramework/PlayerController.h"
@@ -7,7 +8,7 @@
 
 AWPCombatGameMode::AWPCombatGameMode()
 {
-    DefaultPawnClass = AWPSoldierCharacter::StaticClass();
+    DefaultPawnClass = AWPEnemySoldier::StaticClass();
     HUDClass = AWPCombatHUD::StaticClass();
 }
 
@@ -24,8 +25,8 @@ void AWPCombatGameMode::StartPlay()
     if (PlayerController && !PlayerController->GetPawn())
     {
         const FTransform SpawnTransform(FRotator(0.0f, -90.0f, 0.0f), FVector(0.0f, 3200.0f, 140.0f));
-        if (AWPSoldierCharacter* Soldier = GetWorld()->SpawnActorDeferred<AWPSoldierCharacter>(
-            AWPSoldierCharacter::StaticClass(),
+        if (AWPEnemySoldier* Soldier = GetWorld()->SpawnActorDeferred<AWPEnemySoldier>(
+            AWPEnemySoldier::StaticClass(),
             SpawnTransform,
             nullptr,
             nullptr,
