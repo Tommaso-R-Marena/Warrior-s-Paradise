@@ -130,6 +130,58 @@ void AWPBattlefieldDirector::IssueSquadOrder(EWPSquadOrder NewOrder, const FVect
     }
 }
 
+void AWPBattlefieldDirector::ReportEnemyContact(
+    EWPCombatTeam ReportingTeam,
+    AWPSoldierCharacter* Contact)
+{
+    if (!Contact || !Contact->IsCombatCapable() || !GetWorld())
+    {
+        return;
+    }
+
+    if (ReportingTeam == EWPCombatTeam::Allies)
+    {
+        AlliedSharedContact = Contact;
+        AlliedSharedContactTime = GetWorld()->GetTimeSeconds();
+    }
+    else
+    {
+        AxisSharedContact = Contact;
+        AxisSharedContactTime = GetWorld()->GetTimeSeconds();
+    }
+}
+
+AWPSoldierCharacter* AWPBattlefieldDirector::GetSharedEnemyContact(
+    EWPCombatTeam ReportingTeam,
+    float MaximumAgeSeconds) const
+{
+    if (!GetWorld())
+    {
+        return nullptr;
+    }
+
+    const float Time = GetWorld()->GetTimeSeconds();
+    const TWeakObjectPtr<AWPSoldierCharacter>& Contact =
+        ReportingTeam == EWPCombatTeam::Allies
+            ? AlliedSharedContact
+            : AxisSharedContact;
+
+    const float ContactTime =
+        ReportingTeam == EWPCombatTeam::Allies
+            ? AlliedSharedContactTime
+            : AxisSharedContactTime;
+
+    AWPSoldierCharacter* Soldier = Contact.Get();
+    if (!Soldier ||
+        !Soldier->IsCombatCapable() ||
+        Time - ContactTime > FMath::Max(0.0f, MaximumAgeSeconds))
+    {
+        return nullptr;
+    }
+
+    return Soldier;
+}
+
 bool AWPBattlefieldDirector::RequestArtillery(
     AWPSoldierCharacter* Caller,
     const FVector& TargetLocation)
