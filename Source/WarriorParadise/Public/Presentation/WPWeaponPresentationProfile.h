@@ -25,6 +25,9 @@ public:
     TSoftObjectPtr<UNiagaraSystem> TracerEffect;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX|Impact")
+    TSoftObjectPtr<UNiagaraSystem> DirtImpact;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX|Impact")
     TSoftObjectPtr<UNiagaraSystem> WoodImpact;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX|Impact")
@@ -55,6 +58,9 @@ public:
     TSoftObjectPtr<USoundBase> BulletImpactSound;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Impact")
+    TSoftObjectPtr<USoundBase> DirtImpactSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Impact")
     TSoftObjectPtr<USoundBase> WoodImpactSound;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio|Impact")
@@ -68,6 +74,9 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Decals")
     TSoftObjectPtr<UMaterialInterface> GenericImpactDecal;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Decals")
+    TSoftObjectPtr<UMaterialInterface> DirtImpactDecal;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Decals")
     TSoftObjectPtr<UMaterialInterface> WoodImpactDecal;
