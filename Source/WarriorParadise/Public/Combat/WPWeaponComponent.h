@@ -43,6 +43,12 @@ public:
     FWPWeaponSimpleEventSignature OnDryFire;
 
     UPROPERTY(BlueprintAssignable, Category="Weapon|Presentation")
+    FWPWeaponSimpleEventSignature OnManualCycleStarted;
+
+    UPROPERTY(BlueprintAssignable, Category="Weapon|Presentation")
+    FWPWeaponSimpleEventSignature OnManualCycleCompleted;
+
+    UPROPERTY(BlueprintAssignable, Category="Weapon|Presentation")
     FWPProjectileSpawnedSignature OnProjectileSpawned;
 
     UFUNCTION(BlueprintCallable, Category="Weapon")
@@ -87,6 +93,21 @@ public:
     UFUNCTION(BlueprintPure, Category="Weapon")
     bool IsAiming() const { return bAiming; }
 
+    UFUNCTION(BlueprintPure, Category="Weapon")
+    bool IsCyclingAction() const { return bCyclingAction; }
+
+    UFUNCTION(BlueprintPure, Category="Weapon")
+    bool RequiresManualCycle() const { return bRequiresManualCycle; }
+
+    UFUNCTION(BlueprintPure, Category="Weapon")
+    bool IsAutomatic() const { return bAutomatic; }
+
+    UFUNCTION(BlueprintPure, Category="Weapon")
+    FString GetWeaponDisplayName() const { return WeaponDisplayName; }
+
+    UFUNCTION(BlueprintPure, Category="Weapon")
+    FString GetOperationLabel() const;
+
 protected:
     virtual void BeginPlay() override;
 
@@ -119,6 +140,12 @@ private:
     bool bAutomatic = true;
 
     UPROPERTY(EditDefaultsOnly, Category="Weapon|Handling")
+    bool bRequiresManualCycle = false;
+
+    UPROPERTY(EditDefaultsOnly, Category="Weapon|Handling")
+    float ManualCycleDuration = 0.65f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Weapon|Handling")
     int32 MagazineSize = 30;
 
     UPROPERTY(EditDefaultsOnly, Category="Weapon|Handling")
@@ -145,13 +172,18 @@ private:
     bool bReloading = false;
     bool bWantsToFire = false;
     bool bAiming = false;
+    bool bCyclingAction = false;
+    FString WeaponDisplayName = TEXT("Service Weapon");
     float AccuracyMultiplier = 1.0f;
     float LastFireTime = -1000.0f;
 
     FTimerHandle FireTimerHandle;
     FTimerHandle ReloadTimerHandle;
+    FTimerHandle ManualCycleTimerHandle;
 
     void TryFire();
+    void BeginManualCycle();
+    void FinishManualCycle();
     void FinishReload();
     bool BuildShot(FVector& OutStart, FVector& OutDirection, AController*& OutController) const;
 };
