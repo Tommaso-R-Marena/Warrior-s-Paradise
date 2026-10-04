@@ -5,6 +5,7 @@
 #include "WPEnvironmentVisualProfile.generated.h"
 
 class UMaterialInterface;
+class USoundBase;
 class UStaticMesh;
 class UTextureCube;
 
@@ -71,6 +72,33 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Lighting")
     TSoftObjectPtr<UTextureCube> SkyCubemap;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Lighting")
+    TSoftObjectPtr<UMaterialInterface> CloudMaterial;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio")
+    TSoftObjectPtr<USoundBase> AmbientLoop;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio")
+    TSoftObjectPtr<USoundBase> WindLoop;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio")
+    TSoftObjectPtr<USoundBase> DistantBattleOneShot;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio", meta=(ClampMin="0.0"))
+    float AmbientVolume = 0.42f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio", meta=(ClampMin="0.0"))
+    float WindVolume = 0.26f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio", meta=(ClampMin="0.0"))
+    float DistantBattleVolume = 0.46f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio", meta=(ClampMin="1.0"))
+    float DistantBattleMinIntervalSeconds = 7.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Audio", meta=(ClampMin="1.0"))
+    float DistantBattleMaxIntervalSeconds = 15.0f;
 
     TSoftObjectPtr<UMaterialInterface> GetMaterial(EWPEnvironmentSurface Surface) const
     {
