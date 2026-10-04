@@ -34,6 +34,11 @@ void UWPWeaponComponent::SetAiming(bool bNewAiming)
     OnWeaponStateChanged.Broadcast();
 }
 
+void UWPWeaponComponent::SetAccuracyMultiplier(float Multiplier)
+{
+    AccuracyMultiplier = FMath::Clamp(Multiplier, 0.45f, 3.5f);
+}
+
 void UWPWeaponComponent::AddReserveAmmo(int32 Amount)
 {
     if (Amount <= 0)
@@ -125,7 +130,8 @@ bool UWPWeaponComponent::BuildShot(FVector& OutStart, FVector& OutDirection, ACo
         OutController->GetPlayerViewPoint(OutStart, ViewRotation);
     }
 
-    const float Spread = bAiming ? AimSpreadDegrees : HipSpreadDegrees;
+    const float BaseSpread = bAiming ? AimSpreadDegrees : HipSpreadDegrees;
+    const float Spread = BaseSpread * AccuracyMultiplier;
     OutDirection = FMath::VRandCone(
         ViewRotation.Vector(),
         FMath::DegreesToRadians(Spread));
