@@ -7,6 +7,7 @@
 #include "Combat/WPWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
@@ -14,6 +15,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "Kismet/GameplayStatics.h"
+#include "Presentation/WPInfantryVisualProfile.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -37,6 +39,23 @@ AWPSoldierCharacter::AWPSoldierCharacter()
     FirstPersonCamera->SetRelativeLocation(FVector(-8.0f, 0.0f, 68.0f));
     FirstPersonCamera->SetFieldOfView(HipFOV);
     FirstPersonCamera->bUsePawnControlRotation = true;
+
+    FirstPersonArms = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPersonArms"));
+    FirstPersonArms->SetupAttachment(FirstPersonCamera);
+    FirstPersonArms->SetOnlyOwnerSee(true);
+    FirstPersonArms->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    FirstPersonArms->SetCastShadow(false);
+    FirstPersonArms->SetVisibility(false, true);
+
+    FirstPersonWeapon = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPersonWeapon"));
+    FirstPersonWeapon->SetupAttachment(FirstPersonArms);
+    FirstPersonWeapon->SetOnlyOwnerSee(true);
+    FirstPersonWeapon->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    FirstPersonWeapon->SetCastShadow(false);
+    FirstPersonWeapon->SetVisibility(false, true);
+
+    GetMesh()->SetOwnerNoSee(true);
+    GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
     HealthComponent = CreateDefaultSubobject<UWPHealthComponent>(TEXT("HealthComponent"));
     WeaponComponent = CreateDefaultSubobject<UWPWeaponComponent>(TEXT("WeaponComponent"));
@@ -82,11 +101,89 @@ void AWPSoldierCharacter::BeginPlay()
     FirstPersonCamera->SetFieldOfView(HipFOV);
     Stamina = MaxStamina;
     ApplyRoleLoadout();
+    ApplyVisualProfile();
 
     HealthComponent->OnDowned.AddDynamic(this, &AWPSoldierCharacter::HandleDowned);
     HealthComponent->OnRevived.AddDynamic(this, &AWPSoldierCharacter::HandleRevived);
     HealthComponent->OnDeath.AddDynamic(this, &AWPSoldierCharacter::HandleDeath);
     WeaponComponent->OnShotFired.AddDynamic(this, &AWPSoldierCharacter::HandleShotFired);
+}
+
+void AWPSoldierCharacter::ApplyVisualProfile()
+{
+    bProductionVisualsActive = false;
+
+    if (!VisualProfile)
+    {
+        GetMesh()->SetVisibility(false, true);
+        FirstPersonArms->SetVisibility(false, true);
+        FirstPersonWeapon->SetVisibility(false, true);
+        return;
+    }
+
+    if (USkeletalMesh* ThirdPersonMesh = VisualProfile->ThirdPersonMesh.LoadSynchronous())
+    {
+        GetMesh()->SetSkeletalMesh(ThirdPersonMesh);
+        GetMesh()->SetRelativeLocation(VisualProfile->ThirdPersonRelativeLocation);
+        GetMesh()->SetRelativeRotation(VisualProfile->ThirdPersonRelativeRotation);
+        GetMesh()->SetRelativeScale3D(VisualProfile->ThirdPersonRelativeScale);
+        GetMesh()->SetOwnerNoSee(true);
+        GetMesh()->SetVisibility(true, true);
+
+        if (VisualProfile->ThirdPersonAnimClass)
+        {
+            GetMesh()->SetAnimInstanceClass(VisualProfile->ThirdPersonAnimClass);
+        }
+
+        bProductionVisualsActive = true;
+    }
+
+    if (USkeletalMesh* ArmsMesh = VisualProfile->FirstPersonArmsMesh.LoadSynchronous())
+    {
+        FirstPersonArms->SetSkeletalMesh(ArmsMesh);
+        FirstPersonArms->SetRelativeLocation(VisualProfile->FirstPersonArmsRelativeLocation);
+        FirstPersonArms->SetRelativeRotation(VisualProfile->FirstPersonArmsRelativeRotation);
+        FirstPersonArms->SetRelativeScale3D(VisualProfile->FirstPersonArmsRelativeScale);
+        FirstPersonArms->SetVisibility(true, true);
+
+        if (VisualProfile->FirstPersonArmsAnimClass)
+        {
+            FirstPersonArms->SetAnimInstanceClass(VisualProfile->FirstPersonArmsAnimClass);
+        }
+
+        bProductionVisualsActive = true;
+    }
+
+    if (USkeletalMesh* WeaponMesh = VisualProfile->FirstPersonWeaponMesh.LoadSynchronous())
+    {
+        FirstPersonWeapon->SetSkeletalMesh(WeaponMesh);
+
+        if (FirstPersonArms->GetSkeletalMeshAsset() &&
+            VisualProfile->WeaponAttachSocket != NAME_None)
+        {
+            FirstPersonWeapon->AttachToComponent(
+                FirstPersonArms,
+                FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+                VisualProfile->WeaponAttachSocket);
+        }
+        else
+        {
+            FirstPersonWeapon->AttachToComponent(
+                FirstPersonCamera,
+                FAttachmentTransformRules::KeepRelativeTransform);
+        }
+
+        FirstPersonWeapon->SetRelativeTransform(
+            VisualProfile->FirstPersonWeaponRelativeTransform);
+        FirstPersonWeapon->SetVisibility(true, true);
+        bProductionVisualsActive = true;
+    }
+
+    if (bProductionVisualsActive)
+    {
+        ViewWeaponBody->SetVisibility(false, true);
+        ViewWeaponBarrel->SetVisibility(false, true);
+    }
 }
 
 void AWPSoldierCharacter::ApplyRoleLoadout()
