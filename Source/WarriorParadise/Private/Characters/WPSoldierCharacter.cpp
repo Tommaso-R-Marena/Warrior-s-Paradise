@@ -100,6 +100,7 @@ void AWPSoldierCharacter::ApplyRoleLoadout()
         case EWPSoldierRole::Medic:
             WeaponComponent->Configure(30.0f, 450.0f, 1.12f);
             GrenadesRemaining = FMath::Min(GrenadesRemaining, 1);
+            MedkitsRemaining = FMath::Max(MedkitsRemaining, 2);
             break;
 
         case EWPSoldierRole::Engineer:
@@ -255,6 +256,65 @@ bool AWPSoldierCharacter::TryReviveSoldier(AWPSoldierCharacter* Target)
     }
 
     return Target->GetHealthComponent()->Revive();
+}
+
+bool AWPSoldierCharacter::TryMeleeAttack(AWPSoldierCharacter* Target)
+{
+    if (!Target ||
+        Target == this ||
+        Target->GetCombatTeam() == CombatTeam ||
+        !Target->GetHealthComponent() ||
+        Target->GetHealthComponent()->IsDead() ||
+        !IsCombatCapable() ||
+        !GetWorld())
+    {
+        return false;
+    }
+
+    const float Time = GetWorld()->GetTimeSeconds();
+    if (Time < NextMeleeTime ||
+        FVector::DistSquared(GetActorLocation(), Target->GetActorLocation()) >
+            FMath::Square(MeleeRange))
+    {
+        return false;
+    }
+
+    const FVector Start = GetActorLocation() + FVector(0.0f, 0.0f, 55.0f);
+    const FVector End = Target->GetActorLocation() + FVector(0.0f, 0.0f, 45.0f);
+
+    FHitResult Hit;
+    FCollisionQueryParams Params(SCENE_QUERY_STAT(WPMeleeLOS), true, this);
+    Params.AddIgnoredActor(this);
+
+    const bool bBlocked = GetWorld()->LineTraceSingleByChannel(
+        Hit,
+        Start,
+        End,
+        ECC_Visibility,
+        Params) &&
+        Hit.GetActor() != Target;
+
+    if (bBlocked)
+    {
+        return false;
+    }
+
+    CancelBandage();
+    StopSprint();
+    StopAim();
+    WeaponComponent->StopFire();
+
+    NextMeleeTime = Time + MeleeCooldownSeconds;
+    OnMeleeAttack.Broadcast();
+
+    UGameplayStatics::ApplyDamage(
+        Target,
+        MeleeDamage,
+        GetController(),
+        this,
+        UDamageType::StaticClass());
+
+    return true;
 }
 
 void AWPSoldierCharacter::Tick(float DeltaSeconds)
@@ -419,9 +479,11 @@ void AWPSoldierCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
     PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &AWPSoldierCharacter::JumpInput);
     PlayerInputComponent->BindAction(TEXT("Jump"), IE_Released, this, &ACharacter::StopJumping);
     PlayerInputComponent->BindAction(TEXT("Prone"), IE_Pressed, this, &AWPSoldierCharacter::ToggleProne);
-    PlayerInputComponent->BindAction(TEXT("Fire"), IE_Pressed, WeaponComponent, &UWPWeaponComponent::StartFire);
-    PlayerInputComponent->BindAction(TEXT("Fire"), IE_Released, WeaponComponent, &UWPWeaponComponent::StopFire);
-    PlayerInputComponent->BindAction(TEXT("Reload"), IE_Pressed, WeaponComponent, &UWPWeaponComponent::Reload);
+    PlayerInputComponent->BindAction(TEXT("Fire"), IE_Pressed, this, &AWPSoldierCharacter::StartFireInput);
+    PlayerInputComponent->BindAction(TEXT("Fire"), IE_Released, this, &AWPSoldierCharacter::StopFireInput);
+    PlayerInputComponent->BindAction(TEXT("Reload"), IE_Pressed, this, &AWPSoldierCharacter::ReloadInput);
+    PlayerInputComponent->BindAction(TEXT("Melee"), IE_Pressed, this, &AWPSoldierCharacter::MeleeInput);
+    PlayerInputComponent->BindAction(TEXT("Bandage"), IE_Pressed, this, &AWPSoldierCharacter::StartBandage);
     PlayerInputComponent->BindAction(TEXT("Sprint"), IE_Pressed, this, &AWPSoldierCharacter::StartSprint);
     PlayerInputComponent->BindAction(TEXT("Sprint"), IE_Released, this, &AWPSoldierCharacter::StopSprint);
     PlayerInputComponent->BindAction(TEXT("Crouch"), IE_Pressed, this, &AWPSoldierCharacter::StartCrouch);
@@ -435,6 +497,155 @@ void AWPSoldierCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
     PlayerInputComponent->BindAction(TEXT("SquadAttack"), IE_Pressed, this, &AWPSoldierCharacter::IssueAttackOrder);
     PlayerInputComponent->BindAction(TEXT("SquadHold"), IE_Pressed, this, &AWPSoldierCharacter::IssueHoldOrder);
     PlayerInputComponent->BindAction(TEXT("CallArtillery"), IE_Pressed, this, &AWPSoldierCharacter::CallArtilleryInput);
+}
+
+void AWPSoldierCharacter::StartFireInput()
+{
+    if (!IsCombatCapable())
+    {
+        return;
+    }
+
+    CancelBandage();
+    WeaponComponent->StartFire();
+}
+
+void AWPSoldierCharacter::StopFireInput()
+{
+    WeaponComponent->StopFire();
+}
+
+void AWPSoldierCharacter::ReloadInput()
+{
+    if (!IsCombatCapable())
+    {
+        return;
+    }
+
+    CancelBandage();
+    WeaponComponent->Reload();
+}
+
+void AWPSoldierCharacter::MeleeInput()
+{
+    if (!GetWorld() || !IsCombatCapable())
+    {
+        return;
+    }
+
+    AWPSoldierCharacter* BestTarget = nullptr;
+    float BestScore = TNumericLimits<float>::Max();
+
+    for (TActorIterator<AWPSoldierCharacter> It(GetWorld()); It; ++It)
+    {
+        AWPSoldierCharacter* Candidate = *It;
+        if (!Candidate ||
+            Candidate == this ||
+            Candidate->GetCombatTeam() == CombatTeam ||
+            !Candidate->GetHealthComponent() ||
+            Candidate->GetHealthComponent()->IsDead())
+        {
+            continue;
+        }
+
+        const FVector ToCandidate =
+            Candidate->GetActorLocation() - GetActorLocation();
+        const float Distance = ToCandidate.Size();
+
+        if (Distance > MeleeRange)
+        {
+            continue;
+        }
+
+        const float Facing = FVector::DotProduct(
+            GetActorForwardVector(),
+            ToCandidate.GetSafeNormal());
+
+        if (Facing < 0.35f)
+        {
+            continue;
+        }
+
+        const float Score = Distance - Facing * 80.0f;
+        if (Score < BestScore)
+        {
+            BestScore = Score;
+            BestTarget = Candidate;
+        }
+    }
+
+    if (BestTarget)
+    {
+        TryMeleeAttack(BestTarget);
+    }
+}
+
+void AWPSoldierCharacter::StartBandage()
+{
+    if (!GetWorld() ||
+        !IsCombatCapable() ||
+        bBandaging ||
+        MedkitsRemaining <= 0 ||
+        !HealthComponent ||
+        HealthComponent->GetHealth() >= HealthComponent->GetMaxHealth())
+    {
+        return;
+    }
+
+    StopSprint();
+    StopAim();
+    WeaponComponent->StopFire();
+
+    bBandaging = true;
+    OnBandageStarted.Broadcast();
+    GetCharacterMovement()->MaxWalkSpeed =
+        bProne ? ProneSpeed : FMath::Min(WalkSpeed, 220.0f);
+
+    GetWorld()->GetTimerManager().SetTimer(
+        BandageTimerHandle,
+        this,
+        &AWPSoldierCharacter::FinishBandage,
+        BandageDurationSeconds,
+        false);
+}
+
+void AWPSoldierCharacter::FinishBandage()
+{
+    if (!bBandaging)
+    {
+        return;
+    }
+
+    bBandaging = false;
+
+    if (HealthComponent &&
+        HealthComponent->Heal(BandageHealAmount))
+    {
+        MedkitsRemaining = FMath::Max(0, MedkitsRemaining - 1);
+    }
+
+    GetCharacterMovement()->MaxWalkSpeed =
+        bProne ? ProneSpeed : WalkSpeed;
+
+    OnBandageCompleted.Broadcast();
+}
+
+void AWPSoldierCharacter::CancelBandage()
+{
+    if (!bBandaging)
+    {
+        return;
+    }
+
+    bBandaging = false;
+
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().ClearTimer(BandageTimerHandle);
+    }
+
+    GetCharacterMovement()->MaxWalkSpeed =
+        bProne ? ProneSpeed : WalkSpeed;
 }
 
 void AWPSoldierCharacter::MoveForward(float Value)
@@ -475,6 +686,8 @@ void AWPSoldierCharacter::StartSprint()
     {
         return;
     }
+
+    CancelBandage();
 
     if (bProne && !ExitProne())
     {
@@ -646,6 +859,7 @@ void AWPSoldierCharacter::StartAim()
         return;
     }
 
+    CancelBandage();
     bAiming = true;
     WeaponComponent->SetAiming(true);
 }
@@ -658,6 +872,7 @@ void AWPSoldierCharacter::StopAim()
 
 void AWPSoldierCharacter::ThrowGrenadeInput()
 {
+    CancelBandage();
     FVector TargetLocation;
     if (GetViewTarget(TargetLocation, 6500.0f))
     {
@@ -667,6 +882,7 @@ void AWPSoldierCharacter::ThrowGrenadeInput()
 
 void AWPSoldierCharacter::ThrowSmokeGrenadeInput()
 {
+    CancelBandage();
     FVector TargetLocation;
     if (GetViewTarget(TargetLocation, 6000.0f))
     {
@@ -676,6 +892,8 @@ void AWPSoldierCharacter::ThrowSmokeGrenadeInput()
 
 void AWPSoldierCharacter::InteractInput()
 {
+    CancelBandage();
+
     if (!GetWorld() || !IsCombatCapable())
     {
         return;
@@ -779,6 +997,7 @@ void AWPSoldierCharacter::HandleShotFired(float RecoilPitch, float RecoilYaw)
 
 void AWPSoldierCharacter::HandleDowned()
 {
+    CancelBandage();
     StopSprint();
     ExitProne();
     StopAim();
@@ -799,6 +1018,7 @@ void AWPSoldierCharacter::HandleRevived()
 
 void AWPSoldierCharacter::HandleDeath()
 {
+    CancelBandage();
     ExitProne();
     StopAim();
     WeaponComponent->StopFire();
