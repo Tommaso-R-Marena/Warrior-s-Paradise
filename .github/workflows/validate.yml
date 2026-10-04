@@ -20,4 +20,6 @@ jobs:
           git checkout --detach FETCH_HEAD
 
       - name: Validate Unreal project structure
-        run: python3 tools/validate_project.py
+        run: |
+          python3 tools/validate_project.py
+          python3 tools/check_compile_readiness.py
