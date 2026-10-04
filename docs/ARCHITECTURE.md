@@ -43,7 +43,7 @@ Owns physical bullet travel, gravity, damage, hit-location scaling, suppression 
 
 ### UWPHealthComponent / UWPSuppressionComponent
 
-Health owns damage, partial healing, downed/bleedout/revive/final death and damage-source events.
+Health owns damage, partial healing, **active bleeding**, downed/bleedout/revive/final death and damage-source events. Severe hits or sufficiently low health can start a severity-scaled bleeding timer; field dressings stop that timer, while entering the downed state hands authority to the existing bleedout lifecycle so the two death-pressure systems never stack.
 
 Suppression owns accumulation/decay plus a hysteretic state machine: **Steady → Pressured → Pinned**. The normalized value still drives camera/accuracy effects, while the discrete state prevents AI behavior from oscillating around a single threshold. Pinned AI abandons offensive movement, prioritizes/holds cover, degrades shot dispersion and only attempts sparse return fire from cover.
 
@@ -58,7 +58,7 @@ The tactical infantry layer provides:
 - cover reservation;
 - suppression-state reactions with cover priority, degraded accuracy and pinned return-fire limits;
 - flanking;
-- role behaviors;
+- role behaviors, including medic prioritization of downed and bleeding allies;
 - grenades/smoke;
 - melee.
 
