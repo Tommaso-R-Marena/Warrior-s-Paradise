@@ -9,7 +9,11 @@
 #include "Game/WPBattlefieldDirector.h"
 #include "GameFramework/FloatingPawnMovement.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "Presentation/WPVehicleVisualProfile.h"
+#include "Sound/SoundAttenuation.h"
+#include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Vehicles/WPTankShell.h"
 
@@ -249,7 +253,45 @@ void AWPArmoredVehicle::FireCannon(AActor* Target)
         AimDirection.Rotation(),
         SpawnParameters))
     {
+        Shell->OnImpact.AddUniqueDynamic(
+            this,
+            &AWPArmoredVehicle::HandleTankShellImpact);
+
         Shell->InitializeShell(CombatTeam, AimDirection * 22000.0f);
+
+        if (VisualProfile)
+        {
+            if (UNiagaraSystem* System =
+                VisualProfile->CannonMuzzleFlash.LoadSynchronous())
+            {
+                UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                    this,
+                    System,
+                    MuzzleLocation,
+                    AimDirection.Rotation(),
+                    VisualProfile->CannonMuzzleScale,
+                    true,
+                    true,
+                    ENCPoolMethod::AutoRelease,
+                    true);
+            }
+
+            if (USoundBase* Sound =
+                VisualProfile->CannonSound.LoadSynchronous())
+            {
+                UGameplayStatics::PlaySoundAtLocation(
+                    this,
+                    Sound,
+                    MuzzleLocation,
+                    VisualProfile->CannonVolume,
+                    1.0f + FMath::FRandRange(-0.015f, 0.015f),
+                    0.0f,
+                    VisualProfile->Attenuation.LoadSynchronous(),
+                    nullptr,
+                    nullptr);
+            }
+        }
+
         OnCannonFired.Broadcast();
     }
 }
@@ -283,6 +325,39 @@ void AWPArmoredVehicle::FireMachineGun(AActor* Target)
             45000.0f,
             nullptr,
             CombatTeam);
+
+        if (VisualProfile)
+        {
+            if (UNiagaraSystem* System =
+                VisualProfile->MachineGunMuzzleFlash.LoadSynchronous())
+            {
+                UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                    this,
+                    System,
+                    MuzzleLocation,
+                    AimDirection.Rotation(),
+                    VisualProfile->MachineGunMuzzleScale,
+                    true,
+                    true,
+                    ENCPoolMethod::AutoRelease,
+                    true);
+            }
+
+            if (USoundBase* Sound =
+                VisualProfile->MachineGunSound.LoadSynchronous())
+            {
+                UGameplayStatics::PlaySoundAtLocation(
+                    this,
+                    Sound,
+                    MuzzleLocation,
+                    VisualProfile->MachineGunVolume,
+                    1.0f + FMath::FRandRange(-0.025f, 0.025f),
+                    0.0f,
+                    VisualProfile->Attenuation.LoadSynchronous(),
+                    nullptr,
+                    nullptr);
+            }
+        }
 
         OnMachineGunFired.Broadcast();
     }
@@ -443,6 +518,44 @@ void AWPArmoredVehicle::ApplyShellImpact(
     }
 }
 
+void AWPArmoredVehicle::HandleTankShellImpact(FVector ImpactLocation)
+{
+    if (!VisualProfile)
+    {
+        return;
+    }
+
+    if (UNiagaraSystem* System =
+        VisualProfile->ShellImpactEffect.LoadSynchronous())
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+            this,
+            System,
+            ImpactLocation,
+            FRotator::ZeroRotator,
+            VisualProfile->ShellImpactScale,
+            true,
+            true,
+            ENCPoolMethod::AutoRelease,
+            true);
+    }
+
+    if (USoundBase* Sound =
+        VisualProfile->ShellImpactSound.LoadSynchronous())
+    {
+        UGameplayStatics::PlaySoundAtLocation(
+            this,
+            Sound,
+            ImpactLocation,
+            VisualProfile->ImpactVolume,
+            1.0f + FMath::FRandRange(-0.02f, 0.02f),
+            0.0f,
+            VisualProfile->Attenuation.LoadSynchronous(),
+            nullptr,
+            nullptr);
+    }
+}
+
 void AWPArmoredVehicle::HandleTakeAnyDamage(
     AActor* DamagedActor,
     float Damage,
@@ -479,6 +592,40 @@ void AWPArmoredVehicle::DestroyVehicle()
     }
 
     bDestroyed = true;
+
+    if (VisualProfile)
+    {
+        if (UNiagaraSystem* System =
+            VisualProfile->DestructionEffect.LoadSynchronous())
+        {
+            UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                this,
+                System,
+                GetActorLocation() + FVector(0.0f, 0.0f, 90.0f),
+                GetActorRotation(),
+                VisualProfile->DestructionScale,
+                true,
+                true,
+                ENCPoolMethod::AutoRelease,
+                true);
+        }
+
+        if (USoundBase* Sound =
+            VisualProfile->DestructionSound.LoadSynchronous())
+        {
+            UGameplayStatics::PlaySoundAtLocation(
+                this,
+                Sound,
+                GetActorLocation(),
+                VisualProfile->DestructionVolume,
+                1.0f + FMath::FRandRange(-0.02f, 0.02f),
+                0.0f,
+                VisualProfile->Attenuation.LoadSynchronous(),
+                nullptr,
+                nullptr);
+        }
+    }
+
     OnVehicleDestroyed.Broadcast();
     Movement->StopMovementImmediately();
     CollisionRoot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
