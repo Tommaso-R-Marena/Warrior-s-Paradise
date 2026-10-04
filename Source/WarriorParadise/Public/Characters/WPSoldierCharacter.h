@@ -67,6 +67,9 @@ public:
     UFUNCTION(BlueprintPure, Category="Movement")
     bool IsSprinting() const { return bSprinting; }
 
+    UFUNCTION(BlueprintPure, Category="Movement")
+    bool IsProne() const { return bProne; }
+
     UFUNCTION(BlueprintCallable, Category="Combat")
     bool ThrowGrenadeAt(const FVector& TargetLocation);
 
@@ -128,6 +131,24 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="Movement")
     float SprintSpeed = 690.0f;
 
+    UPROPERTY(EditDefaultsOnly, Category="Movement")
+    float ProneSpeed = 145.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Movement|Stance")
+    float StandingCapsuleHalfHeight = 94.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Movement|Stance")
+    float ProneCapsuleHalfHeight = 48.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Movement|Stance")
+    float StandingCameraZ = 68.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Movement|Stance")
+    float ProneCameraZ = 25.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Movement|Stance")
+    float StanceInterpSpeed = 10.0f;
+
     UPROPERTY(EditDefaultsOnly, Category="Movement|Stamina", meta=(ClampMin="1.0"))
     float MaxStamina = 100.0f;
 
@@ -163,6 +184,7 @@ private:
 
     bool bAiming = false;
     bool bSprinting = false;
+    bool bProne = false;
     float LastSprintActivityTime = -1000.0f;
     float PendingRecoilPitch = 0.0f;
     float PendingRecoilYaw = 0.0f;
@@ -180,6 +202,10 @@ private:
     void MoveRight(float Value);
     void Turn(float Value);
     void LookUp(float Value);
+    void JumpInput();
+    void ToggleProne();
+    bool EnterProne();
+    bool ExitProne();
     void StartSprint();
     void StopSprint();
     void StartCrouch();
