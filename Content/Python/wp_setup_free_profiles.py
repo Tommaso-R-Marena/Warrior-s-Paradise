@@ -222,11 +222,19 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
         ("impact",),
         ("hit",),
     )
+    tracer = find_asset(
+        niagara_class,
+        ("bullet", "tracer"),
+        ("tracer",),
+        ("projectile", "trail"),
+    )
 
     if muzzle:
         set_prop(asset, "muzzle_flash", muzzle)
     if impact:
         set_prop(asset, "bullet_impact", impact)
+    if tracer:
+        set_prop(asset, "tracer_effect", tracer)
 
     material_effects = {
         "wood_impact": find_asset(
@@ -316,6 +324,39 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
         ("body", "impact"),
         ("bullet", "flesh"),
     )
+
+    decal_class = unreal.MaterialInterface
+    generic_decal = find_asset(
+        decal_class,
+        ("bullet", "hole"),
+        ("bullet", "decal"),
+        ("impact", "decal"),
+    )
+    wood_decal = find_asset(
+        decal_class,
+        ("wood", "bullet", "decal"),
+        ("wood", "impact", "decal"),
+    )
+    stone_decal = find_asset(
+        decal_class,
+        ("concrete", "bullet", "decal"),
+        ("stone", "impact", "decal"),
+        ("concrete", "decal"),
+    )
+    metal_decal = find_asset(
+        decal_class,
+        ("metal", "bullet", "decal"),
+        ("metal", "impact", "decal"),
+    )
+
+    if generic_decal:
+        set_prop(asset, "generic_impact_decal", generic_decal)
+    if wood_decal:
+        set_prop(asset, "wood_impact_decal", wood_decal)
+    if stone_decal:
+        set_prop(asset, "stone_impact_decal", stone_decal)
+    if metal_decal:
+        set_prop(asset, "metal_impact_decal", metal_decal)
 
     if fire:
         set_prop(asset, "fire_sound", fire)
