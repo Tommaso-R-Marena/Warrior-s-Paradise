@@ -1,4 +1,6 @@
 #include "Combat/WPBallisticProjectile.h"
+#include "Characters/WPSoldierCharacter.h"
+#include "Combat/WPSuppressionComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -58,9 +60,58 @@ void AWPBallisticProjectile::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
+    ApplyNearMissSuppression();
+
     if (FVector::DistSquared(SpawnLocation, GetActorLocation()) > FMath::Square(MaximumTravelCm))
     {
         Destroy();
+    }
+}
+
+void AWPBallisticProjectile::ApplyNearMissSuppression()
+{
+    if (!GetWorld() || NearMissRadiusCm <= 0.0f || NearMissSuppression <= 0.0f)
+    {
+        return;
+    }
+
+    TArray<FOverlapResult> Overlaps;
+    FCollisionObjectQueryParams ObjectQuery;
+    ObjectQuery.AddObjectTypesToQuery(ECC_Pawn);
+
+    FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(WPNearMissSuppression), false, this);
+    if (AActor* ProjectileOwner = GetOwner())
+    {
+        QueryParams.AddIgnoredActor(ProjectileOwner);
+    }
+
+    if (!GetWorld()->OverlapMultiByObjectType(
+        Overlaps,
+        GetActorLocation(),
+        FQuat::Identity,
+        ObjectQuery,
+        FCollisionShape::MakeSphere(NearMissRadiusCm),
+        QueryParams))
+    {
+        return;
+    }
+
+    for (const FOverlapResult& Result : Overlaps)
+    {
+        AWPSoldierCharacter* Soldier = Cast<AWPSoldierCharacter>(Result.GetActor());
+        if (!Soldier || Soldier == GetOwner() || !Soldier->GetSuppressionComponent())
+        {
+            continue;
+        }
+
+        TWeakObjectPtr<AActor> WeakSoldier(Soldier);
+        if (SuppressedActors.Contains(WeakSoldier))
+        {
+            continue;
+        }
+
+        Soldier->GetSuppressionComponent()->AddSuppression(NearMissSuppression);
+        SuppressedActors.Add(WeakSoldier);
     }
 }
 
@@ -74,6 +125,14 @@ void AWPBallisticProjectile::HandleHit(
     if (!OtherActor || OtherActor == GetOwner())
     {
         return;
+    }
+
+    if (AWPSoldierCharacter* Soldier = Cast<AWPSoldierCharacter>(OtherActor))
+    {
+        if (UWPSuppressionComponent* Suppression = Soldier->GetSuppressionComponent())
+        {
+            Suppression->AddSuppression(30.0f);
+        }
     }
 
     const FVector ShotDirection = Movement->Velocity.GetSafeNormal();
