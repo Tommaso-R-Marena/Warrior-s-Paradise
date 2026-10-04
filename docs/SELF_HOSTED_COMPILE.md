@@ -53,8 +53,9 @@ The workflow:
 4. deletes project `Binaries` and `Intermediate` for a clean build when requested;
 5. builds `WarriorParadiseEditor Win64`;
 6. builds the shipping-relevant `WarriorParadise Win64` game target;
-7. prints recent Unreal Build Tool logs automatically if either target fails;
-8. publishes a final **PASS** or **FAIL** summary.
+7. launches a 15-second GPU-less `-nullrhi` gameplay smoke test;
+8. prints recent Unreal Build Tool logs automatically if compilation or runtime smoke validation fails;
+9. publishes a final **PASS** or **FAIL** summary.
 
 A PASS means the checked commit compiled successfully against the UE 5.8 installation on that runner. It does not by itself prove that gameplay, assets, cooking, packaging, rendering, or runtime behavior are correct.
 
