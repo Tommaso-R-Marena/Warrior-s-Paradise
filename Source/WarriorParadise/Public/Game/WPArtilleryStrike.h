@@ -5,6 +5,8 @@
 #include "GameFramework/Actor.h"
 #include "WPArtilleryStrike.generated.h"
 
+class UWPExplosionPresentationProfile;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWPArtilleryImpactSignature, FVector, ImpactLocation);
 
 UCLASS()
@@ -20,7 +22,16 @@ public:
 
     void InitializeStrike(const FVector& InTargetLocation, EWPCombatTeam InTeam);
 
+    UFUNCTION(BlueprintCallable, Category="Artillery|Presentation")
+    void SetPresentationProfile(UWPExplosionPresentationProfile* NewProfile)
+    {
+        PresentationProfile = NewProfile;
+    }
+
 private:
+    UPROPERTY(EditDefaultsOnly, Category="Artillery|Presentation")
+    TObjectPtr<UWPExplosionPresentationProfile> PresentationProfile;
+
     UPROPERTY(EditDefaultsOnly, Category="Artillery", meta=(ClampMin="1"))
     int32 ShellCount = 8;
 
