@@ -60,10 +60,13 @@ The repository now contains a substantial code-side combined-arms battle rather 
 
 ### Battlefield interaction and combined arms
 
-- runtime battlefield fallback with buildings, cover and atmosphere;
+- runtime battlefield fallback with **enterable building collision shells**, cover and atmosphere;
+- optional free cabin/building visual overlays that preserve safe gameplay collision;
+- Poly Haven PBR surface slots for dirt, plaster, brick, stone, wood, metal, roof and concrete;
+- deterministic free tree/crate/barrel dressing plus optional HDRI/volumetric-cloud/ambience presentation;
 - damageable cover that breaks into temporary physics debris;
 - penetrable thin cover;
-- UE 5.8 Local Fog Volume tactical smoke;
+- UE 5.8 Local Fog Volume tactical smoke with optional Niagara/deploy/hiss presentation;
 - one Allied armored vehicle during the inner-village push;
 - one Axis armored vehicle in the final counterattack;
 - autonomous vehicle movement, turret tracking, cannon fire and coaxial fire;
@@ -73,21 +76,41 @@ The repository now contains a substantial code-side combined-arms battle rather 
 - tank shells with blast damage/suppression;
 - victory gating on surviving hostile armor.
 
-## Production-facing event hooks
+## Production presentation layer
 
-Gameplay exposes presentation events for:
+The branch no longer stops at raw gameplay delegates. It includes data-driven presentation components/profiles for:
 
-- shot fired / projectile spawned / bullet impact;
-- reload start / complete / cancel / dry fire;
-- health and damage source;
-- downed / revive / death;
-- suppression;
-- melee and bandaging;
-- grenade explosion and smoke deployment;
-- artillery impacts;
-- cannon / coax fire, armor damage and vehicle destruction.
+- muzzle flash, weapon audio, reload/dry-fire audio;
+- live bullet tracers;
+- dirt/wood/stone/metal/flesh impact Niagara and audio;
+- persistent material-specific impact decals;
+- soldier hit, pain, downed, revive, death, melee and bandage VFX/audio/montage hooks;
+- frag and artillery explosion Niagara/audio;
+- tactical-smoke Niagara plus deploy/hiss audio;
+- tank cannon/coax muzzle presentation, shell impacts and destruction;
+- spatialized world audio with runtime attenuation/occlusion fallbacks for infantry presentation;
+- production soldier/weapon/tank/environment visual profiles;
+- battle-wide faction/role loadout selection.
 
 See [Presentation Bindings](docs/PRESENTATION_BINDINGS.md).
+
+## Free-content bootstrap
+
+A license-aware local pipeline now turns free resources into usable Unreal content:
+
+```powershell
+.\tools\setup_free_content.ps1
+```
+
+It can download approved redistributable CC0 content, record hashes/provenance, compile the UE 5.8 editor target, import external assets, build PBR materials, discover installed free content and generate the optional battle preset:
+
+```text
+/Game/WarriorParadise/Profiles/DA_WP_BattlePresentation_Free
+```
+
+The generator recognizes period-weapon candidates, soldier meshes, Motion Matching AnimBPs, tanks, rural buildings, Niagara effects, audio, HDRI/ambience and environment materials. Provider-gated Epic/Fab/Sonniss content is intentionally acquired through the provider rather than scraped or mirrored publicly.
+
+See [Free Content Workflow](docs/FREE_CONTENT_WORKFLOW.md), [Free Asset Bootstrap](docs/FREE_ASSET_BOOTSTRAP.md) and [Third-Party Assets](docs/THIRD_PARTY_ASSETS.md).
 
 ## Controls
 
@@ -126,27 +149,40 @@ Target: **Unreal Engine 5.8**.
 
 The current fallback uses Unreal's built-in Entry map and constructs the battle at runtime. That keeps gameplay code testable without committing production binary map assets.
 
-## Validation
+## Validation and local build
+
+Fast local source/content-contract validation:
 
 ```bash
 python3 tools/validate_project.py
 ```
 
-The contract checks UE 5.8 targeting plus the implemented stance, medicine, perception, squad-switching, smoke, objective, destruction, artillery and armor hooks.
+Windows UE 5.8 editor build:
 
-A **full Unreal C++ compile/playtest has still not been executed from this ChatGPT environment**. The connected GitHub hosted runner has been failing before job execution, so the workflow remains manually dispatchable rather than producing repeated false-red automatic runs.
+```powershell
+.\tools\build_local.ps1
+```
+
+Optional packaged Win64 build:
+
+```powershell
+.\tools\build_local.ps1 -Package
+```
+
+The validator now checks the **56-file** source surface plus Python tooling, plugin requirements, free-asset/license metadata, smoke/soldier/weapon/vehicle presentation, enterable buildings, material-specific impacts, tracers/decals and the free-content bootstrap contract.
+
+GitHub Actions is manual-only and is not required for development. A **full Unreal C++ compile/playtest has still not been executed from this ChatGPT environment**; a clean local UE 5.8 build remains the next hard validation gate.
 
 ## What remains before this is visually Enlisted-quality
 
-The remaining gap is dominated by production content and engine validation, not missing combat-rule scaffolding:
+The remaining gap is now dominated by **content acquisition, art-direction coherence and engine validation**, not missing presentation plumbing:
 
-- production skeletal soldiers, hands, weapons and vehicles;
-- animation blueprints, locomotion, transitions, reloads, recoil and additive poses;
-- authentic WWII environment/terrain/interior asset pass;
-- Niagara muzzle/impact/explosion/dust/debris effects;
-- spatial weapon, explosion, vehicle, voice and foley audio;
-- physical materials, decals and per-surface response;
-- authored level/navigation pass and Chaos destruction where useful;
-- UE 5.8 compile fixes, playtesting, tuning, Unreal Insights profiling and packaged-build validation.
+- acquire/install the chosen free Epic/Fab/Sonniss content locally;
+- retarget the Game Animation Sample/Motion Matching stack to the final soldier skeletons where needed;
+- create/select historically coherent high-fidelity uniforms, hands, weapons and vehicles;
+- replace fallback village dressing with a coherent authored WWII environment/interior pass while keeping the existing safe collision/navigation shell;
+- tune Niagara/audio/decal profiles to one consistent visual and sonic language;
+- author any hero destruction/animation not supplied by the free sources;
+- compile in UE 5.8, fix UHT/C++/asset-load issues, playtest, tune AI/combat, profile with Unreal Insights and validate a packaged Win64 build.
 
 See [Vertical Slice](docs/VERTICAL_SLICE.md), [Architecture](docs/ARCHITECTURE.md), [Asset Pipeline](docs/ASSET_PIPELINE.md), and [Performance Target](docs/PERFORMANCE_TARGET.md).
