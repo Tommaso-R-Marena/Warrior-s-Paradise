@@ -228,6 +228,37 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
     if impact:
         set_prop(asset, "bullet_impact", impact)
 
+    material_effects = {
+        "wood_impact": find_asset(
+            niagara_class,
+            ("wood", "impact"),
+            ("wood", "hit"),
+            ("splinter",),
+        ),
+        "stone_impact": find_asset(
+            niagara_class,
+            ("stone", "impact"),
+            ("concrete", "impact"),
+            ("dust", "impact"),
+        ),
+        "metal_impact": find_asset(
+            niagara_class,
+            ("metal", "impact"),
+            ("spark", "impact"),
+            ("ricochet",),
+        ),
+        "flesh_impact": find_asset(
+            niagara_class,
+            ("flesh", "impact"),
+            ("blood", "impact"),
+            ("blood",),
+        ),
+    }
+
+    for property_name, value in material_effects.items():
+        if value:
+            set_prop(asset, property_name, value)
+
     if automatic:
         fire = find_asset(
             sound_class,
@@ -261,6 +292,30 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
         ("impact", "metal"),
         ("impact",),
     )
+    wood_impact = find_asset(
+        sound_class,
+        ("wood", "impact"),
+        ("bullet", "wood"),
+        ("wood", "hit"),
+    )
+    stone_impact = find_asset(
+        sound_class,
+        ("stone", "impact"),
+        ("concrete", "impact"),
+        ("bullet", "concrete"),
+    )
+    metal_impact = find_asset(
+        sound_class,
+        ("metal", "impact"),
+        ("ricochet",),
+        ("bullet", "metal"),
+    )
+    flesh_impact = find_asset(
+        sound_class,
+        ("flesh", "impact"),
+        ("body", "impact"),
+        ("bullet", "flesh"),
+    )
 
     if fire:
         set_prop(asset, "fire_sound", fire)
@@ -270,6 +325,14 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
         set_prop(asset, "dry_fire_sound", dry)
     if bullet_impact:
         set_prop(asset, "bullet_impact_sound", bullet_impact)
+    if wood_impact:
+        set_prop(asset, "wood_impact_sound", wood_impact)
+    if stone_impact:
+        set_prop(asset, "stone_impact_sound", stone_impact)
+    if metal_impact:
+        set_prop(asset, "metal_impact_sound", metal_impact)
+    if flesh_impact:
+        set_prop(asset, "flesh_impact_sound", flesh_impact)
 
 
 def configure_explosion_presentation(
