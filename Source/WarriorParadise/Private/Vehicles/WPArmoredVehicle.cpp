@@ -334,7 +334,9 @@ void AWPArmoredVehicle::HandleTakeAnyDamage(
         return;
     }
 
-    const float EffectiveDamage = Damage < 60.0f ? Damage * 0.08f : Damage;
+    // Rifle-caliber small arms cannot meaningfully penetrate armored hulls.
+    // Explosives, artillery and tank shells cross the threshold and apply normally.
+    const float EffectiveDamage = Damage < 60.0f ? 0.0f : Damage;
     Health = FMath::Max(0.0f, Health - EffectiveDamage);
 
     if (Health <= 0.0f)
