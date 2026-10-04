@@ -57,6 +57,12 @@ private:
     void HandleDryFire();
 
     UFUNCTION()
+    void HandleManualCycleStarted();
+
+    UFUNCTION()
+    void HandleManualCycleCompleted();
+
+    UFUNCTION()
     void HandleProjectileSpawned(AWPBallisticProjectile* Projectile);
 
     UFUNCTION()
