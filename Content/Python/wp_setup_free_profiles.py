@@ -915,6 +915,37 @@ def main() -> None:
         ],
     )
 
+    smoke_presentation = create_or_load_data_asset(
+        "DA_WP_Presentation_Smoke",
+        "WPSmokePresentationProfile",
+    )
+
+    smoke_effect = find_asset(
+        unreal.NiagaraSystem,
+        ("smoke", "grenade"),
+        ("smoke", "cloud"),
+        ("smoke",),
+    )
+    smoke_deploy = find_asset(
+        unreal.SoundBase,
+        ("smoke", "grenade", "deploy"),
+        ("smoke", "deploy"),
+        ("grenade", "hiss"),
+    )
+    smoke_hiss = find_asset(
+        unreal.SoundBase,
+        ("smoke", "hiss"),
+        ("hiss", "loop"),
+        ("gas", "hiss"),
+    )
+
+    if smoke_effect:
+        set_prop(smoke_presentation, "smoke_effect", smoke_effect)
+    if smoke_deploy:
+        set_prop(smoke_presentation, "deploy_sound", smoke_deploy)
+    if smoke_hiss:
+        set_prop(smoke_presentation, "hiss_loop", smoke_hiss)
+
     environment = create_or_load_data_asset(
         "DA_WP_Environment_Free",
         "WPEnvironmentVisualProfile",
@@ -1030,6 +1061,7 @@ def main() -> None:
         "environment": environment,
         "frag_explosion": frag_explosion,
         "artillery_explosion": artillery_explosion,
+        "smoke_presentation": smoke_presentation,
     }
 
     for property_name, value in mapping.items():
@@ -1046,6 +1078,7 @@ def main() -> None:
         axis_vehicle,
         frag_explosion,
         artillery_explosion,
+        smoke_presentation,
         environment,
         battle,
     ]
