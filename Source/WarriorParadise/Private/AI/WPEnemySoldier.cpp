@@ -205,6 +205,56 @@ AWPSoldierCharacter* AWPEnemySoldier::FindDownedAlly(float MaximumRange) const
     return BestTarget;
 }
 
+AWPSoldierCharacter* AWPEnemySoldier::FindBleedingAlly(
+    float MaximumRange) const
+{
+    if (!GetWorld())
+    {
+        return nullptr;
+    }
+
+    AWPSoldierCharacter* BestTarget = nullptr;
+    float BestScore =
+        FMath::Square(MaximumRange);
+
+    for (TActorIterator<AWPSoldierCharacter> It(GetWorld());
+         It;
+         ++It)
+    {
+        AWPSoldierCharacter* Candidate = *It;
+        if (!Candidate ||
+            Candidate == this ||
+            Candidate->GetCombatTeam() != GetCombatTeam() ||
+            !Candidate->IsCombatCapable() ||
+            !Candidate->GetHealthComponent() ||
+            !Candidate->GetHealthComponent()->IsBleeding())
+        {
+            continue;
+        }
+
+        const float DistanceSquared =
+            FVector::DistSquared2D(
+                GetActorLocation(),
+                Candidate->GetActorLocation());
+
+        const float Severity =
+            Candidate->GetHealthComponent()
+                ->GetBleedingSeverity();
+
+        const float Score =
+            DistanceSquared *
+            FMath::Lerp(1.0f, 0.52f, Severity);
+
+        if (Score < BestScore)
+        {
+            BestScore = Score;
+            BestTarget = Candidate;
+        }
+    }
+
+    return BestTarget;
+}
+
 AWPSoldierCharacter* AWPEnemySoldier::FindAmmoTarget(float MaximumRange) const
 {
     if (!GetWorld())
@@ -429,8 +479,19 @@ bool AWPEnemySoldier::HandleMedicSupport()
         return false;
     }
 
-    AWPSoldierCharacter* DownedAlly = FindDownedAlly(1800.0f);
-    if (!DownedAlly)
+    AWPSoldierCharacter* MedicalTarget =
+        FindDownedAlly(1800.0f);
+    const bool bNeedsRevive =
+        MedicalTarget != nullptr;
+
+    if (!MedicalTarget &&
+        GetMedkitsRemaining() > 0)
+    {
+        MedicalTarget =
+            FindBleedingAlly(1400.0f);
+    }
+
+    if (!MedicalTarget)
     {
         return false;
     }
@@ -439,7 +500,9 @@ bool AWPEnemySoldier::HandleMedicSupport()
     GetWeaponComponent()->StopFire();
     bPulseFiring = false;
 
-    const float Distance = FVector::Dist2D(GetActorLocation(), DownedAlly->GetActorLocation());
+    const float Distance = FVector::Dist2D(
+        GetActorLocation(),
+        MedicalTarget->GetActorLocation());
     const float Suppression = GetSuppressionComponent()
         ? GetSuppressionComponent()->GetNormalizedSuppression()
         : 0.0f;
@@ -448,16 +511,26 @@ bool AWPEnemySoldier::HandleMedicSupport()
         GetSmokeGrenadesRemaining() > 0 &&
         Distance > 300.0f)
     {
-        ThrowSmokeGrenadeAt(DownedAlly->GetActorLocation());
+        ThrowSmokeGrenadeAt(
+            MedicalTarget->GetActorLocation());
     }
 
     if (Distance <= 210.0f)
     {
-        TryReviveSoldier(DownedAlly);
+        if (bNeedsRevive)
+        {
+            TryReviveSoldier(MedicalTarget);
+        }
+        else
+        {
+            TryTreatSoldier(MedicalTarget);
+        }
     }
     else
     {
-        MoveTacticallyToward(DownedAlly->GetActorLocation(), 1.0f);
+        MoveTacticallyToward(
+            MedicalTarget->GetActorLocation(),
+            1.0f);
     }
 
     return true;
