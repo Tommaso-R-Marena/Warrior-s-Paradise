@@ -42,6 +42,9 @@ public:
     UFUNCTION(BlueprintCallable, Category="Weapon")
     void AddReserveAmmo(int32 Amount);
 
+    UFUNCTION(BlueprintCallable, Category="Weapon")
+    void SetAccuracyMultiplier(float Multiplier);
+
     UFUNCTION(BlueprintPure, Category="Weapon")
     int32 GetAmmoInMagazine() const { return AmmoInMagazine; }
 
@@ -112,6 +115,7 @@ private:
     bool bReloading = false;
     bool bWantsToFire = false;
     bool bAiming = false;
+    float AccuracyMultiplier = 1.0f;
     float LastFireTime = -1000.0f;
 
     FTimerHandle FireTimerHandle;
