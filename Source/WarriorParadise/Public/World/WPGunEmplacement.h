@@ -138,6 +138,7 @@ private:
     void FireAt(const FVector& TargetLocation, AActor* TargetActor);
     AActor* FindBestTarget() const;
     bool HasLineOfSightTo(const AActor* Target) const;
+    bool CanAimAt(const FVector& TargetLocation) const;
     void UpdateGunRotation();
     void DestroyEmplacement();
 
