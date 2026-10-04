@@ -2,6 +2,7 @@
 #include "Characters/WPSoldierCharacter.h"
 #include "Combat/WPBallisticProjectile.h"
 #include "Combat/WPHealthComponent.h"
+#include "Combat/WPSmokeCloud.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
@@ -144,6 +145,15 @@ bool AWPArmoredVehicle::HasLineOfSightTo(const AActor* Target) const
 
     const FVector Start = BarrelVisual->GetComponentLocation();
     const FVector End = GetTargetAimPoint(Target);
+
+    for (TActorIterator<AWPSmokeCloud> It(GetWorld()); It; ++It)
+    {
+        const AWPSmokeCloud* Smoke = *It;
+        if (Smoke && Smoke->BlocksSightBetween(Start, End))
+        {
+            return false;
+        }
+    }
 
     FHitResult Hit;
     FCollisionQueryParams Params(SCENE_QUERY_STAT(WPVehicleSight), true, this);
