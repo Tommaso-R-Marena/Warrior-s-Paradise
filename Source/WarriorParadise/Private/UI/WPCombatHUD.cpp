@@ -232,13 +232,28 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
             false);
     }
 
+    if (Health && Health->IsBleeding())
+    {
+        DrawText(
+            FString::Printf(
+                TEXT("BLEEDING %d%%   USE V TO BANDAGE"),
+                FMath::RoundToInt(
+                    Health->GetBleedingSeverity() * 100.0f)),
+            FLinearColor(1.0f, 0.22f, 0.12f, 1.0f),
+            28.0f,
+            Height - 108.0f,
+            GEngine->GetSmallFont(),
+            1.0f,
+            false);
+    }
+
     if (Soldier->IsBandaging())
     {
         DrawText(
             TEXT("BANDAGING"),
             FLinearColor(0.45f, 0.92f, 0.55f, 1.0f),
             28.0f,
-            Height - 108.0f,
+            Height - 130.0f,
             GEngine->GetSmallFont(),
             1.0f,
             false);
