@@ -27,14 +27,26 @@ The script checks:
 
 - `-EngineRoot` supplied explicitly;
 - `UE_5_8_ROOT`;
-- common Epic Launcher install locations;
-- the current-user Unreal Engine build registry.
+- Epic Games Launcher's install manifest;
+- standard Epic Games registry entries;
+- the current-user Unreal Engine custom-build registry;
+- common Epic Launcher install locations.
 
 Example:
 
 ```powershell
 .\tools\build_local.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.8"
 ```
+
+## Clean authoritative compile
+
+To remove project build intermediates and compile both the editor and Win64 game targets:
+
+```powershell
+.\tools\build_local.ps1 -Clean -BuildGameTarget
+```
+
+This is the same core verification used by the self-hosted GitHub Actions compile gate.
 
 ## Validate without Unreal
 
@@ -66,4 +78,4 @@ Packaging uses Unreal Automation Tool `BuildCookRun` with Win64 Development, bui
 
 ## Why this exists
 
-The local build is the authoritative validation gate while hosted CI minutes are unavailable. A source-contract pass is useful but is **not** a substitute for Unreal Header Tool, C++ compilation, asset loading and PIE/package validation. The first clean local UE 5.8 build should be treated as a milestone and any compiler/runtime defect should be fixed before expanding game systems again.
+The local build and the Windows self-hosted GitHub Actions compile gate are the authoritative validation paths while hosted CI minutes are unavailable. A source-contract pass is useful but is **not** a substitute for Unreal Header Tool, C++ compilation, asset loading and PIE/package validation. The first clean local UE 5.8 build should be treated as a milestone and any compiler/runtime defect should be fixed before expanding game systems again.
