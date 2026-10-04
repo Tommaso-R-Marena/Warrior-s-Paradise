@@ -583,6 +583,17 @@ void AWPSoldierCharacter::CallArtilleryInput()
 
 void AWPSoldierCharacter::HandleShotFired(float RecoilPitch, float RecoilYaw)
 {
+    if (IsCombatCapable())
+    {
+        if (AWPBattlefieldDirector* Director = GetBattlefieldDirector())
+        {
+            Director->ReportGunshot(
+                CombatTeam,
+                GetActorLocation(),
+                9000.0f);
+        }
+    }
+
     if (!IsPlayerControlled() || !IsCombatCapable())
     {
         return;
