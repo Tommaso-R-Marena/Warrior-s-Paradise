@@ -7,6 +7,7 @@
 #include "Combat/WPWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
+#include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
@@ -16,6 +17,7 @@
 #include "GameFramework/Controller.h"
 #include "Kismet/GameplayStatics.h"
 #include "Presentation/WPInfantryVisualProfile.h"
+#include "Presentation/WPWeaponPresentationComponent.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -54,12 +56,31 @@ AWPSoldierCharacter::AWPSoldierCharacter()
     FirstPersonWeapon->SetCastShadow(false);
     FirstPersonWeapon->SetVisibility(false, true);
 
+    FirstPersonStaticWeapon = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FirstPersonStaticWeapon"));
+    FirstPersonStaticWeapon->SetupAttachment(FirstPersonArms);
+    FirstPersonStaticWeapon->SetOnlyOwnerSee(true);
+    FirstPersonStaticWeapon->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    FirstPersonStaticWeapon->SetCastShadow(false);
+    FirstPersonStaticWeapon->SetVisibility(false, true);
+
+    ThirdPersonWeapon = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ThirdPersonWeapon"));
+    ThirdPersonWeapon->SetupAttachment(GetMesh());
+    ThirdPersonWeapon->SetOwnerNoSee(true);
+    ThirdPersonWeapon->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    ThirdPersonWeapon->SetVisibility(false, true);
+
+    MuzzleAnchor = CreateDefaultSubobject<USceneComponent>(TEXT("MuzzleAnchor"));
+    MuzzleAnchor->SetupAttachment(FirstPersonCamera);
+    MuzzleAnchor->SetRelativeLocation(FVector(90.0f, 0.0f, -10.0f));
+
     GetMesh()->SetOwnerNoSee(true);
     GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
     HealthComponent = CreateDefaultSubobject<UWPHealthComponent>(TEXT("HealthComponent"));
     WeaponComponent = CreateDefaultSubobject<UWPWeaponComponent>(TEXT("WeaponComponent"));
     SuppressionComponent = CreateDefaultSubobject<UWPSuppressionComponent>(TEXT("SuppressionComponent"));
+    WeaponPresentationComponent = CreateDefaultSubobject<UWPWeaponPresentationComponent>(
+        TEXT("WeaponPresentationComponent"));
 
     GrenadeClass = AWPFragGrenade::StaticClass();
     SmokeGrenadeClass = AWPSmokeGrenade::StaticClass();
@@ -113,11 +134,25 @@ void AWPSoldierCharacter::ApplyVisualProfile()
 {
     bProductionVisualsActive = false;
 
+    GetMesh()->SetVisibility(false, true);
+    FirstPersonArms->SetVisibility(false, true);
+    FirstPersonWeapon->SetVisibility(false, true);
+    FirstPersonStaticWeapon->SetVisibility(false, true);
+    ThirdPersonWeapon->SetVisibility(false, true);
+
+    ViewWeaponBody->SetVisibility(true, true);
+    ViewWeaponBarrel->SetVisibility(true, true);
+
+    MuzzleAnchor->AttachToComponent(
+        FirstPersonCamera,
+        FAttachmentTransformRules::KeepRelativeTransform);
+    MuzzleAnchor->SetRelativeTransform(FTransform(
+        FRotator::ZeroRotator,
+        FVector(90.0f, 0.0f, -10.0f),
+        FVector::OneVector));
+
     if (!VisualProfile)
     {
-        GetMesh()->SetVisibility(false, true);
-        FirstPersonArms->SetVisibility(false, true);
-        FirstPersonWeapon->SetVisibility(false, true);
         return;
     }
 
@@ -138,6 +173,20 @@ void AWPSoldierCharacter::ApplyVisualProfile()
         bProductionVisualsActive = true;
     }
 
+    if (UStaticMesh* ThirdPersonWeaponMesh =
+        VisualProfile->ThirdPersonWeaponMesh.LoadSynchronous())
+    {
+        ThirdPersonWeapon->SetStaticMesh(ThirdPersonWeaponMesh);
+        ThirdPersonWeapon->AttachToComponent(
+            GetMesh(),
+            FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+            VisualProfile->ThirdPersonWeaponAttachSocket);
+        ThirdPersonWeapon->SetRelativeTransform(
+            VisualProfile->ThirdPersonWeaponRelativeTransform);
+        ThirdPersonWeapon->SetVisibility(true, true);
+        bProductionVisualsActive = true;
+    }
+
     if (USkeletalMesh* ArmsMesh = VisualProfile->FirstPersonArmsMesh.LoadSynchronous())
     {
         FirstPersonArms->SetSkeletalMesh(ArmsMesh);
@@ -153,6 +202,8 @@ void AWPSoldierCharacter::ApplyVisualProfile()
 
         bProductionVisualsActive = true;
     }
+
+    USceneComponent* ActiveFirstPersonWeapon = nullptr;
 
     if (USkeletalMesh* WeaponMesh = VisualProfile->FirstPersonWeaponMesh.LoadSynchronous())
     {
@@ -176,7 +227,44 @@ void AWPSoldierCharacter::ApplyVisualProfile()
         FirstPersonWeapon->SetRelativeTransform(
             VisualProfile->FirstPersonWeaponRelativeTransform);
         FirstPersonWeapon->SetVisibility(true, true);
+        ActiveFirstPersonWeapon = FirstPersonWeapon;
         bProductionVisualsActive = true;
+    }
+    else if (UStaticMesh* StaticWeaponMesh =
+        VisualProfile->FirstPersonStaticWeaponMesh.LoadSynchronous())
+    {
+        FirstPersonStaticWeapon->SetStaticMesh(StaticWeaponMesh);
+
+        if (FirstPersonArms->GetSkeletalMeshAsset() &&
+            VisualProfile->WeaponAttachSocket != NAME_None)
+        {
+            FirstPersonStaticWeapon->AttachToComponent(
+                FirstPersonArms,
+                FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+                VisualProfile->WeaponAttachSocket);
+        }
+        else
+        {
+            FirstPersonStaticWeapon->AttachToComponent(
+                FirstPersonCamera,
+                FAttachmentTransformRules::KeepRelativeTransform);
+        }
+
+        FirstPersonStaticWeapon->SetRelativeTransform(
+            VisualProfile->FirstPersonWeaponRelativeTransform);
+        FirstPersonStaticWeapon->SetVisibility(true, true);
+        ActiveFirstPersonWeapon = FirstPersonStaticWeapon;
+        bProductionVisualsActive = true;
+    }
+
+    if (ActiveFirstPersonWeapon &&
+        VisualProfile->MuzzleAttachSocket != NAME_None)
+    {
+        MuzzleAnchor->AttachToComponent(
+            ActiveFirstPersonWeapon,
+            FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+            VisualProfile->MuzzleAttachSocket);
+        MuzzleAnchor->SetRelativeTransform(VisualProfile->MuzzleRelativeTransform);
     }
 
     if (bProductionVisualsActive)
@@ -184,6 +272,13 @@ void AWPSoldierCharacter::ApplyVisualProfile()
         ViewWeaponBody->SetVisibility(false, true);
         ViewWeaponBarrel->SetVisibility(false, true);
     }
+}
+
+FTransform AWPSoldierCharacter::GetWeaponPresentationTransform() const
+{
+    return MuzzleAnchor
+        ? MuzzleAnchor->GetComponentTransform()
+        : GetActorTransform();
 }
 
 void AWPSoldierCharacter::ApplyRoleLoadout()
