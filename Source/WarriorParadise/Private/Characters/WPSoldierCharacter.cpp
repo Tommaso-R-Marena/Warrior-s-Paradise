@@ -342,12 +342,24 @@ void AWPSoldierCharacter::Tick(float DeltaSeconds)
 
     WeaponComponent->SetAccuracyMultiplier(AccuracyMultiplier);
 
-    const float TargetFOV = bAiming ? AimFOV : HipFOV;
+    const float BaseTargetFOV = bAiming ? AimFOV : HipFOV;
+    const float TargetFOV = BaseTargetFOV - Suppression * SuppressionFOVPenalty;
     FirstPersonCamera->SetFieldOfView(FMath::FInterpTo(
         FirstPersonCamera->FieldOfView,
         TargetFOV,
         DeltaSeconds,
         AimInterpSpeed));
+
+    const float SuppressionRoll =
+        FMath::Sin(Time * 7.5f) *
+        Suppression *
+        SuppressionRollDegrees;
+
+    FirstPersonCamera->SetRelativeRotation(FMath::RInterpTo(
+        FirstPersonCamera->GetRelativeRotation(),
+        FRotator(0.0f, 0.0f, SuppressionRoll),
+        DeltaSeconds,
+        9.0f));
 
     const float AimSwayScale = bAiming ? 0.38f : 1.0f;
     const float StanceSwayScale = bProne
