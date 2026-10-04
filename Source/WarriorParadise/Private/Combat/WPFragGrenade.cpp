@@ -6,6 +6,11 @@
 #include "EngineUtils.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "Presentation/WPExplosionPresentationProfile.h"
+#include "Sound/SoundAttenuation.h"
+#include "Sound/SoundBase.h"
 #include "TimerManager.h"
 #include "Vehicles/WPArmoredVehicle.h"
 #include "World/WPDestructibleCover.h"
@@ -164,6 +169,43 @@ void AWPFragGrenade::Explode()
             GetInstigatorController(),
             this,
             UDamageType::StaticClass());
+    }
+
+    if (PresentationProfile)
+    {
+        if (UNiagaraSystem* System =
+            PresentationProfile->ExplosionEffect.LoadSynchronous())
+        {
+            UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                this,
+                System,
+                ExplosionLocation,
+                FRotator::ZeroRotator,
+                PresentationProfile->EffectScale,
+                true,
+                true,
+                ENCPoolMethod::AutoRelease,
+                true);
+        }
+
+        if (USoundBase* Sound =
+            PresentationProfile->ExplosionSound.LoadSynchronous())
+        {
+            const float Pitch = 1.0f + FMath::FRandRange(
+                -PresentationProfile->PitchRandomization,
+                PresentationProfile->PitchRandomization);
+
+            UGameplayStatics::PlaySoundAtLocation(
+                this,
+                Sound,
+                ExplosionLocation,
+                PresentationProfile->Volume,
+                Pitch,
+                0.0f,
+                PresentationProfile->Attenuation.LoadSynchronous(),
+                nullptr,
+                nullptr);
+        }
     }
 
     OnExploded.Broadcast(ExplosionLocation);
