@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
+#include "Materials/MaterialInterface.h"
 #include "Presentation/WPWeaponPresentationProfile.h"
 #include "Sound/SoundAttenuation.h"
 #include "Sound/SoundBase.h"
@@ -228,6 +229,25 @@ void UWPWeaponPresentationComponent::HandleProjectileSpawned(
         return;
     }
 
+    if (PresentationProfile)
+    {
+        if (UNiagaraSystem* Tracer =
+            PresentationProfile->TracerEffect.LoadSynchronous())
+        {
+            UNiagaraFunctionLibrary::SpawnSystemAttached(
+                Tracer,
+                Projectile->GetRootComponent(),
+                NAME_None,
+                FVector::ZeroVector,
+                FRotator::ZeroRotator,
+                EAttachLocation::SnapToTarget,
+                true,
+                true,
+                ENCPoolMethod::AutoRelease,
+                true);
+        }
+    }
+
     Projectile->OnImpact.AddUniqueDynamic(
         this,
         &UWPWeaponPresentationComponent::HandleProjectileImpact);
@@ -281,6 +301,8 @@ void UWPWeaponPresentationComponent::HandleProjectileImpact(
     TSoftObjectPtr<UNiagaraSystem> Effect = PresentationProfile->BulletImpact;
     TSoftObjectPtr<USoundBase> ImpactSound =
         PresentationProfile->BulletImpactSound;
+    TSoftObjectPtr<UMaterialInterface> ImpactDecal =
+        PresentationProfile->GenericImpactDecal;
 
     switch (Surface)
     {
@@ -293,6 +315,10 @@ void UWPWeaponPresentationComponent::HandleProjectileImpact(
             {
                 ImpactSound = PresentationProfile->WoodImpactSound;
             }
+            if (!PresentationProfile->WoodImpactDecal.IsNull())
+            {
+                ImpactDecal = PresentationProfile->WoodImpactDecal;
+            }
             break;
 
         case ELocalImpactSurface::Stone:
@@ -304,6 +330,10 @@ void UWPWeaponPresentationComponent::HandleProjectileImpact(
             {
                 ImpactSound = PresentationProfile->StoneImpactSound;
             }
+            if (!PresentationProfile->StoneImpactDecal.IsNull())
+            {
+                ImpactDecal = PresentationProfile->StoneImpactDecal;
+            }
             break;
 
         case ELocalImpactSurface::Metal:
@@ -314,6 +344,10 @@ void UWPWeaponPresentationComponent::HandleProjectileImpact(
             if (!PresentationProfile->MetalImpactSound.IsNull())
             {
                 ImpactSound = PresentationProfile->MetalImpactSound;
+            }
+            if (!PresentationProfile->MetalImpactDecal.IsNull())
+            {
+                ImpactDecal = PresentationProfile->MetalImpactDecal;
             }
             break;
 
@@ -353,5 +387,19 @@ void UWPWeaponPresentationComponent::HandleProjectileImpact(
             Sound,
             ImpactLocation,
             PresentationProfile->ImpactVolume);
+    }
+
+    if (Surface != ELocalImpactSurface::Flesh)
+    {
+        if (UMaterialInterface* Decal = ImpactDecal.LoadSynchronous())
+        {
+            UGameplayStatics::SpawnDecalAtLocation(
+                this,
+                Decal,
+                PresentationProfile->ImpactDecalSize,
+                ImpactLocation + ImpactNormal * 1.5f,
+                ImpactNormal.Rotation(),
+                PresentationProfile->ImpactDecalLifeSeconds);
+        }
     }
 }
