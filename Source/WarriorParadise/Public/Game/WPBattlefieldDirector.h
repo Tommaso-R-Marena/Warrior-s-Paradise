@@ -46,7 +46,9 @@ private:
     UPROPERTY(VisibleInstanceOnly, Category="Battle")
     int32 Score = 0;
 
+    UPROPERTY(Transient)
     TObjectPtr<UStaticMesh> CubeMesh;
+
     FTimerHandle NextWaveTimer;
 
     void BuildBattlefield();
