@@ -5,9 +5,12 @@
 #include "Engine/DataAsset.h"
 #include "WPBattlePresentationSet.generated.h"
 
+class UWPAirSupportVisualProfile;
+class UWPEmplacementVisualProfile;
 class UWPEnvironmentVisualProfile;
 class UWPExplosionPresentationProfile;
 class UWPInfantryLoadoutProfile;
+class UWPLightVehicleVisualProfile;
 class UWPSmokePresentationProfile;
 class UWPVehicleVisualProfile;
 
@@ -47,6 +50,33 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Vehicles")
     TObjectPtr<UWPVehicleVisualProfile> AxisVehicle;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Light Vehicles")
+    TObjectPtr<UWPLightVehicleVisualProfile> AlliedTransport;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Light Vehicles")
+    TObjectPtr<UWPLightVehicleVisualProfile> AlliedArmoredCar;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Light Vehicles")
+    TObjectPtr<UWPLightVehicleVisualProfile> AxisArmoredCar;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Emplacements")
+    TObjectPtr<UWPEmplacementVisualProfile> AlliedHMG;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Emplacements")
+    TObjectPtr<UWPEmplacementVisualProfile> AlliedATGun;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Emplacements")
+    TObjectPtr<UWPEmplacementVisualProfile> AxisHMG;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Emplacements")
+    TObjectPtr<UWPEmplacementVisualProfile> AxisATGun;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Aircraft")
+    TObjectPtr<UWPAirSupportVisualProfile> AlliedAircraft;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Aircraft")
+    TObjectPtr<UWPAirSupportVisualProfile> AxisAircraft;
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Environment")
     TObjectPtr<UWPEnvironmentVisualProfile> Environment;
 
@@ -84,6 +114,43 @@ public:
         return Team == EWPCombatTeam::Allies
             ? AlliedVehicle.Get()
             : AxisVehicle.Get();
+    }
+
+    UWPLightVehicleVisualProfile* GetLightVehicleVisual(
+        EWPCombatTeam Team,
+        EWPLightVehicleType Type) const
+    {
+        if (Team == EWPCombatTeam::Allies)
+        {
+            return Type == EWPLightVehicleType::TransportTruck
+                ? AlliedTransport.Get()
+                : AlliedArmoredCar.Get();
+        }
+
+        return AxisArmoredCar.Get();
+    }
+
+    UWPEmplacementVisualProfile* GetEmplacementVisual(
+        EWPCombatTeam Team,
+        EWPEmplacementType Type) const
+    {
+        if (Team == EWPCombatTeam::Allies)
+        {
+            return Type == EWPEmplacementType::AntiTankGun
+                ? AlliedATGun.Get()
+                : AlliedHMG.Get();
+        }
+
+        return Type == EWPEmplacementType::AntiTankGun
+            ? AxisATGun.Get()
+            : AxisHMG.Get();
+    }
+
+    UWPAirSupportVisualProfile* GetAircraftVisual(EWPCombatTeam Team) const
+    {
+        return Team == EWPCombatTeam::Allies
+            ? AlliedAircraft.Get()
+            : AxisAircraft.Get();
     }
 
     UWPExplosionPresentationProfile* GetFragExplosion() const
