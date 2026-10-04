@@ -8,10 +8,13 @@
 
 class APlayerController;
 class AWPArtilleryStrike;
+class AWPAirSupportAircraft;
 class AWPArmoredVehicle;
 class AWPCaptureObjective;
 class AWPCoverPoint;
 class AWPEnemySoldier;
+class AWPGunEmplacement;
+class AWPLightVehicle;
 class AWPSoldierCharacter;
 class UAudioComponent;
 class UMaterialInterface;
@@ -42,6 +45,11 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Battle|Support")
     bool RequestArtillery(AWPSoldierCharacter* Caller, const FVector& TargetLocation);
+
+    UFUNCTION(BlueprintCallable, Category="Battle|Support")
+    bool RequestAirSupport(
+        AWPSoldierCharacter* Caller,
+        const FVector& TargetLocation);
 
     void ReportEnemyContact(EWPCombatTeam ReportingTeam, AWPSoldierCharacter* Contact);
     bool GetRecentEnemyContactLocation(
@@ -111,6 +119,12 @@ public:
     UFUNCTION(BlueprintPure, Category="Battle|Support")
     float GetArtilleryCooldownRemaining() const;
 
+    UFUNCTION(BlueprintPure, Category="Battle|Support")
+    int32 GetAirSupportCharges() const { return AirSupportCharges; }
+
+    UFUNCTION(BlueprintPure, Category="Battle|Support")
+    float GetAirSupportCooldownRemaining() const;
+
     UFUNCTION(BlueprintPure, Category="Battle")
     bool IsFinalCounterattack() const { return bFinalCounterattack; }
 
@@ -157,6 +171,15 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="Battle|Vehicles")
     TSubclassOf<AWPArmoredVehicle> ArmoredVehicleClass;
 
+    UPROPERTY(EditDefaultsOnly, Category="Battle|Vehicles")
+    TSubclassOf<AWPLightVehicle> LightVehicleClass;
+
+    UPROPERTY(EditDefaultsOnly, Category="Battle|Emplacements")
+    TSubclassOf<AWPGunEmplacement> GunEmplacementClass;
+
+    UPROPERTY(EditDefaultsOnly, Category="Battle|Air Support")
+    TSubclassOf<AWPAirSupportAircraft> AirSupportClass;
+
     UPROPERTY(EditDefaultsOnly, Category="Battle")
     float InterWaveDelay = 4.5f;
 
@@ -165,6 +188,15 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category="Battle|Support")
     float ArtilleryCooldownSeconds = 42.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Battle|Air Support")
+    float AirSupportCooldownSeconds = 70.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Battle|Air Support")
+    float AmbientFlybyMinIntervalSeconds = 42.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Battle|Air Support")
+    float AmbientFlybyMaxIntervalSeconds = 76.0f;
 
     UPROPERTY(VisibleInstanceOnly, Category="Battle")
     int32 Wave = 1;
@@ -199,6 +231,9 @@ private:
     UPROPERTY(VisibleInstanceOnly, Category="Battle|Support")
     int32 ArtilleryCharges = 2;
 
+    UPROPERTY(VisibleInstanceOnly, Category="Battle|Air Support")
+    int32 AirSupportCharges = 2;
+
     UPROPERTY(VisibleInstanceOnly, Category="Battle")
     bool bFinalCounterattack = false;
 
@@ -207,6 +242,12 @@ private:
 
     UPROPERTY(VisibleInstanceOnly, Category="Battle")
     bool bAxisArmorSpawned = false;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Battle")
+    bool bAlliedLightVehiclesSpawned = false;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Battle")
+    bool bAxisLightVehiclesSpawned = false;
 
     UPROPERTY(VisibleInstanceOnly, Category="Battle")
     bool bBattleWon = false;
@@ -229,6 +270,7 @@ private:
     int32 PendingFriendlyReplacements = 0;
     int32 ReplacementRoleCursor = 0;
     float NextArtilleryAvailableTime = 0.0f;
+    float NextAirSupportAvailableTime = 0.0f;
     TWeakObjectPtr<APlayerController> PendingPlayerRespawnController;
     FVector AlliedSharedContactLocation = FVector::ZeroVector;
     FVector AxisSharedContactLocation = FVector::ZeroVector;
@@ -244,6 +286,7 @@ private:
     FTimerHandle NextWaveTimer;
     FTimerHandle FriendlyReplacementTimer;
     FTimerHandle DistantBattleTimer;
+    FTimerHandle AmbientFlybyTimer;
 
     UPROPERTY(Transient)
     TObjectPtr<UAudioComponent> AmbientAudioComponent;
@@ -258,6 +301,8 @@ private:
     void ScatterEnvironmentProps();
     void BuildObjectives();
     void BuildCoverPoints();
+    void SpawnInitialCombinedArms();
+    void SpawnDefensiveEmplacements();
     void SpawnFriendlySquad();
     AWPSoldierCharacter* SpawnFriendlySoldier(
         const FVector& Location,
@@ -274,6 +319,28 @@ private:
         EWPCombatTeam Team,
         const FVector& Location,
         const FRotator& Rotation);
+
+    AWPLightVehicle* SpawnLightVehicle(
+        EWPCombatTeam Team,
+        EWPLightVehicleType Type,
+        const FVector& Location,
+        const FRotator& Rotation);
+
+    AWPGunEmplacement* SpawnGunEmplacement(
+        EWPCombatTeam Team,
+        EWPEmplacementType Type,
+        const FVector& Location,
+        const FRotator& Rotation);
+
+    AWPAirSupportAircraft* SpawnAirSupport(
+        EWPCombatTeam Team,
+        const FVector& TargetLocation,
+        EWPAirSupportMission Mission);
+
+    void ScheduleAmbientFlyby();
+
+    UFUNCTION()
+    void SpawnAmbientFlyby();
 
     bool TransferPlayerControl(AWPSoldierCharacter* FallenSoldier);
     void QueueFriendlyReplacement(APlayerController* ControllerNeedingPawn);
