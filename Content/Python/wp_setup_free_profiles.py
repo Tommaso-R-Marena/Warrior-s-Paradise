@@ -433,6 +433,108 @@ def configure_vehicle_presentation(asset) -> None:
             set_prop(asset, property_name, value)
 
 
+def configure_soldier_presentation(asset) -> None:
+    hit_effect = find_asset(
+        unreal.NiagaraSystem,
+        ("blood", "impact"),
+        ("flesh", "impact"),
+        ("hit", "blood"),
+    )
+    death_effect = find_asset(
+        unreal.NiagaraSystem,
+        ("blood", "death"),
+        ("death", "blood"),
+        ("blood",),
+    )
+
+    sounds = {
+        "pain_sound": find_asset(
+            unreal.SoundBase,
+            ("soldier", "pain"),
+            ("pain", "voice"),
+            ("pain",),
+        ),
+        "downed_sound": find_asset(
+            unreal.SoundBase,
+            ("downed",),
+            ("wounded", "voice"),
+        ),
+        "revive_sound": find_asset(
+            unreal.SoundBase,
+            ("revive",),
+            ("medical",),
+        ),
+        "death_sound": find_asset(
+            unreal.SoundBase,
+            ("soldier", "death"),
+            ("death", "voice"),
+        ),
+        "melee_sound": find_asset(
+            unreal.SoundBase,
+            ("melee", "hit"),
+            ("punch",),
+            ("body", "impact"),
+        ),
+        "bandage_start_sound": find_asset(
+            unreal.SoundBase,
+            ("bandage",),
+            ("cloth", "medical"),
+            ("cloth",),
+        ),
+        "bandage_complete_sound": find_asset(
+            unreal.SoundBase,
+            ("bandage", "complete"),
+            ("medical", "complete"),
+        ),
+    }
+
+    montages = {
+        "hit_react_montage": find_asset(
+            unreal.AnimMontage,
+            ("hit", "react"),
+            ("hitreact",),
+        ),
+        "downed_montage": find_asset(
+            unreal.AnimMontage,
+            ("downed",),
+            ("wounded",),
+        ),
+        "revive_montage": find_asset(
+            unreal.AnimMontage,
+            ("revive",),
+            ("get", "up"),
+        ),
+        "death_montage": find_asset(
+            unreal.AnimMontage,
+            ("death",),
+            ("die",),
+        ),
+        "melee_montage": find_asset(
+            unreal.AnimMontage,
+            ("melee",),
+            ("punch",),
+        ),
+        "bandage_montage": find_asset(
+            unreal.AnimMontage,
+            ("bandage",),
+            ("medical",),
+        ),
+    }
+
+    if hit_effect:
+        set_prop(asset, "hit_effect", hit_effect)
+    if death_effect:
+        set_prop(asset, "death_effect", death_effect)
+
+    for property_name, value in sounds.items():
+        if value:
+            set_prop(asset, property_name, value)
+
+    for property_name, value in montages.items():
+        if value:
+            set_prop(asset, property_name, value)
+
+
 def configure_loadout(
     asset,
     *,
@@ -440,6 +542,7 @@ def configure_loadout(
     weapon,
     visuals,
     presentation,
+    soldier_presentation,
     frag: int,
     smoke: int,
     medkits: int,
@@ -448,6 +551,7 @@ def configure_loadout(
     set_prop(asset, "weapon_definition", weapon)
     set_prop(asset, "visual_profile", visuals)
     set_prop(asset, "weapon_presentation_profile", presentation)
+    set_prop(asset, "soldier_presentation_profile", soldier_presentation)
     set_prop(asset, "frag_grenades", frag)
     set_prop(asset, "smoke_grenades", smoke)
     set_prop(asset, "medkits", medkits)
@@ -638,6 +742,12 @@ def main() -> None:
     configure_weapon_presentation(rifle_presentation, automatic=False)
     configure_weapon_presentation(smg_presentation, automatic=True)
 
+    soldier_presentation = create_or_load_data_asset(
+        "DA_WP_Presentation_Soldier",
+        "WPSoldierPresentationProfile",
+    )
+    configure_soldier_presentation(soldier_presentation)
+
     loadout_specs = {
         "AlliedRifleman": ("lee", rifle_presentation, 2, 1, 1),
         "AlliedAssault": ("ppsh", smg_presentation, 1, 1, 1),
@@ -661,6 +771,7 @@ def main() -> None:
             weapon=weapons[weapon_key],
             visuals=visuals[weapon_key],
             presentation=presentation,
+            soldier_presentation=soldier_presentation,
             frag=frag,
             smoke=smoke,
             medkits=medkits,
@@ -805,6 +916,7 @@ def main() -> None:
         *visuals.values(),
         rifle_presentation,
         smg_presentation,
+        soldier_presentation,
         *loadouts.values(),
         allied_vehicle,
         axis_vehicle,
