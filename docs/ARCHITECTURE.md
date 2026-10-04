@@ -25,6 +25,8 @@ Every playable body uses the AI-capable subclass `AWPEnemySoldier`, so possessio
 Own data-driven weapon simulation:
 
 - cadence;
+- automatic / semi-automatic / manual-action behavior;
+- per-weapon bolt/pump cycle timing and cycle presentation events;
 - magazine/reserve state;
 - reload;
 - ADS state;
