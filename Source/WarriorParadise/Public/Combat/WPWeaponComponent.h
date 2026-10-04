@@ -39,6 +39,9 @@ public:
     UFUNCTION(BlueprintCallable, Category="Weapon")
     void Configure(float InDamage, float InRoundsPerMinute, float InSpreadDegrees);
 
+    UFUNCTION(BlueprintCallable, Category="Weapon")
+    void AddReserveAmmo(int32 Amount);
+
     UFUNCTION(BlueprintPure, Category="Weapon")
     int32 GetAmmoInMagazine() const { return AmmoInMagazine; }
 
@@ -87,6 +90,9 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category="Weapon|Handling")
     int32 StartingReserveAmmo = 150;
+
+    UPROPERTY(EditDefaultsOnly, Category="Weapon|Handling")
+    int32 MaximumReserveAmmo = 240;
 
     UPROPERTY(EditDefaultsOnly, Category="Weapon|Handling")
     float ReloadDuration = 1.9f;
