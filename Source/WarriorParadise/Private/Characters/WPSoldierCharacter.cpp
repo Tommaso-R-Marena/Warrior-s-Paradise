@@ -957,7 +957,10 @@ void AWPSoldierCharacter::LookUp(float Value)
 
 void AWPSoldierCharacter::StartSprint()
 {
-    if (!IsCombatCapable() || Stamina <= 8.0f)
+    if (!IsCombatCapable() ||
+        Stamina <= 8.0f ||
+        (SuppressionComponent &&
+         SuppressionComponent->IsPinned()))
     {
         return;
     }
