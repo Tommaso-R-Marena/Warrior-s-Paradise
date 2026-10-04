@@ -6,6 +6,7 @@
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Game/WPBattlefieldDirector.h"
+#include "Game/WPGameUserSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Vehicles/WPArmoredVehicle.h"
 #include "Vehicles/WPLightVehicle.h"
@@ -55,6 +56,8 @@ void AWPCombatHUD::DrawHUD()
 
     const float Width = Canvas->SizeX;
     const float Height = Canvas->SizeY;
+
+    DrawGraphicsReadout(Width);
 
     APawn* PlayerPawn =
         UGameplayStatics::GetPlayerPawn(this, 0);
@@ -109,6 +112,33 @@ void AWPCombatHUD::DrawHUD()
             Height * 0.5f);
         DrawEmplacementReadout(Width, Height);
     }
+}
+
+void AWPCombatHUD::DrawGraphicsReadout(float Width)
+{
+    if (!GEngine)
+    {
+        return;
+    }
+
+    const UWPGameUserSettings* Settings =
+        UWPGameUserSettings::Get();
+
+    if (!Settings)
+    {
+        return;
+    }
+
+    DrawText(
+        FString::Printf(
+            TEXT("GFX %s   F10 PRESET   F9 AUTO"),
+            *Settings->GetGraphicsPresetLabel()),
+        FLinearColor(0.72f, 0.82f, 0.92f, 0.82f),
+        Width - 225.0f,
+        22.0f,
+        GEngine->GetSmallFont(),
+        0.82f,
+        false);
 }
 
 void AWPCombatHUD::DrawCrosshair(float CenterX, float CenterY)
