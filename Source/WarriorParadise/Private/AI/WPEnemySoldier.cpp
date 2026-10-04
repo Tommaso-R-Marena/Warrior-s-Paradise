@@ -3,6 +3,7 @@
 #include "Combat/WPWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "EngineUtils.h"
 #include "Game/WPBattlefieldDirector.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -11,6 +12,8 @@
 AWPEnemySoldier::AWPEnemySoldier()
 {
     PrimaryActorTick.bCanEverTick = true;
+    SetCombatTeam(EWPCombatTeam::Axis);
+
     GetCharacterMovement()->bRunPhysicsWithNoController = true;
     GetCharacterMovement()->MaxWalkSpeed = 315.0f;
 
@@ -52,8 +55,63 @@ void AWPEnemySoldier::BeginPlay()
 {
     Super::BeginPlay();
 
-    GetWeaponComponent()->Configure(9.0f, 360.0f, 4.2f);
-    GetHealthComponent()->OnDeath.AddDynamic(this, &AWPEnemySoldier::HandleEnemyDeath);
+    if (GetCombatTeam() == EWPCombatTeam::Allies)
+    {
+        GetWeaponComponent()->Configure(14.0f, 430.0f, 2.7f);
+        GetCharacterMovement()->MaxWalkSpeed = 335.0f;
+    }
+    else
+    {
+        GetWeaponComponent()->Configure(9.0f, 360.0f, 4.2f);
+        GetCharacterMovement()->MaxWalkSpeed = 315.0f;
+    }
+
+    GetHealthComponent()->OnDeath.AddDynamic(this, &AWPEnemySoldier::HandleSoldierDeath);
+}
+
+AWPSoldierCharacter* AWPEnemySoldier::FindBestTarget() const
+{
+    if (!GetWorld())
+    {
+        return nullptr;
+    }
+
+    AWPSoldierCharacter* BestTarget = nullptr;
+    float BestScore = TNumericLimits<float>::Max();
+
+    for (TActorIterator<AWPSoldierCharacter> It(GetWorld()); It; ++It)
+    {
+        AWPSoldierCharacter* Candidate = *It;
+        if (!Candidate || Candidate == this)
+        {
+            continue;
+        }
+
+        if (Candidate->GetCombatTeam() == GetCombatTeam())
+        {
+            continue;
+        }
+
+        if (!Candidate->GetHealthComponent() || Candidate->GetHealthComponent()->IsDead())
+        {
+            continue;
+        }
+
+        float Score = FVector::DistSquared2D(GetActorLocation(), Candidate->GetActorLocation());
+
+        if (GetCombatTeam() == EWPCombatTeam::Axis && Candidate->IsPlayerControlled())
+        {
+            Score *= 0.82f;
+        }
+
+        if (Score < BestScore)
+        {
+            BestScore = Score;
+            BestTarget = Candidate;
+        }
+    }
+
+    return BestTarget;
 }
 
 bool AWPEnemySoldier::HasLineOfSightTo(const AActor* Target) const
@@ -87,9 +145,22 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         return;
     }
 
-    ACharacter* Target = UGameplayStatics::GetPlayerCharacter(this, 0);
+    const float Time = GetWorld()->GetTimeSeconds();
+
+    if (Time >= NextTargetSearchTime ||
+        !CurrentTarget.IsValid() ||
+        !CurrentTarget->GetHealthComponent() ||
+        CurrentTarget->GetHealthComponent()->IsDead())
+    {
+        CurrentTarget = FindBestTarget();
+        NextTargetSearchTime = Time + RetargetInterval + FMath::FRandRange(0.0f, 0.18f);
+    }
+
+    AWPSoldierCharacter* Target = CurrentTarget.Get();
     if (!Target)
     {
+        GetWeaponComponent()->StopFire();
+        bPulseFiring = false;
         return;
     }
 
@@ -111,8 +182,11 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
     {
         AddMovementInput(-FlatDirection, 0.35f);
     }
-
-    const float Time = GetWorld()->GetTimeSeconds();
+    else
+    {
+        const FVector Strafe(-FlatDirection.Y, FlatDirection.X, 0.0f);
+        AddMovementInput(Strafe, FMath::Sin(Time * 0.85f + GetUniqueID()) * 0.22f);
+    }
 
     if (bPulseFiring && Time >= StopFireTime)
     {
@@ -133,13 +207,13 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
     }
 }
 
-void AWPEnemySoldier::HandleEnemyDeath()
+void AWPEnemySoldier::HandleSoldierDeath()
 {
     GetWeaponComponent()->StopFire();
 
     if (AWPBattlefieldDirector* Director = Cast<AWPBattlefieldDirector>(
         UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass())))
     {
-        Director->NotifyEnemyKilled(this);
+        Director->NotifySoldierKilled(this);
     }
 }
