@@ -1,6 +1,7 @@
 #include "Characters/WPSoldierCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "Combat/WPHealthComponent.h"
+#include "Combat/WPSuppressionComponent.h"
 #include "Combat/WPWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -29,6 +30,7 @@ AWPSoldierCharacter::AWPSoldierCharacter()
 
     HealthComponent = CreateDefaultSubobject<UWPHealthComponent>(TEXT("HealthComponent"));
     WeaponComponent = CreateDefaultSubobject<UWPWeaponComponent>(TEXT("WeaponComponent"));
+    SuppressionComponent = CreateDefaultSubobject<UWPSuppressionComponent>(TEXT("SuppressionComponent"));
 
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeAsset(TEXT("/Engine/BasicShapes/Cube.Cube"));
     static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderAsset(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
