@@ -6,6 +6,9 @@ param(
     [switch]$ValidateOnly,
     [switch]$Clean,
     [switch]$BuildGameTarget,
+    [switch]$HeadlessSmoke,
+    [ValidateRange(5, 300)]
+    [int]$HeadlessSmokeSeconds = 15,
     [switch]$Package,
     [string]$ArchiveDirectory = ""
 )
@@ -223,6 +226,31 @@ if ($BuildGameTarget) {
         $ProjectFile,
         "-WaitMutex"
     )
+}
+
+if ($HeadlessSmoke) {
+    $EditorCmd = Join-Path $ResolvedEngineRoot "Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
+
+    if (-not (Test-Path $EditorCmd)) {
+        throw "UnrealEditor-Cmd.exe was not found: $EditorCmd"
+    }
+
+    Write-Step "Running GPU-less NullRHI gameplay smoke test"
+    Invoke-Checked -Executable $EditorCmd -Arguments @(
+        $ProjectFile,
+        "/Engine/Maps/Entry",
+        "-game",
+        "-nullrhi",
+        "-nosound",
+        "-unattended",
+        "-nopause",
+        "-stdout",
+        "-FullStdOutLogOutput",
+        "-WPHeadlessSmoke",
+        "-WPSmokeSeconds=$HeadlessSmokeSeconds"
+    )
+
+    Write-Host "GPU-less gameplay smoke test passed." -ForegroundColor Green
 }
 
 if ($Package) {
