@@ -1,11 +1,7 @@
 name: Validate project
 
 on:
-  push:
-    branches:
-      - main
-      - "feat/**"
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
