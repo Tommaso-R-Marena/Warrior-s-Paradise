@@ -1,9 +1,10 @@
 #include "Game/WPGameUserSettings.h"
 #include "Engine/Engine.h"
+#include "HAL/IConsoleManager.h"
 
 namespace
 {
-constexpr int32 CurrentWPSettingsVersion = 1;
+constexpr int32 CurrentWPSettingsVersion = 2;
 }
 
 UWPGameUserSettings::UWPGameUserSettings()
@@ -87,18 +88,56 @@ void UWPGameUserSettings::ApplyManualQuality(
     SetDynamicResolutionEnabled(false);
 }
 
+void UWPGameUserSettings::ApplyMinimalRenderingOverrides(bool bEnable)
+{
+    struct FCVarSetting
+    {
+        const TCHAR* Name;
+        int32 MinimalValue;
+        int32 NormalValue;
+    };
+
+    static const FCVarSetting Settings[] =
+    {
+        { TEXT("r.DynamicGlobalIlluminationMethod"), 0, 1 },
+        { TEXT("r.ReflectionMethod"), 0, 1 },
+        { TEXT("r.Shadow.Virtual.Enable"), 0, 1 },
+        { TEXT("r.VolumetricCloud"), 0, 1 },
+        { TEXT("r.AntiAliasingMethod"), 1, 4 }
+    };
+
+    for (const FCVarSetting& Setting : Settings)
+    {
+        if (IConsoleVariable* Variable =
+            IConsoleManager::Get().FindConsoleVariable(Setting.Name))
+        {
+            Variable->Set(
+                bEnable ? Setting.MinimalValue : Setting.NormalValue,
+                ECVF_SetByGameSetting);
+        }
+    }
+}
+
 void UWPGameUserSettings::ApplyGraphicsPreset(
     EWPGraphicsPreset NewPreset,
     bool bSaveSettings)
 {
     if (NewPreset == EWPGraphicsPreset::Auto)
     {
+        ApplyMinimalRenderingOverrides(false);
         RunAutoBenchmark();
         return;
     }
 
+    ApplyMinimalRenderingOverrides(
+        NewPreset == EWPGraphicsPreset::Minimal);
+
     switch (NewPreset)
     {
+        case EWPGraphicsPreset::Minimal:
+            ApplyManualQuality(0, 50.0f, 30.0f);
+            break;
+
         case EWPGraphicsPreset::Low:
             ApplyManualQuality(0, 67.0f, 60.0f);
             break;
@@ -134,10 +173,14 @@ void UWPGameUserSettings::ApplyGraphicsPreset(
 
 EWPGraphicsPreset UWPGameUserSettings::CycleGraphicsPreset()
 {
-    EWPGraphicsPreset NextPreset = EWPGraphicsPreset::Low;
+    EWPGraphicsPreset NextPreset = EWPGraphicsPreset::Minimal;
 
     switch (GraphicsPreset)
     {
+        case EWPGraphicsPreset::Minimal:
+            NextPreset = EWPGraphicsPreset::Low;
+            break;
+
         case EWPGraphicsPreset::Low:
             NextPreset = EWPGraphicsPreset::Medium;
             break;
@@ -153,7 +196,7 @@ EWPGraphicsPreset UWPGameUserSettings::CycleGraphicsPreset()
         case EWPGraphicsPreset::Ultra:
         case EWPGraphicsPreset::Auto:
         default:
-            NextPreset = EWPGraphicsPreset::Low;
+            NextPreset = EWPGraphicsPreset::Minimal;
             break;
     }
 
@@ -165,6 +208,9 @@ FString UWPGameUserSettings::GetGraphicsPresetLabel() const
 {
     switch (GraphicsPreset)
     {
+        case EWPGraphicsPreset::Minimal:
+            return TEXT("MINIMAL");
+
         case EWPGraphicsPreset::Low:
             return TEXT("LOW");
 
