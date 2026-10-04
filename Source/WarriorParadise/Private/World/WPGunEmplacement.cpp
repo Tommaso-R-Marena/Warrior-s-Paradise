@@ -2,6 +2,7 @@
 #include "Characters/WPSoldierCharacter.h"
 #include "Combat/WPBallisticProjectile.h"
 #include "Combat/WPHealthComponent.h"
+#include "Combat/WPSmokeCloud.h"
 #include "Combat/WPWeaponComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/InputComponent.h"
@@ -260,13 +261,6 @@ bool AWPGunEmplacement::HasLineOfSightTo(const AActor* Target) const
         return false;
     }
 
-    FHitResult Hit;
-    FCollisionQueryParams Params(
-        SCENE_QUERY_STAT(WPEmplacementLOS),
-        true,
-        this);
-    Params.AddIgnoredActor(this);
-
     const FVector Start =
         GunVisual->GetComponentLocation() +
         FVector(0.0f, 0.0f, 10.0f);
@@ -274,6 +268,22 @@ bool AWPGunEmplacement::HasLineOfSightTo(const AActor* Target) const
     const FVector End =
         Target->GetActorLocation() +
         FVector(0.0f, 0.0f, 50.0f);
+
+    for (TActorIterator<AWPSmokeCloud> It(GetWorld()); It; ++It)
+    {
+        const AWPSmokeCloud* Smoke = *It;
+        if (Smoke && Smoke->BlocksSightBetween(Start, End))
+        {
+            return false;
+        }
+    }
+
+    FHitResult Hit;
+    FCollisionQueryParams Params(
+        SCENE_QUERY_STAT(WPEmplacementLOS),
+        true,
+        this);
+    Params.AddIgnoredActor(this);
 
     if (!GetWorld()->LineTraceSingleByChannel(
         Hit,
