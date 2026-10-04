@@ -7,6 +7,7 @@
 
 class USphereComponent;
 class UProjectileMovementComponent;
+class UWPExplosionPresentationProfile;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWPExplosionSignature, FVector, Location);
 
@@ -23,6 +24,12 @@ public:
 
     void InitializeGrenade(EWPCombatTeam InTeam, const FVector& LaunchVelocity);
 
+    UFUNCTION(BlueprintCallable, Category="Grenade|Presentation")
+    void SetPresentationProfile(UWPExplosionPresentationProfile* NewProfile)
+    {
+        PresentationProfile = NewProfile;
+    }
+
 protected:
     virtual void BeginPlay() override;
 
@@ -32,6 +39,9 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category="Grenade")
     TObjectPtr<UProjectileMovementComponent> Movement;
+
+    UPROPERTY(EditDefaultsOnly, Category="Grenade|Presentation")
+    TObjectPtr<UWPExplosionPresentationProfile> PresentationProfile;
 
     UPROPERTY(EditDefaultsOnly, Category="Grenade", meta=(ClampMin="0.1"))
     float FuseSeconds = 3.1f;
