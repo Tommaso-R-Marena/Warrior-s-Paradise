@@ -540,33 +540,56 @@ FVector AWPArmoredVehicle::GetTargetAimPoint(const AActor* Target) const
 
 void AWPArmoredVehicle::FireCannon(AActor* Target)
 {
-    if (!Target || !GetWorld() || !TankShellClass)
+    if (!Target)
     {
         return;
     }
 
-    const FVector MuzzleLocation = BarrelVisual->GetComponentLocation() + BarrelVisual->GetForwardVector() * 120.0f;
-    const FVector AimDirection = (GetTargetAimPoint(Target) - MuzzleLocation).GetSafeNormal();
+    const EWPArmorShellType ShellType =
+        Cast<AWPArmoredVehicle>(Target)
+            ? EWPArmorShellType::ArmorPiercing
+            : EWPArmorShellType::HighExplosive;
+
+    FireCannonAt(
+        GetTargetAimPoint(Target),
+        ShellType);
+}
+
+void AWPArmoredVehicle::FireCannonAt(
+    const FVector& TargetLocation,
+    EWPArmorShellType ShellType)
+{
+    if (!GetWorld() ||
+        !TankShellClass ||
+        bDestroyed ||
+        TurretHealth <= 0.0f)
+    {
+        return;
+    }
+
+    const FVector MuzzleLocation =
+        BarrelVisual->GetComponentLocation() +
+        BarrelVisual->GetForwardVector() * 120.0f;
+
+    const FVector AimDirection =
+        (TargetLocation - MuzzleLocation).GetSafeNormal();
 
     FActorSpawnParameters SpawnParameters;
     SpawnParameters.Owner = this;
     SpawnParameters.Instigator = this;
-    SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    SpawnParameters.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-    if (AWPTankShell* Shell = GetWorld()->SpawnActor<AWPTankShell>(
-        TankShellClass,
-        MuzzleLocation,
-        AimDirection.Rotation(),
-        SpawnParameters))
+    if (AWPTankShell* Shell =
+        GetWorld()->SpawnActor<AWPTankShell>(
+            TankShellClass,
+            MuzzleLocation,
+            AimDirection.Rotation(),
+            SpawnParameters))
     {
         Shell->OnImpact.AddUniqueDynamic(
             this,
             &AWPArmoredVehicle::HandleTankShellImpact);
-
-        const EWPArmorShellType ShellType =
-            Cast<AWPArmoredVehicle>(Target)
-                ? EWPArmorShellType::ArmorPiercing
-                : EWPArmorShellType::HighExplosive;
 
         Shell->InitializeShell(
             CombatTeam,
@@ -612,25 +635,45 @@ void AWPArmoredVehicle::FireCannon(AActor* Target)
 
 void AWPArmoredVehicle::FireMachineGun(AActor* Target)
 {
-    if (!Target || !GetWorld())
+    if (!Target)
     {
         return;
     }
 
-    const FVector MuzzleLocation = TurretVisual->GetComponentLocation() + TurretVisual->GetForwardVector() * 120.0f;
-    FVector AimDirection = (GetTargetAimPoint(Target) - MuzzleLocation).GetSafeNormal();
-    AimDirection = FMath::VRandCone(AimDirection, FMath::DegreesToRadians(1.0f));
+    FireMachineGunAt(GetTargetAimPoint(Target));
+}
+
+void AWPArmoredVehicle::FireMachineGunAt(
+    const FVector& TargetLocation)
+{
+    if (!GetWorld() || bDestroyed)
+    {
+        return;
+    }
+
+    const FVector MuzzleLocation =
+        TurretVisual->GetComponentLocation() +
+        TurretVisual->GetForwardVector() * 120.0f;
+
+    FVector AimDirection =
+        (TargetLocation - MuzzleLocation).GetSafeNormal();
+
+    AimDirection = FMath::VRandCone(
+        AimDirection,
+        FMath::DegreesToRadians(1.0f));
 
     FActorSpawnParameters SpawnParameters;
     SpawnParameters.Owner = this;
     SpawnParameters.Instigator = this;
-    SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    SpawnParameters.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-    if (AWPBallisticProjectile* Projectile = GetWorld()->SpawnActor<AWPBallisticProjectile>(
-        AWPBallisticProjectile::StaticClass(),
-        MuzzleLocation,
-        AimDirection.Rotation(),
-        SpawnParameters))
+    if (AWPBallisticProjectile* Projectile =
+        GetWorld()->SpawnActor<AWPBallisticProjectile>(
+            AWPBallisticProjectile::StaticClass(),
+            MuzzleLocation,
+            AimDirection.Rotation(),
+            SpawnParameters))
     {
         Projectile->InitializeProjectile(
             AimDirection,
@@ -687,6 +730,21 @@ void AWPArmoredVehicle::Tick(float DeltaSeconds)
     }
 
     const float Time = GetWorld()->GetTimeSeconds();
+
+    if (IsPlayerControlled())
+    {
+        if (bPlayerMachineGunFiring &&
+            Time >= NextMachineGunTime)
+        {
+            FireMachineGunAt(
+                GetPlayerAimPoint(MachineGunRangeCm));
+
+            NextMachineGunTime =
+                Time + MachineGunIntervalSeconds;
+        }
+
+        return;
+    }
 
     if (!CurrentTarget.IsValid() && Time >= NextTargetScanTime)
     {
@@ -1087,6 +1145,19 @@ void AWPArmoredVehicle::DestroyVehicle()
     }
 
     bDestroyed = true;
+    bPlayerMachineGunFiring = false;
+
+    if (AWPSoldierCharacter* Soldier = CrewSoldier.Get())
+    {
+        if (APlayerController* PlayerController =
+            Cast<APlayerController>(GetController()))
+        {
+            PlayerController->Possess(Soldier);
+        }
+
+        RestoreCrewSoldier(true);
+        CrewSoldier.Reset();
+    }
 
     if (VisualProfile)
     {
