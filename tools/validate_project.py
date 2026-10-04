@@ -18,6 +18,9 @@ REQUIRED = [
     "Source/WarriorParadise/Public/Game/WPPlayerController.h",
     "Source/WarriorParadise/Private/Game/WPPlayerController.cpp",
     "docs/SCALABILITY.md",
+    "docs/GPU_LESS_MODE.md",
+    "Source/WarriorParadise/Public/Game/WPRuntimeMode.h",
+    "Source/WarriorParadise/Private/Game/WPRuntimeMode.cpp",
     "Source/WarriorParadise.Target.cs",
     "Source/WarriorParadiseEditor.Target.cs",
     "Source/WarriorParadise/WarriorParadise.Build.cs",
@@ -339,6 +342,14 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Private/Game/WPRuntimeMode.cpp", "WPHeadlessSmoke"),
+        ("Source/WarriorParadise/Private/Game/WPRuntimeMode.cpp", "nullrhi"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "StartHeadlessSmokeTest"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "RequestExitWithStatus"),
+        ("Source/WarriorParadise/Private/Game/WPGameUserSettings.cpp", "EWPGraphicsPreset::Minimal"),
+        ("Source/WarriorParadise/Private/Game/WPGameUserSettings.cpp", "r.DynamicGlobalIlluminationMethod"),
+        ("tools/build_local.ps1", "-nullrhi"),
+        ("tools/build_local.ps1", "WPIntegratedGraphics"),
         ("Source/WarriorParadise/Private/Combat/WPWeaponComponent.cpp", "SpawnActor<AWPBallisticProjectile>"),
         ("Source/WarriorParadise/Private/Combat/WPWeaponComponent.cpp", "ApplyWeaponDefinition"),
         ("Source/WarriorParadise/Private/Combat/WPWeaponComponent.cpp", "AmmoInMagazine = MagazineSize"),
@@ -487,7 +498,7 @@ def main() -> None:
                 fail(f"{marker} marker found in {path.relative_to(ROOT)}")
         source_checked += 1
 
-    if source_checked < 71:
+    if source_checked < 73:
         fail(f"unexpectedly small source tree: {source_checked} source files")
 
     python_checked = validate_python()
