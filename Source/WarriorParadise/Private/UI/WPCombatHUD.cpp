@@ -43,6 +43,20 @@ const TCHAR* SquadOrderLabel(EWPSquadOrder Order)
             return TEXT("ATTACK");
     }
 }
+
+const TCHAR* SuppressionStateLabel(EWPSuppressionState State)
+{
+    switch (State)
+    {
+        case EWPSuppressionState::Pinned:
+            return TEXT("PINNED");
+        case EWPSuppressionState::Pressured:
+            return TEXT("PRESSURED");
+        case EWPSuppressionState::Steady:
+        default:
+            return TEXT("STEADY");
+    }
+}
 }
 
 void AWPCombatHUD::DrawHUD()
@@ -169,10 +183,16 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
     const int32 CurrentHealth = Health ? FMath::CeilToInt(Health->GetHealth()) : 0;
     const int32 CurrentAmmo = Weapon ? Weapon->GetAmmoInMagazine() : 0;
     const int32 Reserve = Weapon ? Weapon->GetReserveAmmo() : 0;
-    const int32 SuppressionPercent = Soldier->GetSuppressionComponent()
+    UWPSuppressionComponent* SuppressionComponent =
+        Soldier->GetSuppressionComponent();
+    const int32 SuppressionPercent = SuppressionComponent
         ? FMath::RoundToInt(
-            Soldier->GetSuppressionComponent()->GetNormalizedSuppression() * 100.0f)
+            SuppressionComponent->GetNormalizedSuppression() * 100.0f)
         : 0;
+    const EWPSuppressionState SuppressionState =
+        SuppressionComponent
+            ? SuppressionComponent->GetSuppressionState()
+            : EWPSuppressionState::Steady;
 
     DrawText(
         FString::Printf(
@@ -192,9 +212,19 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
 
     if (SuppressionPercent > 2)
     {
+        const FLinearColor SuppressionColor =
+            SuppressionState == EWPSuppressionState::Pinned
+                ? FLinearColor(1.0f, 0.20f, 0.10f, 1.0f)
+                : (SuppressionState == EWPSuppressionState::Pressured
+                    ? FLinearColor(1.0f, 0.55f, 0.16f, 1.0f)
+                    : FLinearColor(0.88f, 0.78f, 0.42f, 1.0f));
+
         DrawText(
-            FString::Printf(TEXT("SUPPRESSION %d%%"), SuppressionPercent),
-            FLinearColor(1.0f, 0.55f, 0.16f, 1.0f),
+            FString::Printf(
+                TEXT("SUPPRESSION %d%%   %s"),
+                SuppressionPercent,
+                SuppressionStateLabel(SuppressionState)),
+            SuppressionColor,
             28.0f,
             Height - 86.0f,
             GEngine->GetSmallFont(),
