@@ -180,7 +180,10 @@ Fast local source/content-contract validation:
 
 ```bash
 python3 tools/validate_project.py
+python3 tools/check_compile_readiness.py
 ```
+
+The compile-readiness audit checks Unreal Header Tool generated-header discipline, reflected type safety, project include resolution, dynamic-delegate handler reflection, target definitions, and module dependencies before an Unreal build is attempted.
 
 Windows UE 5.8 editor build:
 
