@@ -355,6 +355,16 @@
       "acquisition": "Download the CC0 Blender model from OpenGameArt and export FBX/glTF before Unreal import.",
       "distribution": "CC0; may be modified and redistributed. Source file is Blender and requires conversion for the current importer.",
       "purpose": "Free rigged WWII aircraft candidate for flyby/strafe/bombing presentation"
+    },
+    {
+      "id": "opengameart_lowpoly_soviet_jeep",
+      "name": "Lowpoly soviet jeep (GAZ-67)",
+      "source": "OpenGameArt",
+      "license": "CC0-1.0",
+      "page_url": "https://opengameart.org/content/lowpoly-soviet-jeep",
+      "acquisition": "Download the CC0 ZIP from OpenGameArt; convert Blender content to FBX/glTF if the archive does not already contain an Unreal-importable format.",
+      "distribution": "CC0; may be modified and redistributed.",
+      "purpose": "WWII light transport/jeep presentation candidate for the combined-arms vehicle profile"
     }
   ]
 }
