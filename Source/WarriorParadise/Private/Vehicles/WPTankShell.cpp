@@ -7,7 +7,9 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Vehicles/WPArmoredVehicle.h"
+#include "Vehicles/WPLightVehicle.h"
 #include "World/WPDestructibleCover.h"
+#include "World/WPGunEmplacement.h"
 
 AWPTankShell::AWPTankShell()
 {
@@ -97,6 +99,51 @@ void AWPTankShell::HandleHit(
         return;
     }
 
+    if (AWPLightVehicle* Vehicle = Cast<AWPLightVehicle>(OtherActor))
+    {
+        if (Vehicle->GetCombatTeam() == ShellTeam)
+        {
+            Destroy();
+            return;
+        }
+
+        const float DirectDamage =
+            ShellType == EWPArmorShellType::ArmorPiercing
+                ? DirectArmorDamage * 0.92f
+                : MaximumDamage * 0.82f;
+
+        UGameplayStatics::ApplyDamage(
+            Vehicle,
+            DirectDamage,
+            nullptr,
+            this,
+            UDamageType::StaticClass());
+
+        Explode(Hit.ImpactPoint, Vehicle);
+        return;
+    }
+
+    if (AWPGunEmplacement* Gun = Cast<AWPGunEmplacement>(OtherActor))
+    {
+        if (Gun->GetCombatTeam() == ShellTeam)
+        {
+            Destroy();
+            return;
+        }
+
+        UGameplayStatics::ApplyDamage(
+            Gun,
+            ShellType == EWPArmorShellType::HighExplosive
+                ? MaximumDamage
+                : DirectArmorDamage * 0.55f,
+            nullptr,
+            this,
+            UDamageType::StaticClass());
+
+        Explode(Hit.ImpactPoint, Gun);
+        return;
+    }
+
     Explode(Hit.ImpactPoint, OtherActor);
 }
 
@@ -157,6 +204,74 @@ void AWPTankShell::Explode(const FVector& ImpactLocation, AActor* DirectHitActor
             UGameplayStatics::ApplyDamage(
                 Vehicle,
                 MaximumDamage * FMath::Lerp(0.45f, 1.0f, Alpha),
+                nullptr,
+                this,
+                UDamageType::StaticClass());
+        }
+    }
+
+    for (TActorIterator<AWPLightVehicle> It(GetWorld()); It; ++It)
+    {
+        AWPLightVehicle* Vehicle = *It;
+        if (!Vehicle ||
+            Vehicle->GetCombatTeam() == ShellTeam ||
+            Vehicle == GetOwner() ||
+            Vehicle == DirectHitActor ||
+            Vehicle->IsDestroyed())
+        {
+            continue;
+        }
+
+        const float Distance = FVector::Dist(
+            ImpactLocation,
+            Vehicle->GetActorLocation());
+
+        if (Distance <= BlastRadiusCm)
+        {
+            const float Alpha =
+                1.0f -
+                FMath::Clamp(
+                    Distance / BlastRadiusCm,
+                    0.0f,
+                    1.0f);
+
+            UGameplayStatics::ApplyDamage(
+                Vehicle,
+                MaximumDamage *
+                    FMath::Lerp(0.28f, 0.72f, Alpha),
+                nullptr,
+                this,
+                UDamageType::StaticClass());
+        }
+    }
+
+    for (TActorIterator<AWPGunEmplacement> It(GetWorld()); It; ++It)
+    {
+        AWPGunEmplacement* Gun = *It;
+        if (!Gun ||
+            Gun->GetCombatTeam() == ShellTeam ||
+            Gun == DirectHitActor ||
+            Gun->IsDestroyed())
+        {
+            continue;
+        }
+
+        const float Distance = FVector::Dist(
+            ImpactLocation,
+            Gun->GetActorLocation());
+
+        if (Distance <= BlastRadiusCm)
+        {
+            const float Alpha =
+                1.0f -
+                FMath::Clamp(
+                    Distance / BlastRadiusCm,
+                    0.0f,
+                    1.0f);
+
+            UGameplayStatics::ApplyDamage(
+                Gun,
+                MaximumDamage * FMath::Lerp(0.35f, 0.9f, Alpha),
                 nullptr,
                 this,
                 UDamageType::StaticClass());
