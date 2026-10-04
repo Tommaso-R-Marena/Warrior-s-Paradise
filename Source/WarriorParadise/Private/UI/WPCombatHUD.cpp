@@ -116,10 +116,11 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
 
     DrawText(
         FString::Printf(
-            TEXT("%02d / %03d   GRENADES %d"),
+            TEXT("%02d / %03d   FRAG %d   SMOKE %d"),
             CurrentAmmo,
             Reserve,
-            Soldier->GetGrenadesRemaining()),
+            Soldier->GetGrenadesRemaining(),
+            Soldier->GetSmokeGrenadesRemaining()),
         FLinearColor::White,
         Width - 245.0f,
         Height - 58.0f,
@@ -250,7 +251,7 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
     }
 
     DrawText(
-        TEXT("1 FOLLOW   2 ATTACK   3 HOLD   G GRENADE   E REVIVE   T ARTILLERY"),
+        TEXT("1 FOLLOW   2 ATTACK   3 HOLD   G FRAG   H SMOKE   E REVIVE   T ARTILLERY"),
         FLinearColor(0.78f, 0.78f, 0.74f, 0.85f),
         Width * 0.5f - 260.0f,
         Height - 28.0f,
