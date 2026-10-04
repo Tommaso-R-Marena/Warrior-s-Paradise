@@ -1,5 +1,11 @@
 #include "Combat/WPSmokeCloud.h"
 #include "Components/LocalFogVolumeComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "Presentation/WPSmokePresentationProfile.h"
+#include "Sound/SoundAttenuation.h"
+#include "Sound/SoundBase.h"
 
 AWPSmokeCloud::AWPSmokeCloud(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -26,6 +32,61 @@ void AWPSmokeCloud::InitializeSmoke(float InRadiusCm, float DurationSeconds)
     SetActorScale3D(FVector(UniformScale));
 
     SetLifeSpan(FMath::Max(1.0f, DurationSeconds));
+
+    if (!PresentationProfile)
+    {
+        return;
+    }
+
+    if (UNiagaraSystem* SmokeSystem =
+        PresentationProfile->SmokeEffect.LoadSynchronous())
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAttached(
+            SmokeSystem,
+            GetRootComponent(),
+            NAME_None,
+            FVector::ZeroVector,
+            FRotator::ZeroRotator,
+            EAttachLocation::SnapToTarget,
+            true,
+            true,
+            ENCPoolMethod::AutoRelease,
+            true);
+    }
+
+    if (USoundBase* DeploySound =
+        PresentationProfile->DeploySound.LoadSynchronous())
+    {
+        UGameplayStatics::PlaySoundAtLocation(
+            this,
+            DeploySound,
+            GetActorLocation(),
+            PresentationProfile->DeployVolume,
+            1.0f,
+            0.0f,
+            PresentationProfile->Attenuation.LoadSynchronous(),
+            nullptr,
+            nullptr);
+    }
+
+    if (USoundBase* Hiss =
+        PresentationProfile->HissLoop.LoadSynchronous())
+    {
+        UGameplayStatics::SpawnSoundAttached(
+            Hiss,
+            GetRootComponent(),
+            NAME_None,
+            FVector::ZeroVector,
+            FRotator::ZeroRotator,
+            EAttachLocation::SnapToTarget,
+            true,
+            PresentationProfile->HissVolume,
+            1.0f,
+            0.0f,
+            PresentationProfile->Attenuation.LoadSynchronous(),
+            nullptr,
+            true);
+    }
 }
 
 bool AWPSmokeCloud::BlocksSightBetween(const FVector& Start, const FVector& End) const
