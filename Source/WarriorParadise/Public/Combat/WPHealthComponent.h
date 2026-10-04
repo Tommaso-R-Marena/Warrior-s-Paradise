@@ -66,6 +66,9 @@ public:
     void RestoreToFull();
 
     UFUNCTION(BlueprintCallable, Category="Health")
+    bool Heal(float Amount);
+
+    UFUNCTION(BlueprintCallable, Category="Health")
     bool Revive();
 
     UFUNCTION(BlueprintCallable, Category="Health")
