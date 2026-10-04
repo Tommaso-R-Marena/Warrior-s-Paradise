@@ -242,13 +242,23 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
             const int32 ProgressPercent = FMath::RoundToInt(
                 Director->GetActiveObjectiveProgress() * 100.0f);
 
-            DrawText(
-                FString::Printf(
+            const FString ObjectiveText = Director->IsActiveObjectiveContested()
+                ? FString::Printf(
+                    TEXT("OBJECTIVE %d   CONTESTED   A%d / X%d"),
+                    Director->GetActiveObjectiveNumber(),
+                    Director->GetActiveObjectiveAlliedPresence(),
+                    Director->GetActiveObjectiveAxisPresence())
+                : FString::Printf(
                     TEXT("OBJECTIVE %d   CAPTURE %d%%"),
                     Director->GetActiveObjectiveNumber(),
-                    ProgressPercent),
-                FLinearColor(1.0f, 0.82f, 0.28f, 1.0f),
-                Width * 0.5f - 110.0f,
+                    ProgressPercent);
+
+            DrawText(
+                ObjectiveText,
+                Director->IsActiveObjectiveContested()
+                    ? FLinearColor(1.0f, 0.28f, 0.18f, 1.0f)
+                    : FLinearColor(1.0f, 0.82f, 0.28f, 1.0f),
+                Width * 0.5f - 145.0f,
                 72.0f,
                 GEngine->GetMediumFont(),
                 1.0f,
@@ -282,7 +292,7 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
     }
 
     DrawText(
-        TEXT("1 FOLLOW  2 ATTACK  3 HOLD  Z PRONE  F MELEE  V BANDAGE  G FRAG  H SMOKE  E REVIVE  T ARTILLERY"),
+        TEXT("X SWITCH  1 FOLLOW  2 ATTACK  3 HOLD  Z PRONE  F MELEE  V BANDAGE  G FRAG  H SMOKE  E REVIVE  T ARTILLERY"),
         FLinearColor(0.78f, 0.78f, 0.74f, 0.85f),
         Width * 0.5f - 260.0f,
         Height - 28.0f,
