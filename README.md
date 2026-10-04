@@ -12,6 +12,7 @@ The repository now contains a substantial code-side combined-arms battle rather 
 - ADS with FOV interpolation;
 - physical projectiles with gravity and configurable muzzle velocity;
 - movement/stance/suppression-dependent spread;
+- player suppression states feed recoil/sway/HUD feedback and prevent sprinting while fully pinned;
 - procedural weapon sway, recoil, recovery and camera impulse;
 - skeletal-bone hit multipliers ready for production character rigs;
 - thin-cover penetration with retained velocity/damage;
@@ -43,7 +44,9 @@ The repository now contains a substantial code-side combined-arms battle rather 
 - gunshot hearing/investigation;
 - tactical smoke blocks AI and vehicle sight;
 - reservable cover positions;
-- suppression-sensitive movement and fire confidence;
+- explicit **Steady / Pressured / Pinned** suppression states with hysteresis;
+- suppression degrades AI shot dispersion as well as fire confidence;
+- pressured troops seek cover sooner; pinned troops break contact, stop exposed firing and make only sparse return fire from cover;
 - basic lateral flanking;
 - grenade decisions;
 - medic smoke/revive behavior;
