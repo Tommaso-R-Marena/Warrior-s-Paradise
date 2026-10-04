@@ -89,6 +89,14 @@ void UWPWeaponPresentationComponent::BindWeapon()
         this,
         &UWPWeaponPresentationComponent::HandleDryFire);
 
+    Weapon->OnManualCycleStarted.AddUniqueDynamic(
+        this,
+        &UWPWeaponPresentationComponent::HandleManualCycleStarted);
+
+    Weapon->OnManualCycleCompleted.AddUniqueDynamic(
+        this,
+        &UWPWeaponPresentationComponent::HandleManualCycleCompleted);
+
     Weapon->OnProjectileSpawned.AddUniqueDynamic(
         this,
         &UWPWeaponPresentationComponent::HandleProjectileSpawned);
@@ -219,6 +227,29 @@ void UWPWeaponPresentationComponent::HandleDryFire()
 
         PlaySound(Sound, Location, 1.0f);
     }
+}
+
+void UWPWeaponPresentationComponent::HandleManualCycleStarted()
+{
+    if (!PresentationProfile)
+    {
+        return;
+    }
+
+    if (USoundBase* Sound =
+        PresentationProfile->ManualCycleSound.LoadSynchronous())
+    {
+        const FVector Location = SoldierOwner.IsValid()
+            ? SoldierOwner->GetWeaponPresentationTransform().GetLocation()
+            : GetOwner()->GetActorLocation();
+
+        PlaySound(Sound, Location, 0.9f);
+    }
+}
+
+void UWPWeaponPresentationComponent::HandleManualCycleCompleted()
+{
+    // Reserved as a presentation seam for bolt/pump return animations.
 }
 
 void UWPWeaponPresentationComponent::HandleProjectileSpawned(
