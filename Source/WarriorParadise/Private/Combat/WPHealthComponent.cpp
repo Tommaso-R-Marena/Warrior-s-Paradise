@@ -94,6 +94,7 @@ void UWPHealthComponent::HandleTakeAnyDamage(
 
     const float PreviousHealth = Health;
     Health = FMath::Clamp(Health - Damage, 0.0f, MaxHealth);
+    OnDamageReceived.Broadcast(Damage, DamageCauser);
     OnHealthChanged.Broadcast(Health, Health - PreviousHealth);
 
     if (Health <= 0.0f)
