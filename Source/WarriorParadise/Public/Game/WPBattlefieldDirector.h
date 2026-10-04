@@ -36,6 +36,7 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Battle")
     void NotifyVehicleDestroyed(EWPCombatTeam VehicleTeam);
+    void NotifyLightVehicleDestroyed(EWPCombatTeam VehicleTeam);
 
     UFUNCTION(BlueprintCallable, Category="Battle|Squad")
     void IssueSquadOrder(EWPSquadOrder NewOrder, const FVector& OrderLocation);
@@ -79,6 +80,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category="Battle")
     int32 GetActiveEnemyVehicles() const { return ActiveEnemyVehicles; }
+
+    UFUNCTION(BlueprintPure, Category="Battle")
+    int32 GetActiveEnemyLightVehicles() const { return ActiveEnemyLightVehicles; }
 
     UFUNCTION(BlueprintPure, Category="Battle")
     int32 GetAlliedTickets() const { return AlliedTickets; }
@@ -209,6 +213,9 @@ private:
 
     UPROPERTY(VisibleInstanceOnly, Category="Battle")
     int32 ActiveEnemyVehicles = 0;
+
+    UPROPERTY(VisibleInstanceOnly, Category="Battle")
+    int32 ActiveEnemyLightVehicles = 0;
 
     UPROPERTY(VisibleInstanceOnly, Category="Battle")
     int32 AlliedTickets = 14;
