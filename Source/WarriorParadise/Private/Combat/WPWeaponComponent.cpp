@@ -141,6 +141,23 @@ void UWPWeaponComponent::Reload()
         false);
 }
 
+void UWPWeaponComponent::CancelReload()
+{
+    if (!bReloading)
+    {
+        return;
+    }
+
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().ClearTimer(ReloadTimerHandle);
+    }
+
+    bReloading = false;
+    OnReloadCancelled.Broadcast();
+    OnWeaponStateChanged.Broadcast();
+}
+
 void UWPWeaponComponent::FinishReload()
 {
     const int32 Needed = MagazineSize - AmmoInMagazine;
