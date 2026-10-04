@@ -9,12 +9,14 @@ class AWPBattlefieldDirector;
 class AWPFragGrenade;
 class AWPSmokeGrenade;
 class UCameraComponent;
+class USceneComponent;
 class USkeletalMeshComponent;
 class UStaticMeshComponent;
 class UWPHealthComponent;
 class UWPInfantryVisualProfile;
 class UWPSuppressionComponent;
 class UWPWeaponComponent;
+class UWPWeaponPresentationComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPSoldierSimpleEventSignature);
 
@@ -61,6 +63,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Presentation")
     void ApplyVisualProfile();
+
+    UFUNCTION(BlueprintPure, Category="Presentation")
+    FTransform GetWeaponPresentationTransform() const;
 
     UFUNCTION(BlueprintPure, Category="Combat")
     int32 GetGrenadesRemaining() const { return GrenadesRemaining; }
@@ -125,6 +130,9 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat")
     TObjectPtr<UWPSuppressionComponent> SuppressionComponent;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Presentation")
+    TObjectPtr<UWPWeaponPresentationComponent> WeaponPresentationComponent;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat")
     EWPCombatTeam CombatTeam = EWPCombatTeam::Allies;
 
@@ -140,6 +148,15 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category="View")
     TObjectPtr<USkeletalMeshComponent> FirstPersonWeapon;
+
+    UPROPERTY(VisibleAnywhere, Category="View")
+    TObjectPtr<UStaticMeshComponent> FirstPersonStaticWeapon;
+
+    UPROPERTY(VisibleAnywhere, Category="View")
+    TObjectPtr<UStaticMeshComponent> ThirdPersonWeapon;
+
+    UPROPERTY(VisibleAnywhere, Category="View")
+    TObjectPtr<USceneComponent> MuzzleAnchor;
 
     UPROPERTY(VisibleAnywhere, Category="View")
     TObjectPtr<UStaticMeshComponent> ViewWeaponBody;
