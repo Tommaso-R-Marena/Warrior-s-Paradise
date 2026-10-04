@@ -38,6 +38,11 @@ Implemented in the repository foundation:
 - procedural recoil response;
 - magazines and reloads;
 - damage and death;
+- Allied/Axis factions with autonomous soldiers targeting opposing combatants;
+- a five-soldier friendly squad fighting alongside the player;
+- control transfer into a surviving squadmate after player death;
+- near-miss suppression with decay and AI behavior effects;
+- three sequential capture objectives plus a final counterattack/victory state;
 - hostile soldiers with movement, facing, line-of-sight checks, and burst fire;
 - runtime battlefield blockout;
 - directional light, skylight, atmospheric fog;
@@ -64,16 +69,23 @@ Baseline projectile travel, ADS, and recoil now exist. Production work still inc
 
 ## M2 — squad warfare
 
-- squad membership and command state;
-- cover queries;
-- suppression and morale;
-- target sharing;
-- tactical intent;
+Implemented baseline:
+- explicit factions and friendly squad membership;
+- autonomous friendly-versus-hostile target acquisition;
+- suppression state driven by bullet near misses;
+- suppression-sensitive movement and firing confidence;
+- player control transfer to surviving squadmates;
+- objective/reinforcement ownership in the battlefield director.
+
+Still required for production:
+- player-issued squad commands;
+- tactical cover queries;
+- target sharing and role-aware threat selection;
 - formation movement;
-- flanking;
+- coordinated flanking;
 - grenade decisions;
 - medic/ammo behaviors;
-- reinforcement ownership.
+- morale and richer suppression responses.
 
 ## M3 — production battlefield
 
