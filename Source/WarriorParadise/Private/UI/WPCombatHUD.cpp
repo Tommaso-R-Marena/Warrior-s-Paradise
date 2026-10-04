@@ -111,7 +111,7 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
             FMath::RoundToInt(Soldier->GetStaminaNormalized() * 100.0f),
             Soldier->IsProne()
                 ? TEXT("PRONE")
-                : (Soldier->bIsCrouched ? TEXT("CROUCH") : TEXT("STAND"))),
+                : (Soldier->IsCrouchedStance() ? TEXT("CROUCH") : TEXT("STAND"))),
         FLinearColor::White,
         28.0f,
         Height - 58.0f,
