@@ -21,6 +21,7 @@
 #include "EngineUtils.h"
 #include "Game/WPArtilleryStrike.h"
 #include "Game/WPCaptureObjective.h"
+#include "Game/WPRuntimeMode.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -72,13 +73,23 @@ void AWPBattlefieldDirector::BeginPlay()
 {
     Super::BeginPlay();
 
-    BattlePresentationSet = BattlePresentationSetAsset.LoadSynchronous();
-    EnvironmentVisualProfile = BattlePresentationSet
-        ? BattlePresentationSet->Environment
-        : nullptr;
+    bHeadlessSimulation = WPRuntimeMode::IsHeadlessSimulation();
+
+    if (!bHeadlessSimulation)
+    {
+        BattlePresentationSet = BattlePresentationSetAsset.LoadSynchronous();
+        EnvironmentVisualProfile = BattlePresentationSet
+            ? BattlePresentationSet->Environment
+            : nullptr;
+    }
 
     BuildBattlefield();
-    ScatterEnvironmentProps();
+
+    if (!bHeadlessSimulation)
+    {
+        ScatterEnvironmentProps();
+    }
+
     BuildCoverPoints();
 
     AWPSoldierCharacter* Player = Cast<AWPSoldierCharacter>(
@@ -122,7 +133,21 @@ void AWPBattlefieldDirector::BeginPlay()
     SpawnInitialCombinedArms();
     SpawnDefensiveEmplacements();
     SpawnWave();
-    ScheduleAmbientFlyby();
+
+    if (!bHeadlessSimulation)
+    {
+        ScheduleAmbientFlyby();
+    }
+
+    UE_LOG(
+        LogTemp,
+        Display,
+        TEXT(
+            "WP_RUNTIME mode=%s friendly=%d enemies=%d objective=%d"),
+        bHeadlessSimulation ? TEXT("HEADLESS") : TEXT("RENDERED"),
+        FriendlySoldiersAlive,
+        RemainingEnemies,
+        GetActiveObjectiveNumber());
 }
 
 int32 AWPBattlefieldDirector::GetActiveObjectiveNumber() const
@@ -960,8 +985,11 @@ void AWPBattlefieldDirector::BuildBattlefield()
         FRotator::ZeroRotator,
         EWPEnvironmentSurface::Concrete);
 
-    BuildAtmosphere();
-    StartEnvironmentAudio();
+    if (!bHeadlessSimulation)
+    {
+        BuildAtmosphere();
+        StartEnvironmentAudio();
+    }
 }
 
 void AWPBattlefieldDirector::BuildAtmosphere()
