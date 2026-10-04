@@ -121,6 +121,7 @@ AWPSoldierCharacter* AWPEnemySoldier::FindBestTarget() const
 
     AWPSoldierCharacter* BestTarget = nullptr;
     float BestScore = TNumericLimits<float>::Max();
+    const float CloseAwarenessRadiusSquared = FMath::Square(650.0f);
 
     for (TActorIterator<AWPSoldierCharacter> It(GetWorld()); It; ++It)
     {
@@ -133,22 +134,51 @@ AWPSoldierCharacter* AWPEnemySoldier::FindBestTarget() const
             continue;
         }
 
-        float Score = FVector::DistSquared2D(GetActorLocation(), Candidate->GetActorLocation());
+        const float DistanceSquared = FVector::DistSquared2D(
+            GetActorLocation(),
+            Candidate->GetActorLocation());
+
+        const bool bVisible = HasLineOfSightTo(Candidate);
+        const bool bCloseAwareness = DistanceSquared <= CloseAwarenessRadiusSquared;
+
+        if (!bVisible && !bCloseAwareness)
+        {
+            continue;
+        }
+
+        float Score = DistanceSquared;
 
         if (GetCombatTeam() == EWPCombatTeam::Axis && Candidate->IsPlayerControlled())
         {
-            Score *= 0.82f;
+            Score *= 0.88f;
         }
 
-        if (HasLineOfSightTo(Candidate))
+        if (bVisible)
         {
-            Score *= 0.72f;
+            Score *= 0.68f;
         }
 
         if (Score < BestScore)
         {
             BestScore = Score;
             BestTarget = Candidate;
+        }
+    }
+
+    if (!BestTarget)
+    {
+        if (AWPBattlefieldDirector* Director = BattlefieldDirector.Get())
+        {
+            AWPSoldierCharacter* SharedContact = Director->GetSharedEnemyContact(
+                GetCombatTeam(),
+                3.5f);
+
+            if (SharedContact &&
+                SharedContact->GetCombatTeam() != GetCombatTeam() &&
+                SharedContact->IsCombatCapable())
+            {
+                BestTarget = SharedContact;
+            }
         }
     }
 
@@ -572,6 +602,15 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         return;
     }
 
+    const bool bTargetVisible = HasLineOfSightTo(Target);
+    if (bTargetVisible)
+    {
+        if (AWPBattlefieldDirector* Director = BattlefieldDirector.Get())
+        {
+            Director->ReportEnemyContact(GetCombatTeam(), Target);
+        }
+    }
+
     const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
     const float Distance = ToTarget.Size();
     const float Suppression = GetSuppressionComponent()
@@ -619,8 +658,22 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
     }
     else if (Distance > DesiredRange)
     {
+        FVector ApproachPoint = Target->GetActorLocation();
+
+        const uint32 FlankSlot = GetUniqueID() % 5U;
+        if (Suppression < 0.35f && (FlankSlot == 0U || FlankSlot == 1U))
+        {
+            FVector Lateral = FVector::CrossProduct(FVector::UpVector, FlatDirection).GetSafeNormal();
+            if (FlankSlot == 1U)
+            {
+                Lateral *= -1.0f;
+            }
+
+            ApproachPoint += Lateral * FMath::Min(700.0f, Distance * 0.32f);
+        }
+
         MoveTacticallyToward(
-            Target->GetActorLocation(),
+            ApproachPoint,
             0.78f * FMath::Lerp(1.0f, 0.62f, Suppression));
     }
     else if (Distance < DesiredRange * 0.58f)
@@ -657,7 +710,7 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
             1.0f);
 
         if (Distance <= MaximumEngagementRange &&
-            HasLineOfSightTo(Target) &&
+            bTargetVisible &&
             FMath::FRand() <= FireChance)
         {
             GetWeaponComponent()->StartFire();
