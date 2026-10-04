@@ -55,7 +55,7 @@ Acquire those through their supported interfaces, then rerun:
 .\tools\setup_free_content.ps1 -SkipDownload -SkipBuild
 ~~~
 
-The profile generator searches installed project content for MetaHuman/WWII soldiers, Motion Matching AnimBPs, period weapons, Sherman/Panzer/Panther meshes, Niagara muzzle/impact systems, spatial audio sources, generated Poly Haven materials, scenery props and an overcast HDRI.
+The profile generator searches installed project content for MetaHuman/WWII soldiers, Motion Matching AnimBPs, period weapons, Sherman/Panzer/Panther meshes, rural buildings, muzzle/impact/tracer/explosion/smoke Niagara, bullet-hole/decal materials, soldier and weapon audio, vehicle audio, battlefield ambience, generated Poly Haven materials, scenery props and an overcast HDRI. It creates loadout, weapon, soldier, smoke, explosion, vehicle and environment profiles and connects them through the battle-wide preset.
 
 Only skeleton-compatible AnimBPs are assigned automatically. Otherwise the script reports that UE5 IK retargeting is needed.
 
