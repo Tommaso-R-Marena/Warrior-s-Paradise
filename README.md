@@ -7,7 +7,8 @@
 The repository contains an executable, asset-independent combat foundation:
 
 - first-person WASD movement, mouse look, jump, crouch, and sprint;
-- automatic rifle fire with magazine state, reserve ammunition, spread, reload timing, hit traces, and point damage;
+- physical rifle projectiles with gravity, configurable muzzle velocity, travel range, aim-dependent dispersion, magazines, reserve ammunition, and reload timing;
+- right-mouse aim-down-sights with FOV/weapon interpolation and procedural recoil response;
 - reusable health/death component;
 - hostile infantry with range management, line-of-sight checks, movement, firing pulses, and death reporting;
 - runtime-generated battlefield blockout with buildings, cover, boundaries, directional light, skylight, and atmospheric fog;
@@ -16,7 +17,7 @@ The repository contains an executable, asset-independent combat foundation:
 - Unreal project/build/configuration scaffolding;
 - GitHub Actions repository validation.
 
-This is the **combat kernel**, not yet the production visual target. Terrain, characters, animation, weapon art, audio, VFX, destruction, squad tactics, objectives, and vehicles are layered onto this foundation.
+This is the **combat kernel**, not yet the production visual target. Terrain, production characters, animation, weapon art, audio, VFX, destruction, squad tactics, objectives, and vehicles are layered onto this foundation.
 
 ## Engine
 
@@ -39,6 +40,7 @@ The first bootstrap deliberately uses Unreal's built-in Entry map. `AWPBattlefie
 |---|---|
 | W / A / S / D | Move |
 | Mouse | Look |
+| Right Mouse | Aim down sights |
 | Left Shift | Sprint |
 | Left Control | Crouch |
 | Space | Jump |
@@ -58,4 +60,4 @@ The first bootstrap deliberately uses Unreal's built-in Entry map. `AWPBattlefie
 python tools/validate_project.py
 ```
 
-GitHub Actions runs the same structural contract on pushes and pull requests.
+GitHub Actions runs the same structural contract on pushes and pull requests. A full Unreal C++ compile still requires an Unreal Engine 5.8 installation or an appropriately provisioned build runner.
