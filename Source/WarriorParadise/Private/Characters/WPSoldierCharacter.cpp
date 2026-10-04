@@ -486,6 +486,7 @@ void AWPSoldierCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
     PlayerInputComponent->BindAction(TEXT("Reload"), IE_Pressed, this, &AWPSoldierCharacter::ReloadInput);
     PlayerInputComponent->BindAction(TEXT("Melee"), IE_Pressed, this, &AWPSoldierCharacter::MeleeInput);
     PlayerInputComponent->BindAction(TEXT("Bandage"), IE_Pressed, this, &AWPSoldierCharacter::StartBandage);
+    PlayerInputComponent->BindAction(TEXT("SwitchSoldier"), IE_Pressed, this, &AWPSoldierCharacter::SwitchSquadmateInput);
     PlayerInputComponent->BindAction(TEXT("Sprint"), IE_Pressed, this, &AWPSoldierCharacter::StartSprint);
     PlayerInputComponent->BindAction(TEXT("Sprint"), IE_Released, this, &AWPSoldierCharacter::StopSprint);
     PlayerInputComponent->BindAction(TEXT("Crouch"), IE_Pressed, this, &AWPSoldierCharacter::StartCrouch);
@@ -932,6 +933,14 @@ void AWPSoldierCharacter::InteractInput()
     if (BestTarget)
     {
         TryReviveSoldier(BestTarget);
+    }
+}
+
+void AWPSoldierCharacter::SwitchSquadmateInput()
+{
+    if (AWPBattlefieldDirector* Director = GetBattlefieldDirector())
+    {
+        Director->SwitchPlayerToSquadmate(this);
     }
 }
 
