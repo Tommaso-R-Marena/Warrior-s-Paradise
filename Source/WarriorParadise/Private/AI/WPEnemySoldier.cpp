@@ -1,5 +1,6 @@
 #include "AI/WPEnemySoldier.h"
 #include "Combat/WPHealthComponent.h"
+#include "Combat/WPSuppressionComponent.h"
 #include "Combat/WPWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -166,6 +167,9 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
     const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
     const float Distance = ToTarget.Size();
+    const float Suppression = GetSuppressionComponent()
+        ? GetSuppressionComponent()->GetNormalizedSuppression()
+        : 0.0f;
     const FVector FlatDirection = FVector(ToTarget.X, ToTarget.Y, 0.0f).GetSafeNormal();
 
     if (!FlatDirection.IsNearlyZero())
@@ -176,16 +180,17 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
     if (Distance > DesiredRange)
     {
-        AddMovementInput(FlatDirection, 0.75f);
+        AddMovementInput(FlatDirection, 0.75f * FMath::Lerp(1.0f, 0.62f, Suppression));
     }
     else if (Distance < DesiredRange * 0.62f)
     {
-        AddMovementInput(-FlatDirection, 0.35f);
+        AddMovementInput(-FlatDirection, 0.35f + Suppression * 0.28f);
     }
     else
     {
         const FVector Strafe(-FlatDirection.Y, FlatDirection.X, 0.0f);
-        AddMovementInput(Strafe, FMath::Sin(Time * 0.85f + GetUniqueID()) * 0.22f);
+        const float StrafeStrength = FMath::Lerp(0.22f, 0.55f, Suppression);
+        AddMovementInput(Strafe, FMath::Sin(Time * 0.85f + GetUniqueID()) * StrafeStrength);
     }
 
     if (bPulseFiring && Time >= StopFireTime)
@@ -198,7 +203,10 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
     {
         NextDecisionTime = Time + FMath::FRandRange(0.35f, 0.75f);
 
-        if (Distance <= MaximumEngagementRange && HasLineOfSightTo(Target))
+        const float FireChance = FMath::Lerp(1.0f, 0.32f, Suppression);
+        if (Distance <= MaximumEngagementRange &&
+            HasLineOfSightTo(Target) &&
+            FMath::FRand() <= FireChance)
         {
             GetWeaponComponent()->StartFire();
             bPulseFiring = true;
