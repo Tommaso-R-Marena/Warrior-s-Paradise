@@ -104,6 +104,29 @@ FVector AWPBattlefieldDirector::GetActiveObjectiveLocation() const
     return FVector::ZeroVector;
 }
 
+bool AWPBattlefieldDirector::IsActiveObjectiveContested() const
+{
+    return Objectives.IsValidIndex(ActiveObjectiveIndex) &&
+        Objectives[ActiveObjectiveIndex] &&
+        Objectives[ActiveObjectiveIndex]->IsContested();
+}
+
+int32 AWPBattlefieldDirector::GetActiveObjectiveAlliedPresence() const
+{
+    return Objectives.IsValidIndex(ActiveObjectiveIndex) &&
+        Objectives[ActiveObjectiveIndex]
+        ? Objectives[ActiveObjectiveIndex]->GetAlliedPresence()
+        : 0;
+}
+
+int32 AWPBattlefieldDirector::GetActiveObjectiveAxisPresence() const
+{
+    return Objectives.IsValidIndex(ActiveObjectiveIndex) &&
+        Objectives[ActiveObjectiveIndex]
+        ? Objectives[ActiveObjectiveIndex]->GetAxisPresence()
+        : 0;
+}
+
 float AWPBattlefieldDirector::GetArtilleryCooldownRemaining() const
 {
     if (!GetWorld())
