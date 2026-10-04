@@ -49,8 +49,17 @@ void UWPWeaponComponent::ApplyWeaponDefinition(const UWPWeaponDefinition* Defini
     RangeCm = FMath::Max(1000.0f, Definition->RangeCm);
     HipSpreadDegrees = FMath::Max(0.0f, Definition->HipSpreadDegrees);
     AimSpreadDegrees = FMath::Max(0.0f, Definition->AimSpreadDegrees);
-    RoundsPerMinute = FMath::Max(60.0f, Definition->RoundsPerMinute);
+    RoundsPerMinute = FMath::Max(30.0f, Definition->RoundsPerMinute);
     bAutomatic = Definition->bAutomatic;
+    bRequiresManualCycle =
+        Definition->bRequiresManualCycle &&
+        !Definition->bAutomatic;
+    ManualCycleDuration = FMath::Max(
+        0.05f,
+        Definition->ManualCycleDuration);
+    WeaponDisplayName = Definition->DisplayName.IsEmpty()
+        ? Definition->WeaponId.ToString()
+        : Definition->DisplayName.ToString();
     MagazineSize = FMath::Max(1, Definition->MagazineSize);
     StartingReserveAmmo = FMath::Max(0, Definition->StartingReserveAmmo);
     MaximumReserveAmmo = FMath::Max(StartingReserveAmmo, Definition->MaximumReserveAmmo);
@@ -60,6 +69,14 @@ void UWPWeaponComponent::ApplyWeaponDefinition(const UWPWeaponDefinition* Defini
 
     StopFire();
     CancelReload();
+
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().ClearTimer(
+            ManualCycleTimerHandle);
+    }
+    bCyclingAction = false;
+
     AmmoInMagazine = MagazineSize;
     ReserveAmmo = StartingReserveAmmo;
     OnWeaponStateChanged.Broadcast();
@@ -67,8 +84,23 @@ void UWPWeaponComponent::ApplyWeaponDefinition(const UWPWeaponDefinition* Defini
 
 void UWPWeaponComponent::SetAiming(bool bNewAiming)
 {
-    bAiming = bNewAiming && !bReloading;
+    bAiming =
+        bNewAiming &&
+        !bReloading &&
+        !bCyclingAction;
     OnWeaponStateChanged.Broadcast();
+}
+
+FString UWPWeaponComponent::GetOperationLabel() const
+{
+    if (bRequiresManualCycle)
+    {
+        return TEXT("MANUAL");
+    }
+
+    return bAutomatic
+        ? TEXT("AUTO")
+        : TEXT("SEMI");
 }
 
 void UWPWeaponComponent::SetAccuracyMultiplier(float Multiplier)
@@ -124,7 +156,11 @@ void UWPWeaponComponent::StopFire()
 
 void UWPWeaponComponent::Reload()
 {
-    if (bReloading || AmmoInMagazine >= MagazineSize || ReserveAmmo <= 0 || !GetWorld())
+    if (bReloading ||
+        bCyclingAction ||
+        AmmoInMagazine >= MagazineSize ||
+        ReserveAmmo <= 0 ||
+        !GetWorld())
     {
         return;
     }
@@ -157,6 +193,40 @@ void UWPWeaponComponent::CancelReload()
 
     bReloading = false;
     OnReloadCancelled.Broadcast();
+    OnWeaponStateChanged.Broadcast();
+}
+
+void UWPWeaponComponent::BeginManualCycle()
+{
+    if (!bRequiresManualCycle ||
+        bCyclingAction ||
+        !GetWorld())
+    {
+        return;
+    }
+
+    bCyclingAction = true;
+    bAiming = false;
+    OnManualCycleStarted.Broadcast();
+    OnWeaponStateChanged.Broadcast();
+
+    GetWorld()->GetTimerManager().SetTimer(
+        ManualCycleTimerHandle,
+        this,
+        &UWPWeaponComponent::FinishManualCycle,
+        ManualCycleDuration,
+        false);
+}
+
+void UWPWeaponComponent::FinishManualCycle()
+{
+    if (!bCyclingAction)
+    {
+        return;
+    }
+
+    bCyclingAction = false;
+    OnManualCycleCompleted.Broadcast();
     OnWeaponStateChanged.Broadcast();
 }
 
@@ -200,7 +270,9 @@ bool UWPWeaponComponent::BuildShot(FVector& OutStart, FVector& OutDirection, ACo
 
 void UWPWeaponComponent::TryFire()
 {
-    if (bReloading || !GetWorld())
+    if (bReloading ||
+        bCyclingAction ||
+        !GetWorld())
     {
         return;
     }
@@ -272,5 +344,13 @@ void UWPWeaponComponent::TryFire()
     const float PitchKick = RecoilPitchDegrees * (bAiming ? 0.72f : 1.0f);
     const float YawKick = FMath::FRandRange(-RecoilYawDegrees, RecoilYawDegrees) * (bAiming ? 0.65f : 1.0f);
     OnShotFired.Broadcast(PitchKick, YawKick);
-    OnWeaponStateChanged.Broadcast();
+
+    if (bRequiresManualCycle)
+    {
+        BeginManualCycle();
+    }
+    else
+    {
+        OnWeaponStateChanged.Broadcast();
+    }
 }
