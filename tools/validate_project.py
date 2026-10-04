@@ -342,6 +342,11 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "GrenadeFriendlySafetyRadius"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "HasHeldGrenadeForFriendly"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "IsGrenadeTargetSafe"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "bHasHeldGrenadeForFriendly = true"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "friendlyGrenadeHolds=%d"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "FireLaneSafetyRadius"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "HasHeldFireForFriendly"),
         ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "HasClearFireLaneTo"),
