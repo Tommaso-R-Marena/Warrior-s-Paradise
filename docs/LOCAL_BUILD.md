@@ -48,6 +48,24 @@ To remove project build intermediates and compile both the editor and Win64 game
 
 This is the same core verification used by the self-hosted GitHub Actions compile gate.
 
+## GPU-less gameplay smoke
+
+Once UE 5.8 is installed, the same machine can run the battlefield simulation without a rendering device:
+
+```powershell
+.\tools\build_local.ps1 -Clean -HeadlessSmoke
+```
+
+This uses Unreal's NullRHI and returns a non-zero process code if the initialization/runtime smoke contract fails.
+
+For a visually playable machine with integrated graphics but no discrete GPU:
+
+```powershell
+.\tools\build_local.ps1 -LaunchIntegrated
+```
+
+See `docs/GPU_LESS_MODE.md`.
+
 ## Validate without Unreal
 
 ```powershell
