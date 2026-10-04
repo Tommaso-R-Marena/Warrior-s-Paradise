@@ -6,6 +6,7 @@
 
 class UAnimInstance;
 class USkeletalMesh;
+class UStaticMesh;
 
 UCLASS(BlueprintType)
 class WARRIORPARADISE_API UWPInfantryVisualProfile : public UPrimaryDataAsset
@@ -28,6 +29,15 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Third Person")
     FVector ThirdPersonRelativeScale = FVector::OneVector;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Third Person|Weapon")
+    TSoftObjectPtr<UStaticMesh> ThirdPersonWeaponMesh;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Third Person|Weapon")
+    FName ThirdPersonWeaponAttachSocket = TEXT("weapon_r");
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Third Person|Weapon")
+    FTransform ThirdPersonWeaponRelativeTransform = FTransform::Identity;
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="First Person")
     TSoftObjectPtr<USkeletalMesh> FirstPersonArmsMesh;
 
@@ -43,12 +53,24 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="First Person")
     FVector FirstPersonArmsRelativeScale = FVector::OneVector;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="First Person")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="First Person|Weapon")
     TSoftObjectPtr<USkeletalMesh> FirstPersonWeaponMesh;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="First Person")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="First Person|Weapon")
+    TSoftObjectPtr<UStaticMesh> FirstPersonStaticWeaponMesh;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="First Person|Weapon")
     FName WeaponAttachSocket = TEXT("weapon_r");
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="First Person")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="First Person|Weapon")
     FTransform FirstPersonWeaponRelativeTransform = FTransform::Identity;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="First Person|Weapon")
+    FName MuzzleAttachSocket = TEXT("muzzle");
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="First Person|Weapon")
+    FTransform MuzzleRelativeTransform = FTransform(
+        FRotator::ZeroRotator,
+        FVector(90.0f, 0.0f, 0.0f),
+        FVector::OneVector);
 };
