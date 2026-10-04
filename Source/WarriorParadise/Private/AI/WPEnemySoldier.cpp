@@ -465,7 +465,7 @@ bool AWPEnemySoldier::HandleEngineerSupport()
 
 void AWPEnemySoldier::HandleGrenadeOpportunity(AWPSoldierCharacter* Target, float Distance)
 {
-    if (!Target || !GetWorld() || TimeSince(0.0f) < 0.0f)
+    if (!Target || !GetWorld())
     {
         return;
     }
