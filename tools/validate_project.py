@@ -247,7 +247,12 @@ def validate_project_plugins(project: dict) -> None:
         if isinstance(entry, dict)
     }
 
-    for required in ("PythonScriptPlugin", "Niagara", "PoseSearch"):
+    for required in (
+        "PythonScriptPlugin",
+        "EditorScriptingUtilities",
+        "Niagara",
+        "PoseSearch",
+    ):
         if not plugins.get(required):
             fail(f"required Unreal plugin is not enabled: {required}")
 
