@@ -60,6 +60,9 @@ The tactical infantry layer provides:
 - deterministic shared-target maneuver election;
 - Base Of Fire and Maneuver tactical postures, with Assault role preference for the maneuver element;
 - target-centered election so soldiers fighting the same contact converge on one mover rather than independently self-electing;
+- body-width friendly fire-lane sweeps before every AI firing decision;
+- immediate ceasefire when a friendly enters a live lane, with exposed shooters sidestepping to regain a safe lane while covered shooters hold position;
+- downed friendlies remain physical fire-lane blockers;
 - independent flanking as a fallback when coordinated tactics are unavailable;
 - role behaviors, including medic prioritization of downed and bleeding allies;
 - grenades/smoke;
