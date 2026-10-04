@@ -2,6 +2,7 @@
 #include "Characters/WPSoldierCharacter.h"
 #include "Combat/WPBallisticProjectile.h"
 #include "Combat/WPHealthComponent.h"
+#include "Combat/WPSmokeCloud.h"
 #include "Combat/WPWeaponComponent.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
@@ -514,6 +515,31 @@ AActor* AWPLightVehicle::FindBestTarget() const
             Soldier->GetActorLocation());
 
         if (DistanceSquared >= BestDistanceSquared)
+        {
+            continue;
+        }
+
+        const FVector SightStart =
+            WeaponVisual->GetComponentLocation();
+        const FVector SightEnd =
+            Soldier->GetActorLocation() +
+            FVector(0.0f, 0.0f, 45.0f);
+
+        bool bSmokeBlocked = false;
+        for (TActorIterator<AWPSmokeCloud> SmokeIt(GetWorld()); SmokeIt; ++SmokeIt)
+        {
+            const AWPSmokeCloud* Smoke = *SmokeIt;
+            if (Smoke &&
+                Smoke->BlocksSightBetween(
+                    SightStart,
+                    SightEnd))
+            {
+                bSmokeBlocked = true;
+                break;
+            }
+        }
+
+        if (bSmokeBlocked)
         {
             continue;
         }
