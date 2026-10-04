@@ -1,82 +1,95 @@
 # Production Presentation Bindings
 
-This file defines where production animation, VFX and audio should attach. Presentation code should **not** duplicate gameplay decisions.
+Warrior's Paradise keeps simulation authoritative in C++ and routes art/audio through Data Assets and presentation components. Free or production assets can therefore replace fallbacks without reimplementing damage, ammunition, AI, capture, armor or reinforcement rules.
 
-## Weapon
+## Battle-wide selection
 
-`UWPWeaponComponent` exposes:
+`UWPBattlePresentationSet` is the top-level presentation configuration. It selects:
 
-- `OnShotFired` — recoil/camera/AnimBP fire reaction;
-- `OnProjectileSpawned` — muzzle flash, muzzle smoke, shell-ejection coordination;
-- `OnReloadStarted` — reload montage/audio;
-- `OnReloadCompleted` — montage/state completion;
-- `OnReloadCancelled` — interrupt montage/audio cleanly;
-- `OnDryFire` — trigger click/empty feedback;
-- `OnWeaponStateChanged` — UI/AnimBP state refresh.
+- Allied/Axis × Rifleman/Assault/Medic/Engineer loadouts;
+- Allied/Axis vehicle visual profiles;
+- environment visual profile;
+- frag and artillery explosion profiles;
+- tactical-smoke presentation.
 
-## Bullet impacts
+The free-content generator creates the optional conventional asset:
 
-`AWPBallisticProjectile::OnImpact` provides impact location, normal and actor.
+`/Game/WarriorParadise/Profiles/DA_WP_BattlePresentation_Free`.
 
-Production binding should resolve physical material/surface type and spawn the correct decal, particles, sound and debris. Do not move damage calculation into the VFX layer.
+## Infantry loadouts and visuals
 
-## Soldier health / wounds
+`UWPInfantryLoadoutProfile` combines:
 
-`UWPHealthComponent` exposes:
+- `UWPWeaponDefinition`;
+- `UWPInfantryVisualProfile`;
+- `UWPWeaponPresentationProfile`;
+- `UWPSoldierPresentationProfile`;
+- grenade/smoke/medkit counts.
 
-- `OnDamageReceived` — damage magnitude + source;
-- `OnHealthChanged`;
-- `OnDowned`;
-- `OnRevived`;
-- `OnDeath`.
+`UWPInfantryVisualProfile` supports third-person skeletal body + AnimBP, first-person arms, static or skeletal weapon meshes, attachment sockets/transforms and a muzzle anchor.
 
-Use these for hit reactions, blood/dirt presentation, voice lines, downed animation and death animation/ragdoll transitions.
+## Weapon presentation
 
-## Suppression
+`UWPWeaponPresentationComponent` subscribes to `UWPWeaponComponent` and projectile events. It can drive:
 
-`UWPSuppressionComponent::OnSuppressionChanged` exposes normalized suppression.
+- muzzle-flash Niagara;
+- spatialized fire/reload/dry-fire audio;
+- attached tracer Niagara;
+- generic or dirt/wood/stone/metal/flesh impact Niagara;
+- matching surface-specific impact sounds;
+- persistent surface-specific bullet decals.
 
-The C++ player already applies a restrained FOV/roll response. Production audio can add near-miss crack, ringing or mix ducking without changing suppression values.
+The fallback audio attenuation enables 3D positioning and occlusion even when no authored attenuation asset is supplied.
 
-## Soldier actions
+## Soldier presentation
 
-`AWPSoldierCharacter` exposes:
+`UWPSoldierPresentationComponent` subscribes to health/action events and can drive:
 
-- `OnMeleeAttack`;
-- `OnBandageStarted`;
-- `OnBandageCompleted`.
+- hit and death Niagara;
+- pain/downed/revive/death/melee/bandage sounds;
+- hit/downed/revive/death/melee/bandage montages.
 
-Production AnimBPs should bind montages/hand IK/props here.
+The component owns a runtime spatial-audio attenuation/occlusion fallback.
 
 ## Explosives and smoke
 
-- `AWPFragGrenade::OnExploded`;
-- `AWPSmokeCloud` is the shared visual/gameplay smoke volume;
-- artillery exposes `OnImpact`.
+`UWPExplosionPresentationProfile` supplies Niagara/audio for frag and artillery impacts while damage and suppression remain in the combat actors.
 
-Replace temporary light/debris presentation with Niagara/audio while keeping radius/damage/suppression in C++.
+`UWPSmokePresentationProfile` supplies:
+
+- optional smoke Niagara layered on the gameplay Local Fog Volume;
+- deployment audio;
+- attached hiss-loop audio.
+
+Smoke line-of-sight blocking remains gameplay-owned by `AWPSmokeCloud`.
 
 ## Vehicles
 
-`AWPArmoredVehicle` exposes:
+`UWPVehicleVisualProfile` supplies:
 
-- `OnCannonFired`;
-- `OnMachineGunFired`;
-- `OnVehicleDamaged`;
-- `OnVehicleDestroyed`.
+- hull/turret/barrel meshes and transforms;
+- cannon and coax muzzle Niagara/audio;
+- tank-shell impact Niagara/audio;
+- destruction Niagara/audio.
 
-`AWPTankShell::OnImpact` exposes shell impact location.
+`AWPArmoredVehicle` still owns targeting, movement, cooldowns, armor and health.
 
-Production vehicle Blueprints should attach meshes, tracks/wheels, turret animation, exhaust, suspension presentation and audio without reimplementing armor health or target rules.
+## Environment
 
-## Recommended production subclasses
+`UWPEnvironmentVisualProfile` supplies:
 
-Create Blueprint subclasses such as:
+- dirt/plaster/brick/stone/wood/metal/roof/concrete materials;
+- optional rural building visual mesh;
+- tree/crate/barrel scenery;
+- optional sky cubemap/cloud presentation;
+- optional battlefield/wind/distant-battle audio.
 
-- `BP_WP_AlliedRifleman`;
-- `BP_WP_AxisRifleman`;
-- `BP_WP_AlliedTank`;
-- `BP_WP_AxisTank`;
-- production projectile/effect subclasses where necessary.
+The director retains simple collision shells underneath donated building visuals. This deliberately decouples gameplay collision/navigation from third-party mesh quality.
 
-Then set the existing class references in game/director/data assets to those subclasses. Core C++ should remain the source of truth.
+## Animation rule
+
+Imported/migrated animation content is assigned only when skeleton-compatible. The generator will not silently attach a mismatched Game Animation Sample AnimBP; retargeting should be performed in UE5 first.
+
+## Core rule
+
+Presentation assets may subscribe to or consume gameplay state. They must not duplicate or override core combat decisions.
