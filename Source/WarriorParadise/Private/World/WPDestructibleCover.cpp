@@ -37,6 +37,14 @@ void AWPDestructibleCover::ConfigureCover(const FVector& InScale, float InMaxHea
     Health = MaxHealth;
 }
 
+void AWPDestructibleCover::ApplyMaterial(UMaterialInterface* Material)
+{
+    if (MeshComponent && Material)
+    {
+        MeshComponent->SetMaterial(0, Material);
+    }
+}
+
 void AWPDestructibleCover::HandleTakeAnyDamage(
     AActor* DamagedActor,
     float Damage,
