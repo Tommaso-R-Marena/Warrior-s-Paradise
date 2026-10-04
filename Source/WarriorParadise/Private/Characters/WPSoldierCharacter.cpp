@@ -431,6 +431,12 @@ bool AWPSoldierCharacter::ThrowGrenadeAt(const FVector& TargetLocation)
         LaunchVelocity.Rotation(),
         SpawnParameters))
     {
+        if (AWPBattlefieldDirector* Director = GetBattlefieldDirector())
+        {
+            Grenade->SetPresentationProfile(
+                Director->GetFragExplosionPresentation());
+        }
+
         Grenade->InitializeGrenade(CombatTeam, LaunchVelocity);
         --GrenadesRemaining;
         return true;
