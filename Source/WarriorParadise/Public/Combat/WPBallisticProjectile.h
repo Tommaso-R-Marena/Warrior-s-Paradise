@@ -4,6 +4,8 @@
 #include "GameFramework/Actor.h"
 #include "WPBallisticProjectile.generated.h"
 
+class AController;
+class UPrimitiveComponent;
 class USphereComponent;
 class UProjectileMovementComponent;
 
