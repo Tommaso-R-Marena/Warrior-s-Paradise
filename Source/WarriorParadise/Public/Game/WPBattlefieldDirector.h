@@ -84,6 +84,9 @@ private:
     UPROPERTY(Transient)
     TArray<TObjectPtr<AWPCaptureObjective>> Objectives;
 
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<AWPSoldierCharacter>> FriendlySquad;
+
     FTimerHandle NextWaveTimer;
 
     void BuildBattlefield();
@@ -92,6 +95,7 @@ private:
     void SpawnWave();
     void SpawnEnemyGroup(int32 Count, bool bResetEnemyCounter);
     void SpawnNextWave();
+    void TransferPlayerControl(AWPSoldierCharacter* FallenSoldier);
 
     UFUNCTION()
     void HandleObjectiveCaptured(AWPCaptureObjective* Objective);
