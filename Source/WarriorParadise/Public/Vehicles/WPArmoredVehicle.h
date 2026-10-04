@@ -47,6 +47,12 @@ public:
     bool HasProductionVisuals() const { return bProductionVisualsActive; }
 
     UFUNCTION(BlueprintCallable, Category="Vehicle|Presentation")
+    void SetVisualProfile(UWPVehicleVisualProfile* NewProfile)
+    {
+        VisualProfile = NewProfile;
+    }
+
+    UFUNCTION(BlueprintCallable, Category="Vehicle|Presentation")
     void ApplyVisualProfile();
 
     UPROPERTY(BlueprintAssignable, Category="Vehicle|Presentation")
