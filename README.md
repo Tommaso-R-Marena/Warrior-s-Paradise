@@ -86,7 +86,7 @@ The repository now contains a substantial code-side combined-arms battle rather 
 
 ## Production presentation layer
 
-The branch no longer stops at raw gameplay delegates. It includes data-driven presentation components/profiles for:
+The project no longer stops at raw gameplay delegates. It includes data-driven presentation components/profiles for:
 
 - muzzle flash, weapon audio, reload/dry-fire audio;
 - live bullet tracers;
@@ -166,7 +166,7 @@ See [Scalability and Performance Presets](docs/SCALABILITY.md).
 Target: **Unreal Engine 5.8**.
 
 1. Install UE 5.8 and Visual Studio 2022 with Game development with C++.
-2. Clone the repository and check out the vertical-slice branch.
+2. Clone the repository. The full vertical slice is now on the default `main` branch.
 3. Generate project files if requested.
 4. Build `WarriorParadiseEditor`.
 5. Open `WarriorParadise.uproject`.
@@ -188,6 +188,12 @@ Windows UE 5.8 editor build:
 .\tools\build_local.ps1
 ```
 
+Clean verification of both the editor target and the Win64 game target:
+
+```powershell
+.\tools\build_local.ps1 -Clean -BuildGameTarget
+```
+
 Optional packaged Win64 build:
 
 ```powershell
@@ -196,7 +202,7 @@ Optional packaged Win64 build:
 
 The validator now checks the **71-file** source surface plus Python tooling, plugin requirements, free-asset/license metadata, smoke/soldier/weapon/vehicle presentation, enterable buildings, material-specific impacts, tracers/decals and the free-content bootstrap contract.
 
-GitHub Actions is manual-only and is not required for development. A **full Unreal C++ compile/playtest has still not been executed from this ChatGPT environment**; a clean local UE 5.8 build remains the next hard validation gate.
+`main` now includes a manual **UE 5.8 compile gate** at `.github/workflows/unreal-compile.yml`. It is designed for a Windows x64 self-hosted GitHub Actions runner so it does not consume GitHub-hosted Actions minutes. The gate runs repository validation, removes project build intermediates when requested, builds both `WarriorParadiseEditor` and the `WarriorParadise` Win64 game target, prints Unreal Build Tool diagnostics on failure, and publishes a PASS/FAIL job summary. A **full Unreal C++ compile/playtest has still not been executed**; connecting a Windows runner with UE 5.8 installed is the next hard validation gate.
 
 ## What remains before this is visually Enlisted-quality
 
