@@ -419,6 +419,44 @@ AWPEnemySoldier* AWPEnemySoldier::SelectManeuverElement(
     return BestCandidate;
 }
 
+bool AWPEnemySoldier::IsGrenadeTargetSafe(
+    const FVector& TargetLocation) const
+{
+    if (!GetWorld() ||
+        GrenadeFriendlySafetyRadius <= 0.0f)
+    {
+        return true;
+    }
+
+    const float SafetyRadiusSquared =
+        FMath::Square(
+            GrenadeFriendlySafetyRadius);
+
+    for (TActorIterator<AWPSoldierCharacter> It(GetWorld());
+         It;
+         ++It)
+    {
+        const AWPSoldierCharacter* Soldier = *It;
+        if (!Soldier ||
+            Soldier == this ||
+            Soldier->GetCombatTeam() !=
+                GetCombatTeam())
+        {
+            continue;
+        }
+
+        if (FVector::DistSquared(
+                TargetLocation,
+                Soldier->GetActorLocation()) <=
+            SafetyRadiusSquared)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 float AWPEnemySoldier::GetManeuverSelectionScore() const
 {
     float RoleBias = 1000.0f;
@@ -824,10 +862,25 @@ void AWPEnemySoldier::HandleGrenadeOpportunity(AWPSoldierCharacter* Target, floa
         return;
     }
 
-    if (FMath::FRand() <= 0.32f &&
-        ThrowGrenadeAt(Target->GetActorLocation() + Target->GetVelocity() * 0.35f))
+    const FVector PredictedImpact =
+        Target->GetActorLocation() +
+        Target->GetVelocity() * 0.35f;
+
+    if (!IsGrenadeTargetSafe(PredictedImpact))
     {
-        NextGrenadeTime = Time + GrenadeCooldownSeconds + FMath::FRandRange(0.0f, 6.0f);
+        bHasHeldGrenadeForFriendly = true;
+        NextGrenadeTime =
+            Time + FMath::FRandRange(1.2f, 2.4f);
+        return;
+    }
+
+    if (FMath::FRand() <= 0.32f &&
+        ThrowGrenadeAt(PredictedImpact))
+    {
+        NextGrenadeTime =
+            Time +
+            GrenadeCooldownSeconds +
+            FMath::FRandRange(0.0f, 6.0f);
     }
 }
 
