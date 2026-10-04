@@ -177,6 +177,11 @@ Invoke-Checked -Executable $Python -Arguments @(
     (Join-Path $RepoRoot "tools\validate_project.py")
 )
 
+Write-Step "Running Unreal compile-readiness audit"
+Invoke-Checked -Executable $Python -Arguments @(
+    (Join-Path $RepoRoot "tools\check_compile_readiness.py")
+)
+
 if ($ValidateOnly) {
     Write-Host ""
     Write-Host "Validation completed successfully." -ForegroundColor Green
