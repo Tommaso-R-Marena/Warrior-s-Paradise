@@ -19,6 +19,11 @@ class WARRIORPARADISE_API UWPSoldierPresentationComponent : public UActorCompone
 public:
     UWPSoldierPresentationComponent();
 
+    virtual void TickComponent(
+        float DeltaTime,
+        ELevelTick TickType,
+        FActorComponentTickFunction* ThisTickFunction) override;
+
     UFUNCTION(BlueprintCallable, Category="Presentation")
     void SetPresentationProfile(UWPSoldierPresentationProfile* NewProfile);
 
@@ -41,11 +46,15 @@ private:
     TWeakObjectPtr<AWPSoldierCharacter> SoldierOwner;
     TWeakObjectPtr<UWPHealthComponent> HealthComponent;
     float NextPainSoundTime = 0.0f;
+    FVector LastMovementSampleLocation = FVector::ZeroVector;
+    float MovementDistanceAccumulator = 0.0f;
 
     void BindEvents();
     void PlayWorldSound(USoundBase* Sound, float VolumeMultiplier = 1.0f) const;
     void PlayMontage(UAnimMontage* Montage) const;
     void SpawnEffectAtSoldier(class UNiagaraSystem* System, const FVector& Scale) const;
+    void UpdateMovementFoley();
+    void PlayFootstep();
 
     UFUNCTION()
     void HandleDamageReceived(float Damage, AActor* DamageCauser);
