@@ -52,6 +52,8 @@ The code now includes production visual/loadout profiles, Motion Matching discov
 - cover reservations;
 - coordinated Base Of Fire / Maneuver behavior against shared visible targets;
 - Assault-biased maneuver selection with Riflemen/other troops forming the fire base;
+- friendly fire-lane safety corridor, immediate hold-fire behavior and exposed-shooter lane clearing;
+- downed allies block AI firing corridors as physical casualties;
 - LOS + close awareness;
 - location-based shared contacts;
 - gunshot investigation;
