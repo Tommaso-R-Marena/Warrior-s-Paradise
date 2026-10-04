@@ -17,6 +17,8 @@ REQUIRED = [
     "Source/WarriorParadise/Public/Characters/WPSoldierCharacter.h",
     "Source/WarriorParadise/Public/Combat/WPWeaponComponent.h",
     "Source/WarriorParadise/Public/Combat/WPHealthComponent.h",
+    "Source/WarriorParadise/Public/Combat/WPBallisticProjectile.h",
+    "Source/WarriorParadise/Private/Combat/WPBallisticProjectile.cpp",
     "Source/WarriorParadise/Public/AI/WPEnemySoldier.h",
     "Source/WarriorParadise/Public/Game/WPBattlefieldDirector.h",
     "Source/WarriorParadise/Public/Game/WPCombatGameMode.h",
@@ -28,6 +30,12 @@ FORBIDDEN_MARKERS = ("PLACEHOLDER", "IMPLEMENT_ME", "XXX")
 
 def fail(message: str) -> None:
     raise SystemExit(f"validation failed: {message}")
+
+
+def require_text(relative_path: str, expected: str) -> None:
+    text = (ROOT / relative_path).read_text(encoding="utf-8")
+    if expected not in text:
+        fail(f"{relative_path} is missing required contract text: {expected}")
 
 
 def main() -> None:
@@ -43,6 +51,14 @@ def main() -> None:
     if "WarriorParadise" not in module_names:
         fail("WarriorParadise runtime module is not declared")
 
+    require_text("Config/DefaultInput.ini", 'ActionName="Aim"')
+    require_text(
+        "Source/WarriorParadise/Private/Combat/WPWeaponComponent.cpp",
+        "SpawnActor<AWPBallisticProjectile>")
+    require_text(
+        "Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp",
+        'BindAction(TEXT("Aim")')
+
     checked = 0
     for path in (ROOT / "Source").rglob("*"):
         if not path.is_file() or path.suffix.lower() not in {".h", ".cpp", ".cs"}:
@@ -53,7 +69,7 @@ def main() -> None:
                 fail(f"{marker} marker found in {path.relative_to(ROOT)}")
         checked += 1
 
-    if checked < 10:
+    if checked < 12:
         fail("unexpectedly small source tree")
 
     print(f"Warrior's Paradise validation passed ({checked} source files checked).")
