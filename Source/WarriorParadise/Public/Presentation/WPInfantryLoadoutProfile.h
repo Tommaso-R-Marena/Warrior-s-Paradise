@@ -4,6 +4,7 @@
 #include "Engine/DataAsset.h"
 #include "WPInfantryLoadoutProfile.generated.h"
 
+class UWPSoldierPresentationProfile;
 class UWPInfantryVisualProfile;
 class UWPWeaponDefinition;
 class UWPWeaponPresentationProfile;
@@ -25,6 +26,9 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Presentation")
     TObjectPtr<UWPWeaponPresentationProfile> WeaponPresentationProfile;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Presentation")
+    TObjectPtr<UWPSoldierPresentationProfile> SoldierPresentationProfile;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Equipment", meta=(ClampMin="0"))
     int32 FragGrenades = 1;
