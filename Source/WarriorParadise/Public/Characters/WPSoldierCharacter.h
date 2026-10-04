@@ -273,6 +273,7 @@ private:
     void ThrowGrenadeInput();
     void ThrowSmokeGrenadeInput();
     void InteractInput();
+    void SwitchSquadmateInput();
     void IssueFollowOrder();
     void IssueAttackOrder();
     void IssueHoldOrder();
