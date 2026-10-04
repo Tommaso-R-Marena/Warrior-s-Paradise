@@ -10,14 +10,18 @@ The repository contains an executable, asset-independent combat foundation:
 - physical rifle projectiles with gravity, configurable muzzle velocity, travel range, aim-dependent dispersion, magazines, reserve ammunition, and reload timing;
 - right-mouse aim-down-sights with FOV/weapon interpolation and procedural recoil response;
 - reusable health/death component;
-- hostile infantry with range management, line-of-sight checks, movement, firing pulses, and death reporting;
+- explicit Allied/Axis combat factions with autonomous friendly and hostile infantry;
+- AI target selection, range management, line-of-sight checks, burst fire, and suppression-sensitive behavior;
+- five friendly squadmates who fight alongside the player and become controllable reserves after player death;
+- projectile near-miss suppression with decay and HUD feedback;
+- three sequential capture objectives, reinforcement escalation, final counterattack, and battle-victory state;
 - runtime-generated battlefield blockout with buildings, cover, boundaries, directional light, skylight, and atmospheric fog;
 - wave spawning, scoring, and escalation;
 - code HUD for health, ammunition, wave, hostiles, score, crosshair, and death state;
 - Unreal project/build/configuration scaffolding;
 - GitHub Actions repository validation.
 
-This is the **combat kernel**, not yet the production visual target. Terrain, production characters, animation, weapon art, audio, VFX, destruction, squad tactics, objectives, and vehicles are layered onto this foundation.
+This is the **code-side vertical-slice foundation**, not yet the production visual target. Production terrain, character/weapon assets, animation, audio, VFX, destruction, deeper squad tactics, and vehicles still require Unreal Editor content work and licensed/original assets.
 
 ## Engine
 
@@ -60,4 +64,4 @@ The first bootstrap deliberately uses Unreal's built-in Entry map. `AWPBattlefie
 python tools/validate_project.py
 ```
 
-GitHub Actions runs the same structural contract on pushes and pull requests. A full Unreal C++ compile still requires an Unreal Engine 5.8 installation or an appropriately provisioned build runner.
+Run the structural contract locally with Python before opening Unreal. A full Unreal C++ compile still requires an Unreal Engine 5.8 installation or an appropriately provisioned build runner. The repository also contains a manually dispatchable GitHub workflow; automatic hosted jobs are intentionally disabled while the connected account's hosted runner is failing before job steps begin.
