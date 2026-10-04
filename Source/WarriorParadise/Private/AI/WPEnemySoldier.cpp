@@ -595,9 +595,30 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
     if (!Target)
     {
-        ReleaseCover();
         GetWeaponComponent()->StopFire();
         bPulseFiring = false;
+
+        if (bPinned)
+        {
+            if (AWPCoverPoint* Cover = CurrentCover.Get())
+            {
+                const float CoverDistance = FVector::Dist2D(
+                    GetActorLocation(),
+                    Cover->GetActorLocation());
+
+                if (CoverDistance > 115.0f)
+                {
+                    MoveTacticallyToward(
+                        Cover->GetActorLocation(),
+                        1.0f);
+                }
+                return;
+            }
+        }
+        else if (!bPressured)
+        {
+            ReleaseCover();
+        }
 
         if (!bPinned && HandleEngineerSupport())
         {
@@ -623,13 +644,31 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
             if (bHasInvestigation)
             {
+                if (bPinned)
+                {
+                    FVector AwayFromThreat =
+                        GetActorLocation() - InvestigateLocation;
+                    AwayFromThreat.Z = 0.0f;
+
+                    if (!AwayFromThreat.IsNearlyZero())
+                    {
+                        MoveTacticallyToward(
+                            GetActorLocation() +
+                                AwayFromThreat.GetSafeNormal() * 600.0f,
+                            0.72f);
+                    }
+                    return;
+                }
+
                 const FVector InvestigatePoint =
                     InvestigateLocation + GetFormationOffset() * 0.35f;
 
                 if (FVector::DistSquared2D(GetActorLocation(), InvestigatePoint) >
                     FMath::Square(150.0f))
                 {
-                    MoveTacticallyToward(InvestigatePoint, 0.88f);
+                    MoveTacticallyToward(
+                        InvestigatePoint,
+                        bPressured ? 0.62f : 0.88f);
                 }
                 return;
             }
@@ -639,7 +678,9 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         const float DistanceToDestination = FVector::Dist2D(GetActorLocation(), Destination);
         if (DistanceToDestination > 170.0f)
         {
-            MoveTacticallyToward(Destination, 0.9f);
+            MoveTacticallyToward(
+                Destination,
+                bPinned ? 0.45f : (bPressured ? 0.68f : 0.9f));
         }
         return;
     }
