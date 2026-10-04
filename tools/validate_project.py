@@ -19,8 +19,13 @@ REQUIRED = [
     "Source/WarriorParadise/Public/Combat/WPHealthComponent.h",
     "Source/WarriorParadise/Public/Combat/WPBallisticProjectile.h",
     "Source/WarriorParadise/Private/Combat/WPBallisticProjectile.cpp",
+    "Source/WarriorParadise/Public/Combat/WPCombatTypes.h",
+    "Source/WarriorParadise/Public/Combat/WPSuppressionComponent.h",
+    "Source/WarriorParadise/Private/Combat/WPSuppressionComponent.cpp",
     "Source/WarriorParadise/Public/AI/WPEnemySoldier.h",
     "Source/WarriorParadise/Public/Game/WPBattlefieldDirector.h",
+    "Source/WarriorParadise/Public/Game/WPCaptureObjective.h",
+    "Source/WarriorParadise/Private/Game/WPCaptureObjective.cpp",
     "Source/WarriorParadise/Public/Game/WPCombatGameMode.h",
     "Source/WarriorParadise/Public/UI/WPCombatHUD.h",
 ]
@@ -58,6 +63,12 @@ def main() -> None:
     require_text(
         "Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp",
         'BindAction(TEXT("Aim")')
+    require_text(
+        "Source/WarriorParadise/Private/Combat/WPBallisticProjectile.cpp",
+        "AddSuppression(NearMissSuppression)")
+    require_text(
+        "Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp",
+        "HandleObjectiveCaptured")
 
     checked = 0
     for path in (ROOT / "Source").rglob("*"):
@@ -69,7 +80,7 @@ def main() -> None:
                 fail(f"{marker} marker found in {path.relative_to(ROOT)}")
         checked += 1
 
-    if checked < 12:
+    if checked < 16:
         fail("unexpectedly small source tree")
 
     print(f"Warrior's Paradise validation passed ({checked} source files checked).")
