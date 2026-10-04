@@ -1,0 +1,148 @@
+name: UE 5.8 compile gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: Unreal build configuration
+        required: true
+        default: Development
+        type: choice
+        options:
+          - Development
+          - DebugGame
+      clean:
+        description: Remove project Binaries/Intermediate before compiling
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ue58-compile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    name: Clean Unreal compile
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: powershell
+
+    steps:
+      - name: Checkout requested commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          git init .
+          $remotes = @(git remote)
+          if ($remotes -contains "origin") {
+            git remote remove origin
+          }
+          git remote add origin "https://x-access-token:${env:GH_TOKEN}@github.com/${env:GITHUB_REPOSITORY}.git"
+          git fetch --force --depth=1 origin "${env:GITHUB_SHA}"
+          git reset --hard FETCH_HEAD
+          git clean -ffdx
+
+      - name: Runner preflight
+        run: |
+          $ErrorActionPreference = "Stop"
+          Write-Host "Runner: $env:RUNNER_NAME"
+          Write-Host "OS: $env:RUNNER_OS"
+          Write-Host "Workspace: $env:GITHUB_WORKSPACE"
+          Write-Host "PowerShell: $($PSVersionTable.PSVersion)"
+
+          $python = Get-Command py, python, python3 -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($null -eq $python) {
+            throw "Python 3 is required on the self-hosted runner."
+          }
+          Write-Host "Python: $($python.Source)"
+
+          if (-not (Test-Path ".\WarriorParadise.uproject")) {
+            throw "WarriorParadise.uproject is missing from the checked-out commit."
+          }
+
+          if (-not (Test-Path ".\tools\build_local.ps1")) {
+            throw "tools/build_local.ps1 is missing from the checked-out commit."
+          }
+
+      - name: Validate and compile UE 5.8
+        env:
+          WP_CONFIGURATION: ${{ inputs.configuration }}
+          WP_CLEAN: ${{ inputs.clean }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $params = @{
+            Configuration = $env:WP_CONFIGURATION
+            BuildGameTarget = $true
+          }
+
+          if ($env:WP_CLEAN -eq "true") {
+            $params.Clean = $true
+          }
+
+          .\tools\build_local.ps1 @params
+
+      - name: Print Unreal diagnostics on failure
+        if: failure()
+        run: |
+          Write-Host ""
+          Write-Host "========== Unreal build diagnostics =========="
+
+          $candidates = @(
+            (Join-Path $env:LOCALAPPDATA "UnrealBuildTool\Log.txt"),
+            (Join-Path $env:GITHUB_WORKSPACE "Saved\Logs\WarriorParadise.log")
+          )
+
+          foreach ($path in $candidates) {
+            if (Test-Path $path) {
+              Write-Host ""
+              Write-Host "----- $path (last 400 lines) -----"
+              Get-Content $path -Tail 400 -ErrorAction SilentlyContinue
+            }
+          }
+
+          $ubtDir = Join-Path $env:LOCALAPPDATA "UnrealBuildTool"
+          if (Test-Path $ubtDir) {
+            Get-ChildItem $ubtDir -Filter "*.txt" -File -ErrorAction SilentlyContinue |
+              Sort-Object LastWriteTime -Descending |
+              Select-Object -First 3 |
+              ForEach-Object {
+                Write-Host ""
+                Write-Host "----- $($_.FullName) (last 250 lines) -----"
+                Get-Content $_.FullName -Tail 250 -ErrorAction SilentlyContinue
+              }
+          }
+
+      - name: Publish compile verdict
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          if ($env:JOB_STATUS -eq "success") {
+            $verdict = "PASS"
+            $detail = "WarriorParadiseEditor and WarriorParadise Win64 compiled successfully with UE 5.8."
+          }
+          else {
+            $verdict = "FAIL"
+            $detail = "The UE 5.8 compile gate failed. Inspect the Validate and compile step and printed Unreal diagnostics."
+          }
+
+          @"
+          ## Warrior's Paradise UE 5.8 compile: $verdict
+
+          - Commit: `$env:COMMIT_SHA`
+          - Configuration: `${{ inputs.configuration }}`
+          - Clean build requested: `${{ inputs.clean }}`
+          - Result: **$verdict**
+          - $detail
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+          Write-Host "UE 5.8 compile verdict: $verdict"
