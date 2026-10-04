@@ -327,6 +327,7 @@ private:
     void IssueAttackOrder();
     void IssueHoldOrder();
     void CallArtilleryInput();
+    void CallAirSupportInput();
 
     UFUNCTION()
     void HandleShotFired(float RecoilPitch, float RecoilYaw);
