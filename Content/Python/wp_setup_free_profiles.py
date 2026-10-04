@@ -493,6 +493,37 @@ def main() -> None:
         "WPEnvironmentVisualProfile",
     )
 
+    tree_mesh = find_asset(
+        unreal.StaticMesh,
+        ("foliage_tree",),
+        ("tree",),
+    )
+    crate_mesh = find_asset(
+        unreal.StaticMesh,
+        ("prop_crate",),
+        ("crate",),
+    )
+    barrel_mesh = find_asset(
+        unreal.StaticMesh,
+        ("prop_barrel",),
+        ("barrel",),
+    )
+    sky_cubemap = find_asset(
+        unreal.TextureCube,
+        ("hdri_overcast",),
+        ("overcast",),
+        ("cloudy",),
+    )
+
+    if tree_mesh:
+        set_prop(environment, "tree_mesh", tree_mesh)
+    if crate_mesh:
+        set_prop(environment, "crate_mesh", crate_mesh)
+    if barrel_mesh:
+        set_prop(environment, "barrel_mesh", barrel_mesh)
+    if sky_cubemap:
+        set_prop(environment, "sky_cubemap", sky_cubemap)
+
     for slot, property_name in {
         "ground": "ground_material",
         "plaster": "plaster_material",
