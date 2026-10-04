@@ -421,6 +421,73 @@ UMaterialInterface* AWPBattlefieldDirector::ResolveSurfaceMaterial(
         .LoadSynchronous();
 }
 
+bool AWPBattlefieldDirector::SpawnBuildingVisual(
+    const FVector& Location,
+    const FVector& BoxScale,
+    const FRotator& Rotation)
+{
+    if (!GetWorld() || !EnvironmentVisualProfile)
+    {
+        return false;
+    }
+
+    UStaticMesh* BuildingMesh =
+        EnvironmentVisualProfile->VillageBuildingMesh.LoadSynchronous();
+
+    if (!BuildingMesh)
+    {
+        return false;
+    }
+
+    const FBoxSphereBounds Bounds = BuildingMesh->GetBounds();
+    const FVector SourceExtent = Bounds.BoxExtent;
+
+    if (SourceExtent.X <= KINDA_SMALL_NUMBER ||
+        SourceExtent.Y <= KINDA_SMALL_NUMBER ||
+        SourceExtent.Z <= KINDA_SMALL_NUMBER)
+    {
+        return false;
+    }
+
+    const FVector DesiredExtent(
+        FMath::Abs(BoxScale.X) * 50.0f,
+        FMath::Abs(BoxScale.Y) * 50.0f,
+        FMath::Abs(BoxScale.Z) * 50.0f);
+
+    FVector VisualScale(
+        DesiredExtent.X / SourceExtent.X,
+        DesiredExtent.Y / SourceExtent.Y,
+        DesiredExtent.Z / SourceExtent.Z);
+
+    VisualScale.X = FMath::Clamp(VisualScale.X, 0.05f, 20.0f);
+    VisualScale.Y = FMath::Clamp(VisualScale.Y, 0.05f, 20.0f);
+    VisualScale.Z = FMath::Clamp(VisualScale.Z, 0.05f, 20.0f);
+
+    const FVector Offset =
+        Rotation.RotateVector(
+            EnvironmentVisualProfile->VillageBuildingLocationOffset);
+
+    const FRotator VisualRotation =
+        Rotation + EnvironmentVisualProfile->VillageBuildingRotationOffset;
+
+    AStaticMeshActor* Visual = GetWorld()->SpawnActor<AStaticMeshActor>(
+        Location + Offset,
+        VisualRotation);
+
+    if (!Visual)
+    {
+        return false;
+    }
+
+    UStaticMeshComponent* Component = Visual->GetStaticMeshComponent();
+    Component->SetMobility(EComponentMobility::Movable);
+    Component->SetStaticMesh(BuildingMesh);
+    Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    Component->SetCastShadow(true);
+    Visual->SetActorScale3D(VisualScale);
+    return true;
+}
+
 void AWPBattlefieldDirector::SpawnBox(
     const FVector& Location,
     const FVector& Scale,
@@ -450,6 +517,20 @@ void AWPBattlefieldDirector::SpawnBox(
     }
 
     Box->SetActorScale3D(Scale);
+
+    const bool bLargeBuildingShell =
+        Scale.Z >= 2.5f &&
+        Scale.X >= 5.0f &&
+        Scale.Y >= 4.0f &&
+        (Surface == EWPEnvironmentSurface::Plaster ||
+         Surface == EWPEnvironmentSurface::Brick ||
+         Surface == EWPEnvironmentSurface::Stone);
+
+    if (bLargeBuildingShell &&
+        SpawnBuildingVisual(Location, Scale, Rotation))
+    {
+        MeshComponent->SetVisibility(false, true);
+    }
 
     const bool bThinHorizontalCover =
         Scale.Z > 0.65f &&
