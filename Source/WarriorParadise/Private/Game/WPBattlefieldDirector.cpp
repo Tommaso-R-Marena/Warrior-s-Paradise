@@ -30,6 +30,7 @@
 #include "Presentation/WPEnvironmentVisualProfile.h"
 #include "Presentation/WPExplosionPresentationProfile.h"
 #include "Presentation/WPInfantryLoadoutProfile.h"
+#include "Presentation/WPSmokePresentationProfile.h"
 #include "Presentation/WPVehicleVisualProfile.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
@@ -173,6 +174,14 @@ AWPBattlefieldDirector::GetArtilleryExplosionPresentation() const
 {
     return BattlePresentationSet
         ? BattlePresentationSet->GetArtilleryExplosion()
+        : nullptr;
+}
+
+UWPSmokePresentationProfile*
+AWPBattlefieldDirector::GetSmokePresentation() const
+{
+    return BattlePresentationSet
+        ? BattlePresentationSet->GetSmokePresentation()
         : nullptr;
 }
 
