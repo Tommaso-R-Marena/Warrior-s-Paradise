@@ -9,6 +9,7 @@
 #include "Game/WPBattlefieldDirector.h"
 #include "GameFramework/FloatingPawnMovement.h"
 #include "Kismet/GameplayStatics.h"
+#include "Presentation/WPVehicleVisualProfile.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Vehicles/WPTankShell.h"
 
@@ -73,9 +74,51 @@ void AWPArmoredVehicle::BeginPlay()
 {
     Super::BeginPlay();
     Health = MaxHealth;
+    ApplyVisualProfile();
     BattlefieldDirector = Cast<AWPBattlefieldDirector>(
         UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass()));
     OnTakeAnyDamage.AddDynamic(this, &AWPArmoredVehicle::HandleTakeAnyDamage);
+}
+
+void AWPArmoredVehicle::ApplyVisualProfile()
+{
+    bProductionVisualsActive = false;
+
+    if (!VisualProfile)
+    {
+        return;
+    }
+
+    if (UStaticMesh* HullMesh = VisualProfile->HullMesh.LoadSynchronous())
+    {
+        HullVisual->SetStaticMesh(HullMesh);
+        HullVisual->SetRelativeTransform(VisualProfile->HullRelativeTransform);
+        bProductionVisualsActive = true;
+    }
+
+    if (UStaticMesh* TurretMesh = VisualProfile->TurretMesh.LoadSynchronous())
+    {
+        TurretVisual->SetStaticMesh(TurretMesh);
+        TurretVisual->SetRelativeTransform(VisualProfile->TurretRelativeTransform);
+        TurretVisual->SetVisibility(true, true);
+        bProductionVisualsActive = true;
+    }
+    else if (VisualProfile->bHideFallbackTurretWhenMissing)
+    {
+        TurretVisual->SetVisibility(false, true);
+    }
+
+    if (UStaticMesh* BarrelMesh = VisualProfile->BarrelMesh.LoadSynchronous())
+    {
+        BarrelVisual->SetStaticMesh(BarrelMesh);
+        BarrelVisual->SetRelativeTransform(VisualProfile->BarrelRelativeTransform);
+        BarrelVisual->SetVisibility(true, true);
+        bProductionVisualsActive = true;
+    }
+    else if (VisualProfile->bHideFallbackBarrelWhenMissing)
+    {
+        BarrelVisual->SetVisibility(false, true);
+    }
 }
 
 AActor* AWPArmoredVehicle::FindBestTarget() const
