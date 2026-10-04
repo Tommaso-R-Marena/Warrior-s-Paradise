@@ -10,6 +10,7 @@ class AWPTankShell;
 class UBoxComponent;
 class UFloatingPawnMovement;
 class UStaticMeshComponent;
+class UWPVehicleVisualProfile;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWPVehicleSimpleEventSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
@@ -41,6 +42,12 @@ public:
 
     UFUNCTION(BlueprintPure, Category="Vehicle")
     bool IsDestroyed() const { return bDestroyed; }
+
+    UFUNCTION(BlueprintPure, Category="Vehicle|Presentation")
+    bool HasProductionVisuals() const { return bProductionVisualsActive; }
+
+    UFUNCTION(BlueprintCallable, Category="Vehicle|Presentation")
+    void ApplyVisualProfile();
 
     UPROPERTY(BlueprintAssignable, Category="Vehicle|Presentation")
     FWPVehicleSimpleEventSignature OnCannonFired;
@@ -79,6 +86,9 @@ private:
     UPROPERTY(VisibleAnywhere, Category="Vehicle")
     TObjectPtr<UFloatingPawnMovement> Movement;
 
+    UPROPERTY(EditDefaultsOnly, Category="Vehicle|Presentation")
+    TObjectPtr<UWPVehicleVisualProfile> VisualProfile;
+
     UPROPERTY(EditDefaultsOnly, Category="Vehicle")
     TSubclassOf<AWPTankShell> TankShellClass;
 
@@ -110,6 +120,7 @@ private:
     float NextMachineGunTime = 0.0f;
     float NextTargetScanTime = 0.0f;
     bool bDestroyed = false;
+    bool bProductionVisualsActive = false;
     TWeakObjectPtr<AActor> CurrentTarget;
     TWeakObjectPtr<AWPBattlefieldDirector> BattlefieldDirector;
 
