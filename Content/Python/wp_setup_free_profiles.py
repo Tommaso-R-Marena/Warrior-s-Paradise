@@ -303,6 +303,15 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
         ("dry", "fire"),
         ("empty", "click"),
     )
+    manual_cycle = None
+    if not automatic:
+        manual_cycle = find_asset(
+            sound_class,
+            ("bolt", "action"),
+            ("rifle", "bolt"),
+            ("weapon", "cycle"),
+            ("mechanical", "gun"),
+        )
     bullet_impact = find_asset(
         sound_class,
         ("bullet", "impact"),
@@ -386,6 +395,8 @@ def configure_weapon_presentation(asset, *, automatic: bool) -> None:
         set_prop(asset, "reload_start_sound", reload_start)
     if dry:
         set_prop(asset, "dry_fire_sound", dry)
+    if manual_cycle:
+        set_prop(asset, "manual_cycle_sound", manual_cycle)
     if bullet_impact:
         set_prop(asset, "bullet_impact_sound", bullet_impact)
     if dirt_impact:
