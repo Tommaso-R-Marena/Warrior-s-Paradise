@@ -1,5 +1,6 @@
 #include "Presentation/WPWeaponPresentationComponent.h"
 #include "Characters/WPSoldierCharacter.h"
+#include "Vehicles/WPArmoredVehicle.h"
 #include "Combat/WPBallisticProjectile.h"
 #include "Combat/WPWeaponComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -242,7 +243,97 @@ void UWPWeaponPresentationComponent::HandleProjectileImpact(
         return;
     }
 
-    if (UNiagaraSystem* System = PresentationProfile->BulletImpact.LoadSynchronous())
+    enum class ELocalImpactSurface : uint8
+    {
+        Generic,
+        Wood,
+        Stone,
+        Metal,
+        Flesh
+    };
+
+    ELocalImpactSurface Surface = ELocalImpactSurface::Generic;
+
+    if (HitActor)
+    {
+        if (HitActor->IsA<AWPSoldierCharacter>())
+        {
+            Surface = ELocalImpactSurface::Flesh;
+        }
+        else if (HitActor->IsA<AWPArmoredVehicle>() ||
+                 HitActor->ActorHasTag(TEXT("WP_Surface_Metal")))
+        {
+            Surface = ELocalImpactSurface::Metal;
+        }
+        else if (HitActor->ActorHasTag(TEXT("WP_Surface_Wood")))
+        {
+            Surface = ELocalImpactSurface::Wood;
+        }
+        else if (HitActor->ActorHasTag(TEXT("WP_Surface_Stone")) ||
+                 HitActor->ActorHasTag(TEXT("WP_Surface_Brick")) ||
+                 HitActor->ActorHasTag(TEXT("WP_Surface_Plaster")) ||
+                 HitActor->ActorHasTag(TEXT("WP_Surface_Concrete")))
+        {
+            Surface = ELocalImpactSurface::Stone;
+        }
+    }
+
+    TSoftObjectPtr<UNiagaraSystem> Effect = PresentationProfile->BulletImpact;
+    TSoftObjectPtr<USoundBase> ImpactSound =
+        PresentationProfile->BulletImpactSound;
+
+    switch (Surface)
+    {
+        case ELocalImpactSurface::Wood:
+            if (!PresentationProfile->WoodImpact.IsNull())
+            {
+                Effect = PresentationProfile->WoodImpact;
+            }
+            if (!PresentationProfile->WoodImpactSound.IsNull())
+            {
+                ImpactSound = PresentationProfile->WoodImpactSound;
+            }
+            break;
+
+        case ELocalImpactSurface::Stone:
+            if (!PresentationProfile->StoneImpact.IsNull())
+            {
+                Effect = PresentationProfile->StoneImpact;
+            }
+            if (!PresentationProfile->StoneImpactSound.IsNull())
+            {
+                ImpactSound = PresentationProfile->StoneImpactSound;
+            }
+            break;
+
+        case ELocalImpactSurface::Metal:
+            if (!PresentationProfile->MetalImpact.IsNull())
+            {
+                Effect = PresentationProfile->MetalImpact;
+            }
+            if (!PresentationProfile->MetalImpactSound.IsNull())
+            {
+                ImpactSound = PresentationProfile->MetalImpactSound;
+            }
+            break;
+
+        case ELocalImpactSurface::Flesh:
+            if (!PresentationProfile->FleshImpact.IsNull())
+            {
+                Effect = PresentationProfile->FleshImpact;
+            }
+            if (!PresentationProfile->FleshImpactSound.IsNull())
+            {
+                ImpactSound = PresentationProfile->FleshImpactSound;
+            }
+            break;
+
+        case ELocalImpactSurface::Generic:
+        default:
+            break;
+    }
+
+    if (UNiagaraSystem* System = Effect.LoadSynchronous())
     {
         UNiagaraFunctionLibrary::SpawnSystemAtLocation(
             this,
@@ -256,7 +347,7 @@ void UWPWeaponPresentationComponent::HandleProjectileImpact(
             true);
     }
 
-    if (USoundBase* Sound = PresentationProfile->BulletImpactSound.LoadSynchronous())
+    if (USoundBase* Sound = ImpactSound.LoadSynchronous())
     {
         PlaySound(
             Sound,
