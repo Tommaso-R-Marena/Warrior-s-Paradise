@@ -342,6 +342,14 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "EWPAITacticalPosture"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "BaseOfFirePulseMultiplier"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "SelectManeuverElement"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "GetManeuverSelectionScore"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "GetManeuverDestination"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "EWPAITacticalPosture::BaseOfFire"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "EWPAITacticalPosture::Maneuver"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "coordinatedAI=%d"),
         ("Source/WarriorParadise/Public/Combat/WPHealthComponent.h", "BleedingDamageThreshold"),
         ("Source/WarriorParadise/Public/Combat/WPHealthComponent.h", "OnBleedingChanged"),
         ("Source/WarriorParadise/Private/Combat/WPHealthComponent.cpp", "TryStartBleedingFromDamage"),
@@ -543,7 +551,7 @@ def main() -> None:
         "feedback, tracers, decals, surface impacts, enterable buildings, "
         "crewable tanks, subsystem armor damage, transports, armored cars, "
         "emplacements, scripted air support, battlefield ambience, spatial-audio, "
-        "destruction, squad, suppression-state behavior, bleeding/field-treatment, support, first-run auto benchmark and Minimal/Low/Medium/High/Ultra scalability contracts checked)."
+        "destruction, squad, coordinated fire-and-maneuver, suppression-state behavior, bleeding/field-treatment, support, first-run auto benchmark and Minimal/Low/Medium/High/Ultra scalability contracts checked)."
     )
 
 
