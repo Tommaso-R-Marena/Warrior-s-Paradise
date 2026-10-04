@@ -1769,12 +1769,45 @@ void AWPBattlefieldDirector::HandleObjectiveCaptured(AWPCaptureObjective* Object
         SquadOrderLocation = GetActiveObjectiveLocation();
         ++Wave;
 
+        if (ActiveObjectiveIndex == 1)
+        {
+            if (!bAlliedLightVehiclesSpawned)
+            {
+                bAlliedLightVehiclesSpawned =
+                    SpawnLightVehicle(
+                        EWPCombatTeam::Allies,
+                        EWPLightVehicleType::ArmoredCar,
+                        FVector(2200.0f, 1350.0f, 85.0f),
+                        FRotator(0.0f, -110.0f, 0.0f)) != nullptr;
+            }
+
+            if (!bAxisLightVehiclesSpawned)
+            {
+                bAxisLightVehiclesSpawned =
+                    SpawnLightVehicle(
+                        EWPCombatTeam::Axis,
+                        EWPLightVehicleType::ArmoredCar,
+                        FVector(-2450.0f, -3000.0f, 85.0f),
+                        FRotator(0.0f, 70.0f, 0.0f)) != nullptr;
+            }
+
+            SpawnAirSupport(
+                EWPCombatTeam::Allies,
+                GetActiveObjectiveLocation(),
+                EWPAirSupportMission::Strafe);
+        }
+
         if (ActiveObjectiveIndex >= 2 && !bAlliedArmorSpawned)
         {
             bAlliedArmorSpawned = SpawnArmoredVehicle(
                 EWPCombatTeam::Allies,
                 FVector(2350.0f, -450.0f, 76.0f),
                 FRotator(0.0f, -115.0f, 0.0f)) != nullptr;
+
+            SpawnAirSupport(
+                EWPCombatTeam::Allies,
+                GetActiveObjectiveLocation(),
+                EWPAirSupportMission::Bombing);
         }
 
         if (AxisTickets > 0)
@@ -1800,10 +1833,239 @@ void AWPBattlefieldDirector::HandleObjectiveCaptured(AWPCaptureObjective* Object
             FRotator(0.0f, 65.0f, 0.0f)) != nullptr;
     }
 
+    SpawnAirSupport(
+        EWPCombatTeam::Axis,
+        GetActiveObjectiveLocation(),
+        EWPAirSupportMission::Bombing);
+
     if (RemainingEnemies == 0 && ActiveEnemyVehicles == 0)
     {
         bBattleWon = true;
     }
+}
+
+void AWPBattlefieldDirector::SpawnInitialCombinedArms()
+{
+    SpawnLightVehicle(
+        EWPCombatTeam::Allies,
+        EWPLightVehicleType::TransportTruck,
+        FVector(1450.0f, 3050.0f, 85.0f),
+        FRotator(0.0f, -90.0f, 0.0f));
+}
+
+void AWPBattlefieldDirector::SpawnDefensiveEmplacements()
+{
+    SpawnGunEmplacement(
+        EWPCombatTeam::Allies,
+        EWPEmplacementType::HeavyMachineGun,
+        FVector(-950.0f, 2250.0f, 85.0f),
+        FRotator(0.0f, -88.0f, 0.0f));
+
+    SpawnGunEmplacement(
+        EWPCombatTeam::Allies,
+        EWPEmplacementType::AntiTankGun,
+        FVector(1050.0f, 1650.0f, 85.0f),
+        FRotator(0.0f, -92.0f, 0.0f));
+
+    SpawnGunEmplacement(
+        EWPCombatTeam::Axis,
+        EWPEmplacementType::HeavyMachineGun,
+        FVector(-900.0f, 650.0f, 85.0f),
+        FRotator(0.0f, 90.0f, 0.0f));
+
+    SpawnGunEmplacement(
+        EWPCombatTeam::Axis,
+        EWPEmplacementType::AntiTankGun,
+        FVector(1100.0f, -1650.0f, 85.0f),
+        FRotator(0.0f, 90.0f, 0.0f));
+
+    SpawnGunEmplacement(
+        EWPCombatTeam::Axis,
+        EWPEmplacementType::HeavyMachineGun,
+        FVector(-1050.0f, -3350.0f, 85.0f),
+        FRotator(0.0f, 90.0f, 0.0f));
+}
+
+AWPLightVehicle* AWPBattlefieldDirector::SpawnLightVehicle(
+    EWPCombatTeam Team,
+    EWPLightVehicleType Type,
+    const FVector& Location,
+    const FRotator& Rotation)
+{
+    if (!GetWorld() || !LightVehicleClass)
+    {
+        return nullptr;
+    }
+
+    const FTransform SpawnTransform(Rotation, Location);
+
+    AWPLightVehicle* Vehicle =
+        GetWorld()->SpawnActorDeferred<AWPLightVehicle>(
+            LightVehicleClass,
+            SpawnTransform,
+            nullptr,
+            nullptr,
+            ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn);
+
+    if (!Vehicle)
+    {
+        return nullptr;
+    }
+
+    Vehicle->SetCombatTeam(Team);
+    Vehicle->SetVehicleType(Type);
+
+    if (BattlePresentationSet)
+    {
+        Vehicle->SetVisualProfile(
+            BattlePresentationSet->GetLightVehicleVisual(
+                Team,
+                Type));
+    }
+
+    Vehicle->FinishSpawning(SpawnTransform);
+
+    if (Team == EWPCombatTeam::Axis)
+    {
+        ++ActiveEnemyVehicles;
+    }
+
+    return Vehicle;
+}
+
+AWPGunEmplacement* AWPBattlefieldDirector::SpawnGunEmplacement(
+    EWPCombatTeam Team,
+    EWPEmplacementType Type,
+    const FVector& Location,
+    const FRotator& Rotation)
+{
+    if (!GetWorld() || !GunEmplacementClass)
+    {
+        return nullptr;
+    }
+
+    const FTransform SpawnTransform(Rotation, Location);
+
+    AWPGunEmplacement* Emplacement =
+        GetWorld()->SpawnActorDeferred<AWPGunEmplacement>(
+            GunEmplacementClass,
+            SpawnTransform,
+            nullptr,
+            nullptr,
+            ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn);
+
+    if (!Emplacement)
+    {
+        return nullptr;
+    }
+
+    Emplacement->Configure(Team, Type);
+
+    if (BattlePresentationSet)
+    {
+        Emplacement->SetVisualProfile(
+            BattlePresentationSet->GetEmplacementVisual(
+                Team,
+                Type));
+    }
+
+    Emplacement->FinishSpawning(SpawnTransform);
+    return Emplacement;
+}
+
+AWPAirSupportAircraft* AWPBattlefieldDirector::SpawnAirSupport(
+    EWPCombatTeam Team,
+    const FVector& TargetLocation,
+    EWPAirSupportMission Mission)
+{
+    if (!GetWorld() || !AirSupportClass)
+    {
+        return nullptr;
+    }
+
+    const float Side =
+        Team == EWPCombatTeam::Allies
+            ? 1.0f
+            : -1.0f;
+
+    const FVector StartLocation =
+        TargetLocation +
+        FVector(
+            FMath::FRandRange(-1800.0f, 1800.0f),
+            Side * 6800.0f,
+            2250.0f);
+
+    const FRotator Rotation =
+        (TargetLocation - StartLocation).Rotation();
+
+    AWPAirSupportAircraft* Aircraft =
+        GetWorld()->SpawnActor<AWPAirSupportAircraft>(
+            AirSupportClass,
+            StartLocation,
+            Rotation);
+
+    if (!Aircraft)
+    {
+        return nullptr;
+    }
+
+    Aircraft->InitializeMission(
+        Team,
+        Mission,
+        TargetLocation,
+        BattlePresentationSet
+            ? BattlePresentationSet->GetAircraftVisual(Team)
+            : nullptr,
+        GetArtilleryExplosionPresentation());
+
+    return Aircraft;
+}
+
+void AWPBattlefieldDirector::ScheduleAmbientFlyby()
+{
+    if (!GetWorld() || bBattleWon || bBattleLost)
+    {
+        return;
+    }
+
+    const float Minimum =
+        FMath::Max(15.0f, AmbientFlybyMinIntervalSeconds);
+    const float Maximum =
+        FMath::Max(Minimum, AmbientFlybyMaxIntervalSeconds);
+
+    GetWorld()->GetTimerManager().SetTimer(
+        AmbientFlybyTimer,
+        this,
+        &AWPBattlefieldDirector::SpawnAmbientFlyby,
+        FMath::FRandRange(Minimum, Maximum),
+        false);
+}
+
+void AWPBattlefieldDirector::SpawnAmbientFlyby()
+{
+    if (!GetWorld() || bBattleWon || bBattleLost)
+    {
+        return;
+    }
+
+    const EWPCombatTeam Team =
+        FMath::FRand() < 0.52f
+            ? EWPCombatTeam::Allies
+            : EWPCombatTeam::Axis;
+
+    const FVector FlybyTarget =
+        GetActiveObjectiveLocation() +
+        FVector(
+            FMath::FRandRange(-1700.0f, 1700.0f),
+            FMath::FRandRange(-900.0f, 900.0f),
+            0.0f);
+
+    SpawnAirSupport(
+        Team,
+        FlybyTarget,
+        EWPAirSupportMission::Flyby);
+
+    ScheduleAmbientFlyby();
 }
 
 AWPArmoredVehicle* AWPBattlefieldDirector::SpawnArmoredVehicle(
