@@ -63,7 +63,6 @@ def main() -> None:
     require_text(
         "Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp",
         'BindAction(TEXT("Aim")')
-    )
     require_text(
         "Source/WarriorParadise/Private/Combat/WPBallisticProjectile.cpp",
         "AddSuppression(NearMissSuppression)")
