@@ -21,6 +21,8 @@
 #include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Vehicles/WPTankShell.h"
+#include "Vehicles/WPLightVehicle.h"
+#include "World/WPGunEmplacement.h"
 
 AWPArmoredVehicle::AWPArmoredVehicle()
 {
@@ -493,6 +495,62 @@ AActor* AWPArmoredVehicle::FindBestTarget() const
         {
             BestScore = Score;
             BestTarget = Vehicle;
+        }
+    }
+
+    for (TActorIterator<AWPLightVehicle> It(GetWorld()); It; ++It)
+    {
+        AWPLightVehicle* Vehicle = *It;
+        if (!Vehicle ||
+            Vehicle->GetCombatTeam() == CombatTeam ||
+            Vehicle->IsDestroyed() ||
+            !HasLineOfSightTo(Vehicle))
+        {
+            continue;
+        }
+
+        const float Score =
+            FVector::DistSquared2D(
+                GetActorLocation(),
+                Vehicle->GetActorLocation()) * 0.48f;
+
+        if (Score < BestScore)
+        {
+            BestScore = Score;
+            BestTarget = Vehicle;
+        }
+    }
+
+    for (TActorIterator<AWPGunEmplacement> It(GetWorld()); It; ++It)
+    {
+        AWPGunEmplacement* Gun = *It;
+        if (!Gun ||
+            Gun->GetCombatTeam() == CombatTeam ||
+            Gun->IsDestroyed() ||
+            !HasLineOfSightTo(Gun))
+        {
+            continue;
+        }
+
+        float Score =
+            FVector::DistSquared2D(
+                GetActorLocation(),
+                Gun->GetActorLocation());
+
+        if (Gun->GetEmplacementType() ==
+            EWPEmplacementType::AntiTankGun)
+        {
+            Score *= 0.28f;
+        }
+        else
+        {
+            Score *= 0.62f;
+        }
+
+        if (Score < BestScore)
+        {
+            BestScore = Score;
+            BestTarget = Gun;
         }
     }
 
