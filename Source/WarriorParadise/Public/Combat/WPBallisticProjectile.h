@@ -36,10 +36,19 @@ private:
     UPROPERTY(VisibleAnywhere, Category="Projectile")
     TObjectPtr<UProjectileMovementComponent> Movement;
 
+    UPROPERTY(EditDefaultsOnly, Category="Projectile|Suppression", meta=(ClampMin="0.0"))
+    float NearMissRadiusCm = 175.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Projectile|Suppression", meta=(ClampMin="0.0"))
+    float NearMissSuppression = 13.0f;
+
     float Damage = 34.0f;
     float MaximumTravelCm = 60000.0f;
     FVector SpawnLocation = FVector::ZeroVector;
     TWeakObjectPtr<AController> InstigatorController;
+    TSet<TWeakObjectPtr<AActor>> SuppressedActors;
+
+    void ApplyNearMissSuppression();
 
     UFUNCTION()
     void HandleHit(
