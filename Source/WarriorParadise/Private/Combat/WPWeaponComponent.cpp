@@ -1,13 +1,15 @@
 #include "Combat/WPWeaponComponent.h"
+#include "Combat/WPBallisticProjectile.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Controller.h"
-#include "Kismet/GameplayStatics.h"
+#include "GameFramework/Pawn.h"
 #include "TimerManager.h"
 
 UWPWeaponComponent::UWPWeaponComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
+    ProjectileClass = AWPBallisticProjectile::StaticClass();
 }
 
 void UWPWeaponComponent::BeginPlay()
@@ -21,7 +23,14 @@ void UWPWeaponComponent::Configure(float InDamage, float InRoundsPerMinute, floa
 {
     Damage = FMath::Max(1.0f, InDamage);
     RoundsPerMinute = FMath::Max(60.0f, InRoundsPerMinute);
-    SpreadDegrees = FMath::Max(0.0f, InSpreadDegrees);
+    HipSpreadDegrees = FMath::Max(0.0f, InSpreadDegrees);
+    AimSpreadDegrees = FMath::Min(HipSpreadDegrees, FMath::Max(0.05f, HipSpreadDegrees * 0.25f));
+}
+
+void UWPWeaponComponent::SetAiming(bool bNewAiming)
+{
+    bAiming = bNewAiming && !bReloading;
+    OnWeaponStateChanged.Broadcast();
 }
 
 void UWPWeaponComponent::StartFire()
@@ -59,6 +68,7 @@ void UWPWeaponComponent::Reload()
     }
 
     StopFire();
+    bAiming = false;
     bReloading = true;
     OnWeaponStateChanged.Broadcast();
 
@@ -98,9 +108,10 @@ bool UWPWeaponComponent::BuildShot(FVector& OutStart, FVector& OutDirection, ACo
         OutController->GetPlayerViewPoint(OutStart, ViewRotation);
     }
 
+    const float Spread = bAiming ? AimSpreadDegrees : HipSpreadDegrees;
     OutDirection = FMath::VRandCone(
         ViewRotation.Vector(),
-        FMath::DegreesToRadians(SpreadDegrees));
+        FMath::DegreesToRadians(Spread));
 
     return true;
 }
@@ -136,25 +147,31 @@ void UWPWeaponComponent::TryFire()
     LastFireTime = CurrentTime;
     --AmmoInMagazine;
 
-    const FVector End = Start + Direction * RangeCm;
-    FHitResult Hit;
-    FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(WPWeaponTrace), true, GetOwner());
-    QueryParams.AddIgnoredActor(GetOwner());
-
-    if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, QueryParams))
+    if (ProjectileClass)
     {
-        if (AActor* HitActor = Hit.GetActor())
+        FActorSpawnParameters SpawnParameters;
+        SpawnParameters.Owner = GetOwner();
+        SpawnParameters.Instigator = Cast<APawn>(GetOwner());
+        SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+        const FVector SpawnLocation = Start + Direction * 60.0f;
+        if (AWPBallisticProjectile* Projectile = GetWorld()->SpawnActor<AWPBallisticProjectile>(
+            ProjectileClass,
+            SpawnLocation,
+            Direction.Rotation(),
+            SpawnParameters))
         {
-            UGameplayStatics::ApplyPointDamage(
-                HitActor,
-                Damage,
+            Projectile->InitializeProjectile(
                 Direction,
-                Hit,
-                InstigatorController,
-                GetOwner(),
-                UDamageType::StaticClass());
+                MuzzleVelocityCmPerSecond,
+                Damage,
+                RangeCm,
+                InstigatorController);
         }
     }
 
+    const float PitchKick = RecoilPitchDegrees * (bAiming ? 0.72f : 1.0f);
+    const float YawKick = FMath::FRandRange(-RecoilYawDegrees, RecoilYawDegrees) * (bAiming ? 0.65f : 1.0f);
+    OnShotFired.Broadcast(PitchKick, YawKick);
     OnWeaponStateChanged.Broadcast();
 }
