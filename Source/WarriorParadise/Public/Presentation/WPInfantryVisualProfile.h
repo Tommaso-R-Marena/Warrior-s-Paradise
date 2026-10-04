@@ -69,8 +69,5 @@ public:
     FName MuzzleAttachSocket = TEXT("muzzle");
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="First Person|Weapon")
-    FTransform MuzzleRelativeTransform = FTransform(
-        FRotator::ZeroRotator,
-        FVector(90.0f, 0.0f, 0.0f),
-        FVector::OneVector);
+    FTransform MuzzleRelativeTransform = FTransform::Identity;
 };
