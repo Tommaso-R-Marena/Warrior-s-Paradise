@@ -1,5 +1,6 @@
 #include "Vehicles/WPArmoredVehicle.h"
 #include "Characters/WPSoldierCharacter.h"
+#include "Camera/CameraComponent.h"
 #include "Combat/WPBallisticProjectile.h"
 #include "Combat/WPHealthComponent.h"
 #include "Combat/WPSmokeCloud.h"
@@ -7,7 +8,9 @@
 #include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
 #include "Game/WPBattlefieldDirector.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
+#include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
@@ -67,6 +70,12 @@ AWPArmoredVehicle::AWPArmoredVehicle()
     Movement->Deceleration = 850.0f;
     Movement->TurningBoost = 4.0f;
 
+    CrewCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("CrewCamera"));
+    CrewCamera->SetupAttachment(TurretVisual);
+    CrewCamera->SetRelativeLocation(FVector(-55.0f, 0.0f, 75.0f));
+    CrewCamera->SetRelativeRotation(FRotator(-4.0f, 0.0f, 0.0f));
+    CrewCamera->bUsePawnControlRotation = false;
+
     TankShellClass = AWPTankShell::StaticClass();
 }
 
@@ -87,6 +96,298 @@ void AWPArmoredVehicle::BeginPlay()
     BattlefieldDirector = Cast<AWPBattlefieldDirector>(
         UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass()));
     OnTakeAnyDamage.AddDynamic(this, &AWPArmoredVehicle::HandleTakeAnyDamage);
+}
+
+void AWPArmoredVehicle::SetupPlayerInputComponent(
+    UInputComponent* PlayerInputComponent)
+{
+    Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+    PlayerInputComponent->BindAxis(
+        TEXT("MoveForward"),
+        this,
+        &AWPArmoredVehicle::MoveForwardInput);
+    PlayerInputComponent->BindAxis(
+        TEXT("MoveRight"),
+        this,
+        &AWPArmoredVehicle::TurnHullInput);
+    PlayerInputComponent->BindAxis(
+        TEXT("Turn"),
+        this,
+        &AWPArmoredVehicle::TurnTurretInput);
+    PlayerInputComponent->BindAxis(
+        TEXT("LookUp"),
+        this,
+        &AWPArmoredVehicle::PitchGunInput);
+
+    PlayerInputComponent->BindAction(
+        TEXT("Fire"),
+        IE_Pressed,
+        this,
+        &AWPArmoredVehicle::PlayerFireCannon);
+    PlayerInputComponent->BindAction(
+        TEXT("Aim"),
+        IE_Pressed,
+        this,
+        &AWPArmoredVehicle::StartPlayerMachineGun);
+    PlayerInputComponent->BindAction(
+        TEXT("Aim"),
+        IE_Released,
+        this,
+        &AWPArmoredVehicle::StopPlayerMachineGun);
+    PlayerInputComponent->BindAction(
+        TEXT("Reload"),
+        IE_Pressed,
+        this,
+        &AWPArmoredVehicle::ToggleShellType);
+    PlayerInputComponent->BindAction(
+        TEXT("Interact"),
+        IE_Pressed,
+        this,
+        &AWPArmoredVehicle::InteractInput);
+}
+
+bool AWPArmoredVehicle::TryEnter(AWPSoldierCharacter* Soldier)
+{
+    if (!Soldier ||
+        bDestroyed ||
+        CrewSoldier.IsValid() ||
+        Soldier->GetCombatTeam() != CombatTeam ||
+        !Soldier->IsCombatCapable())
+    {
+        return false;
+    }
+
+    APlayerController* PlayerController =
+        Cast<APlayerController>(Soldier->GetController());
+
+    if (!PlayerController)
+    {
+        return false;
+    }
+
+    CrewSoldier = Soldier;
+    Soldier->GetWeaponComponent()->StopFire();
+    Soldier->SetActorHiddenInGame(true);
+    Soldier->SetActorEnableCollision(false);
+    Soldier->SetActorTickEnabled(false);
+    Soldier->GetCharacterMovement()->DisableMovement();
+
+    PlayerController->Possess(this);
+    PlayerController->SetControlRotation(GetActorRotation());
+
+    PlayerTurretYaw = 0.0f;
+    PlayerGunPitch = 0.0f;
+    bPlayerMachineGunFiring = false;
+    return true;
+}
+
+void AWPArmoredVehicle::RestoreCrewSoldier(bool bEmergency)
+{
+    AWPSoldierCharacter* Soldier = CrewSoldier.Get();
+    if (!Soldier)
+    {
+        return;
+    }
+
+    Soldier->SetActorHiddenInGame(false);
+    Soldier->SetActorEnableCollision(true);
+    Soldier->SetActorTickEnabled(true);
+    Soldier->SetActorLocation(
+        GetActorLocation() +
+            GetActorRightVector() * 250.0f +
+            FVector(0.0f, 0.0f, 70.0f),
+        false,
+        nullptr,
+        ETeleportType::TeleportPhysics);
+
+    if (!Soldier->GetHealthComponent()->IsDead())
+    {
+        Soldier->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
+        if (bEmergency)
+        {
+            UGameplayStatics::ApplyDamage(
+                Soldier,
+                65.0f,
+                nullptr,
+                this,
+                UDamageType::StaticClass());
+        }
+    }
+}
+
+void AWPArmoredVehicle::ExitVehicle()
+{
+    AWPSoldierCharacter* Soldier = CrewSoldier.Get();
+    APlayerController* PlayerController =
+        Soldier
+            ? Cast<APlayerController>(GetController())
+            : nullptr;
+
+    if (!Soldier || !PlayerController)
+    {
+        return;
+    }
+
+    PlayerController->Possess(Soldier);
+    RestoreCrewSoldier(false);
+    CrewSoldier.Reset();
+    bPlayerMachineGunFiring = false;
+}
+
+void AWPArmoredVehicle::InteractInput()
+{
+    ExitVehicle();
+}
+
+void AWPArmoredVehicle::MoveForwardInput(float Value)
+{
+    if (bDestroyed ||
+        IsImmobilized() ||
+        FMath::IsNearlyZero(Value))
+    {
+        return;
+    }
+
+    AddMovementInput(
+        GetActorForwardVector(),
+        Value,
+        true);
+}
+
+void AWPArmoredVehicle::TurnHullInput(float Value)
+{
+    if (bDestroyed ||
+        IsImmobilized() ||
+        FMath::IsNearlyZero(Value))
+    {
+        return;
+    }
+
+    const float Mobility =
+        FMath::Min(
+            GetSubsystemHealthNormalized(EWPVehicleSubsystem::Engine),
+            GetSubsystemHealthNormalized(EWPVehicleSubsystem::Tracks));
+
+    FRotator Rotation = GetActorRotation();
+    Rotation.Yaw += Value * FMath::Lerp(0.35f, 1.15f, Mobility);
+    SetActorRotation(Rotation);
+}
+
+void AWPArmoredVehicle::TurnTurretInput(float Value)
+{
+    if (bDestroyed || TurretHealth <= 0.0f)
+    {
+        return;
+    }
+
+    const float TurretFactor =
+        GetSubsystemHealthNormalized(EWPVehicleSubsystem::Turret);
+
+    PlayerTurretYaw +=
+        Value * FMath::Lerp(0.35f, 1.15f, TurretFactor);
+
+    TurretVisual->SetRelativeRotation(
+        FRotator(0.0f, PlayerTurretYaw, 0.0f));
+
+    BarrelVisual->SetRelativeRotation(
+        FRotator(PlayerGunPitch, PlayerTurretYaw, 0.0f));
+}
+
+void AWPArmoredVehicle::PitchGunInput(float Value)
+{
+    if (bDestroyed || TurretHealth <= 0.0f)
+    {
+        return;
+    }
+
+    PlayerGunPitch = FMath::Clamp(
+        PlayerGunPitch + Value * 0.85f,
+        -10.0f,
+        22.0f);
+
+    BarrelVisual->SetRelativeRotation(
+        FRotator(PlayerGunPitch, PlayerTurretYaw, 0.0f));
+}
+
+FVector AWPArmoredVehicle::GetPlayerAimPoint(float RangeCm) const
+{
+    if (!GetWorld() || !CrewCamera)
+    {
+        return GetActorLocation() +
+            GetActorForwardVector() * RangeCm;
+    }
+
+    const FVector Start = CrewCamera->GetComponentLocation();
+    const FVector End =
+        Start +
+        CrewCamera->GetForwardVector() * RangeCm;
+
+    FHitResult Hit;
+    FCollisionQueryParams Params(
+        SCENE_QUERY_STAT(WPTankPlayerAim),
+        true,
+        this);
+    Params.AddIgnoredActor(this);
+
+    if (GetWorld()->LineTraceSingleByChannel(
+        Hit,
+        Start,
+        End,
+        ECC_Visibility,
+        Params))
+    {
+        return Hit.ImpactPoint;
+    }
+
+    return End;
+}
+
+void AWPArmoredVehicle::ToggleShellType()
+{
+    SelectedShellType =
+        SelectedShellType == EWPArmorShellType::ArmorPiercing
+            ? EWPArmorShellType::HighExplosive
+            : EWPArmorShellType::ArmorPiercing;
+}
+
+void AWPArmoredVehicle::PlayerFireCannon()
+{
+    if (!GetWorld() ||
+        bDestroyed ||
+        TurretHealth <= 0.0f)
+    {
+        return;
+    }
+
+    const float Time = GetWorld()->GetTimeSeconds();
+    if (Time < NextCannonTime)
+    {
+        return;
+    }
+
+    FireCannonAt(
+        GetPlayerAimPoint(CannonRangeCm),
+        SelectedShellType);
+
+    const float TurretFactor =
+        GetSubsystemHealthNormalized(EWPVehicleSubsystem::Turret);
+
+    NextCannonTime =
+        Time +
+        CannonCooldownSeconds *
+            FMath::Lerp(1.75f, 1.0f, TurretFactor);
+}
+
+void AWPArmoredVehicle::StartPlayerMachineGun()
+{
+    bPlayerMachineGunFiring = true;
+}
+
+void AWPArmoredVehicle::StopPlayerMachineGun()
+{
+    bPlayerMachineGunFiring = false;
 }
 
 void AWPArmoredVehicle::ApplyVisualProfile()
