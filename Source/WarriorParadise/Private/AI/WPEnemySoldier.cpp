@@ -562,8 +562,7 @@ bool AWPEnemySoldier::HasClearFireLaneTo(
 
         if (!Soldier ||
             Soldier == this ||
-            Soldier == Target ||
-            !Soldier->IsCombatCapable())
+            Soldier == Target)
         {
             continue;
         }
