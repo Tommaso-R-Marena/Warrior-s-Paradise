@@ -46,7 +46,10 @@ The code now includes production visual/loadout profiles, Motion Matching discov
 - Follow / Attack / Hold orders;
 - manual squad switching and death-driven control transfer;
 - unified AI-capable player/squad pawn;
-- suppression and cover reservations;
+- Steady / Pressured / Pinned suppression states with hysteresis;
+- suppression-driven AI accuracy degradation, aggressive cover-seeking and pinned return-fire limits;
+- pinned player sprint lock plus explicit HUD state feedback;
+- cover reservations;
 - LOS + close awareness;
 - location-based shared contacts;
 - gunshot investigation;
