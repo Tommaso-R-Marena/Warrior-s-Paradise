@@ -11,6 +11,12 @@ REQUIRED = [
     "Config/DefaultEngine.ini",
     "Config/DefaultGame.ini",
     "Config/DefaultInput.ini",
+    "Config/DefaultScalability.ini",
+    "Source/WarriorParadise/Public/Game/WPGameUserSettings.h",
+    "Source/WarriorParadise/Private/Game/WPGameUserSettings.cpp",
+    "Source/WarriorParadise/Public/Game/WPPlayerController.h",
+    "Source/WarriorParadise/Private/Game/WPPlayerController.cpp",
+    "docs/SCALABILITY.md",
     "Source/WarriorParadise.Target.cs",
     "Source/WarriorParadiseEditor.Target.cs",
     "Source/WarriorParadise/WarriorParadise.Build.cs",
@@ -320,6 +326,8 @@ def main() -> None:
         "SquadHold",
         "CallArtillery",
         "CallAirSupport",
+        "CycleGraphicsPreset",
+        "AutoGraphicsBenchmark",
     ):
         require_text("Config/DefaultInput.ini", f'ActionName="{action}"')
 
@@ -386,6 +394,22 @@ def main() -> None:
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "WP_Surface_Wood"),
         ("Source/WarriorParadise/Private/Game/WPCaptureObjective.cpp", "bContested ="),
         ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "DefaultPawnClass = AWPEnemySoldier::StaticClass()"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "PlayerControllerClass = AWPPlayerController::StaticClass()"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "EnsureInitialHardwareBenchmark"),
+        ("Source/WarriorParadise/Private/Game/WPGameUserSettings.cpp", "RunHardwareBenchmark(10, 1.0f, 1.0f)"),
+        ("Source/WarriorParadise/Private/Game/WPGameUserSettings.cpp", "SetOverallScalabilityLevel"),
+        ("Source/WarriorParadise/Private/Game/WPGameUserSettings.cpp", "67.0f"),
+        ("Source/WarriorParadise/Private/Game/WPGameUserSettings.cpp", "78.0f"),
+        ("Source/WarriorParadise/Private/Game/WPGameUserSettings.cpp", "90.0f"),
+        ("Source/WarriorParadise/Private/Game/WPGameUserSettings.cpp", "100.0f"),
+        ("Source/WarriorParadise/Private/Game/WPPlayerController.cpp", "CycleGraphicsPreset"),
+        ("Source/WarriorParadise/Private/Game/WPPlayerController.cpp", "RunGraphicsAutoBenchmark"),
+        ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "GFX %s   F10 PRESET   F9 AUTO"),
+        ("Config/DefaultEngine.ini", "GameUserSettingsClassName=/Script/WarriorParadise.WPGameUserSettings"),
+        ("Config/DefaultScalability.ini", 'PerfIndexValues_ResolutionQuality="67 78 90 100 100"'),
+        ("Config/DefaultScalability.ini", "[FoliageQuality@0]"),
+        ("Config/DefaultScalability.ini", "foliage.DensityScale=0.55"),
+        ("Config/DefaultScalability.ini", "[ShadowQuality@3]"),
         ("Source/WarriorParadise/Private/World/WPDestructibleCover.cpp", "BreakCover"),
         ("Source/WarriorParadise/Private/World/WPDestructibleCover.cpp", "ApplyMaterial"),
         ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "FireCannon"),
@@ -458,7 +482,7 @@ def main() -> None:
                 fail(f"{marker} marker found in {path.relative_to(ROOT)}")
         source_checked += 1
 
-    if source_checked < 67:
+    if source_checked < 71:
         fail(f"unexpectedly small source tree: {source_checked} source files")
 
     python_checked = validate_python()
@@ -473,7 +497,7 @@ def main() -> None:
         "feedback, tracers, decals, surface impacts, enterable buildings, "
         "crewable tanks, subsystem armor damage, transports, armored cars, "
         "emplacements, scripted air support, battlefield ambience, spatial-audio, "
-        "destruction, squad and support contracts checked)."
+        "destruction, squad, support, first-run auto benchmark and Low/Medium/High/Ultra scalability contracts checked)."
     )
 
 
