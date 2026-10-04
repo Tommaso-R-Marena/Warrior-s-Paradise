@@ -16,6 +16,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "Kismet/GameplayStatics.h"
+#include "Presentation/WPInfantryLoadoutProfile.h"
 #include "Presentation/WPInfantryVisualProfile.h"
 #include "Presentation/WPWeaponPresentationComponent.h"
 #include "TimerManager.h"
@@ -121,13 +122,57 @@ void AWPSoldierCharacter::BeginPlay()
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
     FirstPersonCamera->SetFieldOfView(HipFOV);
     Stamina = MaxStamina;
-    ApplyRoleLoadout();
-    ApplyVisualProfile();
+    ApplyLoadoutProfile();
 
     HealthComponent->OnDowned.AddDynamic(this, &AWPSoldierCharacter::HandleDowned);
     HealthComponent->OnRevived.AddDynamic(this, &AWPSoldierCharacter::HandleRevived);
     HealthComponent->OnDeath.AddDynamic(this, &AWPSoldierCharacter::HandleDeath);
     WeaponComponent->OnShotFired.AddDynamic(this, &AWPSoldierCharacter::HandleShotFired);
+}
+
+void AWPSoldierCharacter::SetLoadoutProfile(
+    UWPInfantryLoadoutProfile* NewProfile)
+{
+    LoadoutProfile = NewProfile;
+
+    if (HasActorBegunPlay())
+    {
+        ApplyLoadoutProfile();
+    }
+}
+
+void AWPSoldierCharacter::ApplyLoadoutProfile()
+{
+    if (LoadoutProfile)
+    {
+        if (LoadoutProfile->WeaponDefinition)
+        {
+            WeaponComponent->ApplyWeaponDefinition(
+                LoadoutProfile->WeaponDefinition);
+        }
+        else
+        {
+            ApplyRoleLoadout();
+        }
+
+        VisualProfile = LoadoutProfile->VisualProfile;
+
+        if (WeaponPresentationComponent)
+        {
+            WeaponPresentationComponent->SetPresentationProfile(
+                LoadoutProfile->WeaponPresentationProfile);
+        }
+
+        GrenadesRemaining = FMath::Max(0, LoadoutProfile->FragGrenades);
+        SmokeGrenadesRemaining = FMath::Max(0, LoadoutProfile->SmokeGrenades);
+        MedkitsRemaining = FMath::Max(0, LoadoutProfile->Medkits);
+    }
+    else
+    {
+        ApplyRoleLoadout();
+    }
+
+    ApplyVisualProfile();
 }
 
 void AWPSoldierCharacter::ApplyVisualProfile()
