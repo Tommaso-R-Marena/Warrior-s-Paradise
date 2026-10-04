@@ -52,6 +52,15 @@ public:
     TSoftObjectPtr<UMaterialInterface> ConcreteMaterial;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Scenery")
+    TSoftObjectPtr<UStaticMesh> VillageBuildingMesh;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Scenery")
+    FRotator VillageBuildingRotationOffset = FRotator::ZeroRotator;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Scenery")
+    FVector VillageBuildingLocationOffset = FVector::ZeroVector;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Scenery")
     TSoftObjectPtr<UStaticMesh> TreeMesh;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Scenery")
