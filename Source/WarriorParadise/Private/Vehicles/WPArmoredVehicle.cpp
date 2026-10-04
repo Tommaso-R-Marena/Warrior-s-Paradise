@@ -73,6 +73,8 @@ void AWPArmoredVehicle::BeginPlay()
 {
     Super::BeginPlay();
     Health = MaxHealth;
+    BattlefieldDirector = Cast<AWPBattlefieldDirector>(
+        UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass()));
     OnTakeAnyDamage.AddDynamic(this, &AWPArmoredVehicle::HandleTakeAnyDamage);
 }
 
@@ -96,11 +98,14 @@ AActor* AWPArmoredVehicle::FindBestTarget() const
             continue;
         }
 
-        float Score = FVector::DistSquared2D(GetActorLocation(), Soldier->GetActorLocation());
-        if (HasLineOfSightTo(Soldier))
+        if (!HasLineOfSightTo(Soldier))
         {
-            Score *= 0.72f;
+            continue;
         }
+
+        float Score = FVector::DistSquared2D(
+            GetActorLocation(),
+            Soldier->GetActorLocation()) * 0.72f;
 
         if (Score < BestScore)
         {
@@ -120,11 +125,14 @@ AActor* AWPArmoredVehicle::FindBestTarget() const
             continue;
         }
 
-        float Score = FVector::DistSquared2D(GetActorLocation(), Vehicle->GetActorLocation()) * 0.55f;
-        if (HasLineOfSightTo(Vehicle))
+        if (!HasLineOfSightTo(Vehicle))
         {
-            Score *= 0.65f;
+            continue;
         }
+
+        float Score = FVector::DistSquared2D(
+            GetActorLocation(),
+            Vehicle->GetActorLocation()) * 0.36f;
 
         if (Score < BestScore)
         {
@@ -199,6 +207,7 @@ void AWPArmoredVehicle::FireCannon(AActor* Target)
         SpawnParameters))
     {
         Shell->InitializeShell(CombatTeam, AimDirection * 22000.0f);
+        OnCannonFired.Broadcast();
     }
 }
 
@@ -231,6 +240,8 @@ void AWPArmoredVehicle::FireMachineGun(AActor* Target)
             45000.0f,
             nullptr,
             CombatTeam);
+
+        OnMachineGunFired.Broadcast();
     }
 }
 
@@ -243,20 +254,36 @@ void AWPArmoredVehicle::Tick(float DeltaSeconds)
         return;
     }
 
-    if (!CurrentTarget.IsValid())
+    const float Time = GetWorld()->GetTimeSeconds();
+
+    if (!CurrentTarget.IsValid() && Time >= NextTargetScanTime)
     {
         CurrentTarget = FindBestTarget();
+        NextTargetScanTime = Time + 0.45f;
     }
 
     AActor* Target = CurrentTarget.Get();
     if (!Target)
     {
-        CurrentTarget = FindBestTarget();
-        Target = CurrentTarget.Get();
-        if (!Target)
+        if (!BattlefieldDirector.IsValid())
         {
-            return;
+            BattlefieldDirector = Cast<AWPBattlefieldDirector>(
+                UGameplayStatics::GetActorOfClass(this, AWPBattlefieldDirector::StaticClass()));
         }
+
+        if (AWPBattlefieldDirector* Director = BattlefieldDirector.Get())
+        {
+            const FVector Destination = Director->GetActiveObjectiveLocation();
+            FVector ToDestination = Destination - GetActorLocation();
+            ToDestination.Z = 0.0f;
+
+            if (ToDestination.SizeSquared() > FMath::Square(650.0f))
+            {
+                AddMovementInput(ToDestination.GetSafeNormal(), 0.55f, true);
+            }
+        }
+
+        return;
     }
 
     if (const AWPSoldierCharacter* Soldier = Cast<AWPSoldierCharacter>(Target))
@@ -311,24 +338,65 @@ void AWPArmoredVehicle::Tick(float DeltaSeconds)
         AddMovementInput(FlatDirection, 0.72f, true);
     }
 
-    const float Time = GetWorld()->GetTimeSeconds();
     const bool bVisible = HasLineOfSightTo(Target);
 
-    if (bVisible && Distance <= CannonRangeCm && Time >= NextCannonTime)
+    if (!bVisible)
+    {
+        CurrentTarget.Reset();
+        return;
+    }
+
+    if (Distance <= CannonRangeCm && Time >= NextCannonTime)
     {
         FireCannon(Target);
         NextCannonTime = Time + CannonCooldownSeconds + FMath::FRandRange(0.0f, 1.0f);
     }
 
-    if (bVisible && Distance <= MachineGunRangeCm && Time >= NextMachineGunTime)
+    if (Distance <= MachineGunRangeCm && Time >= NextMachineGunTime)
     {
         FireMachineGun(Target);
         NextMachineGunTime = Time + MachineGunIntervalSeconds;
     }
 
-    if (!bVisible && Time >= NextMachineGunTime + 1.0f)
+}
+
+void AWPArmoredVehicle::ApplyShellImpact(
+    float BaseDamage,
+    const FVector& ImpactLocation,
+    const FVector& ShotDirection)
+{
+    if (bDestroyed || BaseDamage <= 0.0f)
     {
-        CurrentTarget = FindBestTarget();
+        return;
+    }
+
+    const FVector IncomingFrom = (-ShotDirection).GetSafeNormal2D();
+    const FVector Forward = GetActorForwardVector().GetSafeNormal2D();
+    const float FacingDot = FVector::DotProduct(Forward, IncomingFrom);
+
+    float ArmorDamageScale = 0.86f;
+    if (FacingDot >= 0.55f)
+    {
+        ArmorDamageScale = 0.55f;
+    }
+    else if (FacingDot <= -0.55f)
+    {
+        ArmorDamageScale = 1.35f;
+    }
+
+    const float HeightAboveHull = ImpactLocation.Z - GetActorLocation().Z;
+    if (HeightAboveHull > 95.0f)
+    {
+        ArmorDamageScale *= 0.90f;
+    }
+
+    const float EffectiveDamage = BaseDamage * ArmorDamageScale;
+    Health = FMath::Max(0.0f, Health - EffectiveDamage);
+    OnVehicleDamaged.Broadcast(EffectiveDamage, GetHealthNormalized());
+
+    if (Health <= 0.0f)
+    {
+        DestroyVehicle();
     }
 }
 
@@ -349,6 +417,11 @@ void AWPArmoredVehicle::HandleTakeAnyDamage(
     const float EffectiveDamage = Damage < 60.0f ? 0.0f : Damage;
     Health = FMath::Max(0.0f, Health - EffectiveDamage);
 
+    if (EffectiveDamage > 0.0f)
+    {
+        OnVehicleDamaged.Broadcast(EffectiveDamage, GetHealthNormalized());
+    }
+
     if (Health <= 0.0f)
     {
         DestroyVehicle();
@@ -363,6 +436,7 @@ void AWPArmoredVehicle::DestroyVehicle()
     }
 
     bDestroyed = true;
+    OnVehicleDestroyed.Broadcast();
     Movement->StopMovementImmediately();
     CollisionRoot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
