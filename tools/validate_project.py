@@ -252,6 +252,7 @@ def validate_asset_catalog() -> tuple[int, int, int]:
         "fab_free_ppsh41_lowpoly",
         "fab_free_military_field_truck",
         "opengameart_ww2_airplane_rigged",
+        "opengameart_lowpoly_soviet_jeep",
     }
 
     missing_manual = required_manual - seen_ids
@@ -376,6 +377,8 @@ def main() -> None:
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnInitialCombinedArms"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnDefensiveEmplacements"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnLightVehicle"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "ActiveEnemyLightVehicles"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "NotifyLightVehicleDestroyed"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnGunEmplacement"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnAirSupport"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "RequestAirSupport"),
@@ -400,6 +403,7 @@ def main() -> None:
         ("Source/WarriorParadise/Private/Vehicles/WPLightVehicle.cpp", "EmbarkNearbySquad"),
         ("Source/WarriorParadise/Private/Vehicles/WPLightVehicle.cpp", "FirePlayerMachineGun"),
         ("Source/WarriorParadise/Private/Vehicles/WPLightVehicle.cpp", "FindBestTarget"),
+        ("Source/WarriorParadise/Private/Vehicles/WPLightVehicle.cpp", "NotifyLightVehicleDestroyed"),
         ("Source/WarriorParadise/Private/Vehicles/WPAirSupportAircraft.cpp", "InitializeMission"),
         ("Source/WarriorParadise/Private/Vehicles/WPAirSupportAircraft.cpp", "FireStrafeRound"),
         ("Source/WarriorParadise/Private/Vehicles/WPAirSupportAircraft.cpp", "DropBomb"),
@@ -437,6 +441,7 @@ def main() -> None:
         ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "DrawVehicleReadout"),
         ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "DrawEmplacementReadout"),
         ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "GetAirSupportCooldownRemaining"),
+        ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "GetActiveEnemyLightVehicles"),
     )
 
     for relative_path, expected in contracts:
