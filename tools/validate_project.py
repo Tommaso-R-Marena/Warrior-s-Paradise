@@ -69,6 +69,9 @@ def main() -> None:
     require_text(
         "Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp",
         "HandleObjectiveCaptured")
+    require_text(
+        "Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp",
+        "TransferPlayerControl")
 
     checked = 0
     for path in (ROOT / "Source").rglob("*"):
