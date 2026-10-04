@@ -7,6 +7,7 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
+#include "Vehicles/WPArmoredVehicle.h"
 #include "World/WPDestructibleCover.h"
 
 AWPArtilleryStrike::AWPArtilleryStrike()
@@ -90,6 +91,29 @@ void AWPArtilleryStrike::FireImpact()
             UGameplayStatics::ApplyDamage(
                 Soldier,
                 Damage,
+                nullptr,
+                this,
+                UDamageType::StaticClass());
+        }
+    }
+
+    for (TActorIterator<AWPArmoredVehicle> It(GetWorld()); It; ++It)
+    {
+        AWPArmoredVehicle* Vehicle = *It;
+        if (!Vehicle ||
+            Vehicle->GetCombatTeam() == StrikeTeam ||
+            Vehicle->IsDestroyed())
+        {
+            continue;
+        }
+
+        const float Distance = FVector::Dist(ImpactLocation, Vehicle->GetActorLocation());
+        if (Distance <= BlastRadiusCm)
+        {
+            const float Alpha = 1.0f - FMath::Clamp(Distance / BlastRadiusCm, 0.0f, 1.0f);
+            UGameplayStatics::ApplyDamage(
+                Vehicle,
+                MaximumDamage * 1.25f * FMath::Square(Alpha),
                 nullptr,
                 this,
                 UDamageType::StaticClass());
