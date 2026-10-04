@@ -5,6 +5,8 @@
 #include "WPEnvironmentVisualProfile.generated.h"
 
 class UMaterialInterface;
+class UStaticMesh;
+class UTextureCube;
 
 UENUM(BlueprintType)
 enum class EWPEnvironmentSurface : uint8
@@ -48,6 +50,18 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Materials")
     TSoftObjectPtr<UMaterialInterface> ConcreteMaterial;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Scenery")
+    TSoftObjectPtr<UStaticMesh> TreeMesh;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Scenery")
+    TSoftObjectPtr<UStaticMesh> CrateMesh;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Scenery")
+    TSoftObjectPtr<UStaticMesh> BarrelMesh;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Lighting")
+    TSoftObjectPtr<UTextureCube> SkyCubemap;
 
     TSoftObjectPtr<UMaterialInterface> GetMaterial(EWPEnvironmentSurface Surface) const
     {
