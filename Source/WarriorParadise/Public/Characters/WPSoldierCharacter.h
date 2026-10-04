@@ -17,6 +17,7 @@ class WARRIORPARADISE_API AWPSoldierCharacter : public ACharacter
 public:
     AWPSoldierCharacter();
 
+    virtual void Tick(float DeltaSeconds) override;
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
     UFUNCTION(BlueprintPure, Category="Combat")
@@ -50,6 +51,22 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="Movement")
     float SprintSpeed = 690.0f;
 
+    UPROPERTY(EditDefaultsOnly, Category="View")
+    float HipFOV = 78.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="View")
+    float AimFOV = 58.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="View")
+    float AimInterpSpeed = 12.0f;
+
+    bool bAiming = false;
+
+    const FVector HipBodyLocation = FVector(45.0f, 18.0f, -18.0f);
+    const FVector AimBodyLocation = FVector(45.0f, 0.0f, -12.5f);
+    const FVector HipBarrelLocation = FVector(82.0f, 18.0f, -15.0f);
+    const FVector AimBarrelLocation = FVector(82.0f, 0.0f, -10.0f);
+
     void MoveForward(float Value);
     void MoveRight(float Value);
     void Turn(float Value);
@@ -58,6 +75,11 @@ private:
     void StopSprint();
     void StartCrouch();
     void StopCrouch();
+    void StartAim();
+    void StopAim();
+
+    UFUNCTION()
+    void HandleShotFired(float RecoilPitch, float RecoilYaw);
 
     UFUNCTION()
     void HandleDeath();
