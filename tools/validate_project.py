@@ -49,9 +49,14 @@ REQUIRED = [
     "Source/WarriorParadise/Public/Vehicles/WPTankShell.h",
     "Source/WarriorParadise/Private/Vehicles/WPTankShell.cpp",
     "Source/WarriorParadise/Public/Presentation/WPBattlePresentationSet.h",
+    "Source/WarriorParadise/Public/Presentation/WPExplosionPresentationProfile.h",
     "Source/WarriorParadise/Public/Presentation/WPEnvironmentVisualProfile.h",
     "Source/WarriorParadise/Public/Presentation/WPInfantryLoadoutProfile.h",
     "Source/WarriorParadise/Public/Presentation/WPInfantryVisualProfile.h",
+    "Source/WarriorParadise/Public/Presentation/WPSmokePresentationProfile.h",
+    "Source/WarriorParadise/Public/Presentation/WPSoldierPresentationComponent.h",
+    "Source/WarriorParadise/Private/Presentation/WPSoldierPresentationComponent.cpp",
+    "Source/WarriorParadise/Public/Presentation/WPSoldierPresentationProfile.h",
     "Source/WarriorParadise/Public/Presentation/WPVehicleVisualProfile.h",
     "Source/WarriorParadise/Public/Presentation/WPWeaponPresentationComponent.h",
     "Source/WarriorParadise/Private/Presentation/WPWeaponPresentationComponent.cpp",
@@ -65,6 +70,12 @@ REQUIRED = [
     "docs/FREE_ASSET_BOOTSTRAP.md",
     "docs/THIRD_PARTY_ASSETS.md",
     "docs/PRESENTATION_BINDINGS.md",
+    "docs/FREE_CONTENT_WORKFLOW.md",
+    "docs/LOCAL_BUILD.md",
+    "tools/build_local.ps1",
+    "tools/build_local.bat",
+    "tools/setup_free_content.ps1",
+    "tools/setup_free_content.bat",
 ]
 
 FORBIDDEN_MARKERS = (
@@ -315,12 +326,16 @@ def main() -> None:
         ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "ApplyLoadoutProfile"),
         ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "ApplyVisualProfile"),
         ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "GetWeaponPresentationTransform"),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "GetSmokePresentation"),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "SoldierPresentationComponent"),
         ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "SetAccuracyMultiplier"),
         ("Source/WarriorParadise/Private/Combat/WPHealthComponent.cpp", "EnterDownedState"),
         ("Source/WarriorParadise/Private/Combat/WPHealthComponent.cpp", "Heal(float Amount)"),
         ("Source/WarriorParadise/Private/Combat/WPWeaponComponent.cpp", "CancelReload"),
         ("Source/WarriorParadise/Private/Combat/WPWeaponComponent.cpp", "OnProjectileSpawned.Broadcast"),
         ("Source/WarriorParadise/Private/Combat/WPSmokeCloud.cpp", "SetRadialFogExtinction"),
+        ("Source/WarriorParadise/Private/Combat/WPSmokeCloud.cpp", "SpawnSystemAttached"),
+        ("Source/WarriorParadise/Private/Combat/WPSmokeGrenade.cpp", "SetPresentationProfile"),
         ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "FindBestCover"),
         ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "GetRecentEnemyContactLocation"),
         ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "GetRecentEnemyGunshot"),
@@ -337,6 +352,10 @@ def main() -> None:
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "DA_WP_BattlePresentation_Free"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "ResolveSurfaceMaterial"),
         ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "ScatterEnvironmentProps"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnBuildingVisual"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SpawnEnterableBuilding"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "GetSmokePresentation"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "WP_Surface_Wood"),
         ("Source/WarriorParadise/Private/Game/WPCaptureObjective.cpp", "bContested ="),
         ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "DefaultPawnClass = AWPEnemySoldier::StaticClass()"),
         ("Source/WarriorParadise/Private/World/WPDestructibleCover.cpp", "BreakCover"),
@@ -345,15 +364,30 @@ def main() -> None:
         ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "FireMachineGun"),
         ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "ApplyShellImpact"),
         ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "ApplyVisualProfile"),
+        ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "CannonMuzzleFlash"),
+        ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "HandleTankShellImpact"),
+        ("Source/WarriorParadise/Private/Vehicles/WPArmoredVehicle.cpp", "DestructionEffect"),
         ("Source/WarriorParadise/Private/Vehicles/WPTankShell.cpp", "DirectArmorDamage"),
         ("Source/WarriorParadise/Private/Presentation/WPWeaponPresentationComponent.cpp", "SpawnSystemAtLocation"),
         ("Source/WarriorParadise/Private/Presentation/WPWeaponPresentationComponent.cpp", "PlaySoundAtLocation"),
         ("Source/WarriorParadise/Private/Presentation/WPWeaponPresentationComponent.cpp", "bEnableOcclusion = true"),
+        ("Source/WarriorParadise/Private/Presentation/WPWeaponPresentationComponent.cpp", "TracerEffect"),
+        ("Source/WarriorParadise/Private/Presentation/WPWeaponPresentationComponent.cpp", "SpawnDecalAtLocation"),
+        ("Source/WarriorParadise/Private/Presentation/WPWeaponPresentationComponent.cpp", "DirtImpact"),
+        ("Source/WarriorParadise/Private/Presentation/WPSoldierPresentationComponent.cpp", "OnDamageReceived.AddUniqueDynamic"),
+        ("Source/WarriorParadise/Private/Presentation/WPSoldierPresentationComponent.cpp", "HandleBandageStarted"),
+        ("Source/WarriorParadise/Private/Presentation/WPSoldierPresentationComponent.cpp", "PlayAnimMontage"),
         ("Content/Python/wp_import_external_assets.py", 'DESTINATION_ROOT = "/Game/External"'),
         ("Content/Python/wp_build_cc0_materials.py", 'MATERIAL_ROOT = "/Game/External/Materials"'),
         ("Content/Python/wp_setup_free_profiles.py", 'BATTLE_SET_NAME = "DA_WP_BattlePresentation_Free"'),
+        ("Content/Python/wp_setup_free_profiles.py", "WPSmokePresentationProfile"),
+        ("Content/Python/wp_setup_free_profiles.py", "WPSoldierPresentationProfile"),
+        ("Content/Python/wp_setup_free_profiles.py", "configure_vehicle_presentation"),
+        ("Content/Python/wp_setup_free_profiles.py", "tracer_effect"),
         ("tools/assets/bootstrap_free_assets.py", "safe_extract_zip"),
         ("tools/assets/bootstrap_free_assets.py", "asset-lock.json"),
+        ("tools/build_local.ps1", "WarriorParadiseEditor"),
+        ("tools/setup_free_content.ps1", "UnrealEditor-Cmd.exe"),
     )
 
     for relative_path, expected in contracts:
@@ -370,7 +404,7 @@ def main() -> None:
                 fail(f"{marker} marker found in {path.relative_to(ROOT)}")
         source_checked += 1
 
-    if source_checked < 51:
+    if source_checked < 56:
         fail(f"unexpectedly small source tree: {source_checked} source files")
 
     python_checked = validate_python()
@@ -381,8 +415,9 @@ def main() -> None:
         f"({source_checked} source files; {python_checked} Python tools; "
         f"{buckets} Poly Haven slots; {direct_cc0} direct CC0 source(s); "
         f"{manual_free} curated manual/free sources; gameplay, presentation, "
-        "asset licensing, import, material, motion-matching, spatial-audio, "
-        "destruction, squad, support and armor contracts checked)."
+        "asset licensing, import, materials, motion-matching, smoke, soldier "
+        "feedback, tracers, decals, surface impacts, enterable buildings, "
+        "spatial-audio, destruction, squad, support and armor contracts checked)."
     )
 
 
