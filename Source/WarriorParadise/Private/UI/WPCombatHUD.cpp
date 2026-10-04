@@ -91,9 +91,10 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
 
     DrawText(
         FString::Printf(
-            TEXT("%s   CONDITION %03d"),
+            TEXT("%s   CONDITION %03d   STAMINA %03d"),
             RoleLabel(Soldier->GetSoldierRole()),
-            CurrentHealth),
+            CurrentHealth,
+            FMath::RoundToInt(Soldier->GetStaminaNormalized() * 100.0f)),
         FLinearColor::White,
         28.0f,
         Height - 58.0f,
