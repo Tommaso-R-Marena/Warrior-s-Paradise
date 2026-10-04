@@ -45,6 +45,9 @@ public:
     bool IsDead() const { return bDead; }
 
     UFUNCTION(BlueprintPure, Category="Health")
+    float GetBleedoutRemaining() const;
+
+    UFUNCTION(BlueprintPure, Category="Health")
     bool CanBeDowned() const { return bCanBeDowned; }
 
     UFUNCTION(BlueprintCallable, Category="Health")
