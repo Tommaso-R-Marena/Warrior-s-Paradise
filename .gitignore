@@ -18,3 +18,9 @@ Build/
 StagedBuilds/
 .DS_Store
 Thumbs.db
+ExternalAssets/
+Content/External/
+Content/Marketplace/
+Content/MetaHumans/
+Content/GameAnimationSample/
+Content/Sonniss/
