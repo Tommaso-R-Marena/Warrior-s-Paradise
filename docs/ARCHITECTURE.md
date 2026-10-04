@@ -1,59 +1,103 @@
 # Architecture
 
-Warrior's Paradise uses a C++-first Unreal Engine architecture. Core combat rules remain reviewable in source; Blueprints and data assets are reserved for presentation, authored encounters, and art-facing configuration.
+Warrior's Paradise is C++-first. Core battle rules stay reviewable in source; Blueprints, Data Assets, animation, VFX and audio bind onto explicit presentation seams.
 
-## Current runtime
+## Runtime layers
 
 ### AWPSoldierCharacter
 
-Owns first-person locomotion, camera, movement state, health, weapon input, sprinting, crouching, and death handling.
+Owns player-capable soldier state:
 
-### UWPWeaponComponent
+- first-person camera/input;
+- sprint/stamina, crouch and prone;
+- guarded fire/reload input;
+- melee;
+- grenades/smoke;
+- bandaging;
+- squad commands/switch input;
+- recoil/sway/suppression camera response;
+- health/weapon/suppression components.
 
-Owns magazine state, reserve ammunition, cadence, spread, traces, damage, and reload timing.
+Every playable body uses the AI-capable subclass `AWPEnemySoldier`, so possession can move between squad bodies without leaving inert characters.
 
-The component is presentation-independent. Replacing the temporary view weapon with a production skeletal weapon does not change ballistic rules.
+### UWPWeaponComponent / UWPWeaponDefinition
 
-### UWPHealthComponent
+Own data-driven weapon simulation:
 
-Owns health state and exposes health/death delegates.
+- cadence;
+- magazine/reserve state;
+- reload;
+- ADS state;
+- spread;
+- muzzle velocity/range;
+- recoil values;
+- projectile spawn.
 
-### AWPEnemySoldier
+It exposes presentation events for fire, reload lifecycle, dry fire and projectile spawn.
 
-Provides the first executable opponent:
+### AWPBallisticProjectile
 
-- range management;
-- target facing;
-- line-of-sight checks;
-- advance/retreat behavior;
-- controlled firing pulses;
-- battlefield-director death reporting.
+Owns physical bullet travel, gravity, damage, hit-location scaling, suppression and thin-cover penetration. Bullet impact is exposed as a presentation event.
 
-This is a bootstrap opponent. Production AI will move decision-making into squad and tactical layers.
+### UWPHealthComponent / UWPSuppressionComponent
 
-### AWPBattlefieldDirector
+Health owns damage, partial healing, downed/bleedout/revive/final death and damage-source events.
 
-Owns the code-generated fallback battlefield, combat waves, score, and wave progression.
+Suppression owns accumulation/decay and a normalized presentation/AI signal.
 
-Keeping a code-only fallback means the combat kernel can be validated even if production map assets are absent.
+### AWPEnemySoldier / AWPCoverPoint
 
-### AWPCombatGameMode / AWPCombatHUD
+The tactical infantry layer provides:
 
-Establish the gameplay classes and keep the first playable loop independent of UMG assets.
+- LOS and smoke occlusion;
+- close awareness;
+- location-based shared contacts;
+- gunshot investigation;
+- cover reservation;
+- suppression reactions;
+- flanking;
+- role behaviors;
+- grenades/smoke;
+- melee.
 
-## Production layers
+The AI intentionally does not receive a continuously updating hidden target pointer from squad memory.
 
-The mature project separates six concerns:
+### AWPBattlefieldDirector / AWPCaptureObjective
 
-1. **Simulation** — health, wounds, damage, ballistics, inventory, teams, objectives.
-2. **Presentation** — skeletal meshes, animation, audio, VFX, camera, UI.
-3. **Decision AI** — perception, threat assessment, suppression, tactical intent.
-4. **Locomotion AI** — paths, cover, formations, local avoidance, vaulting.
-5. **Battle orchestration** — tickets, objectives, reinforcements, artillery, vehicles.
-6. **Content data** — weapons, factions, roles, encounters, tuning.
+The director owns battle-scale authority:
+
+- objectives and contested state;
+- squad orders;
+- contact/sound memory;
+- tickets and replacements;
+- spawn safety/front movement;
+- artillery;
+- vehicle deployment;
+- score/victory/defeat;
+- player possession transfers.
+
+### AWPArmoredVehicle / AWPTankShell
+
+Own combined-arms fallback simulation:
+
+- vehicle movement and visible-target acquisition;
+- objective advance;
+- turret/cannon/coax;
+- smoke occlusion;
+- small-arms armor immunity;
+- directional armor shell response;
+- vehicle destruction.
+
+### AWPDestructibleCover / smoke / artillery
+
+World-interaction actors keep damage/destruction/support logic independent of art assets. Production Geometry Collections/Niagara/audio can replace presentation while preserving the same battle rules.
+
+## Presentation boundary
+
+Gameplay events are the contract between simulation and art. Production Blueprints should subscribe to delegates rather than duplicating damage, ammunition, suppression or objective logic.
+
+See `PRESENTATION_BINDINGS.md`.
 
 ## Multiplayer posture
 
-The vertical slice is single-player first. Simulation classes should avoid assumptions that prevent later authority/replication work, but networking will not be allowed to slow down proof of the core battlefield experience.
-
-Once the single-player slice is stable, multiplayer work should begin from explicit authority boundaries rather than retrofitting arbitrary replicated properties.
+The current slice is single-player first. Authority boundaries are deliberately centralized in components/directors so later replication can be designed explicitly rather than scattering arbitrary replicated state through presentation Blueprints.
