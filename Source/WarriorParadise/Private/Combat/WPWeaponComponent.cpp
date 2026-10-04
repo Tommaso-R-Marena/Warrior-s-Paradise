@@ -1,5 +1,6 @@
 #include "Combat/WPWeaponComponent.h"
 #include "Combat/WPBallisticProjectile.h"
+#include "Characters/WPSoldierCharacter.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Controller.h"
@@ -31,6 +32,22 @@ void UWPWeaponComponent::SetAiming(bool bNewAiming)
 {
     bAiming = bNewAiming && !bReloading;
     OnWeaponStateChanged.Broadcast();
+}
+
+void UWPWeaponComponent::AddReserveAmmo(int32 Amount)
+{
+    if (Amount <= 0)
+    {
+        return;
+    }
+
+    const int32 PreviousReserve = ReserveAmmo;
+    ReserveAmmo = FMath::Clamp(ReserveAmmo + Amount, 0, MaximumReserveAmmo);
+
+    if (ReserveAmmo != PreviousReserve)
+    {
+        OnWeaponStateChanged.Broadcast();
+    }
 }
 
 void UWPWeaponComponent::StartFire()
@@ -161,12 +178,18 @@ void UWPWeaponComponent::TryFire()
             Direction.Rotation(),
             SpawnParameters))
         {
+            const AWPSoldierCharacter* SoldierOwner = Cast<AWPSoldierCharacter>(GetOwner());
+            const EWPCombatTeam Team = SoldierOwner
+                ? SoldierOwner->GetCombatTeam()
+                : EWPCombatTeam::Allies;
+
             Projectile->InitializeProjectile(
                 Direction,
                 MuzzleVelocityCmPerSecond,
                 Damage,
                 RangeCm,
-                InstigatorController);
+                InstigatorController,
+                Team);
         }
     }
 
