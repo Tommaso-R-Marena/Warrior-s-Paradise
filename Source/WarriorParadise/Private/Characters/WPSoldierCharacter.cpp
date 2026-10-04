@@ -18,6 +18,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Presentation/WPInfantryLoadoutProfile.h"
 #include "Presentation/WPInfantryVisualProfile.h"
+#include "Presentation/WPSoldierPresentationComponent.h"
 #include "Presentation/WPWeaponPresentationComponent.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
@@ -82,6 +83,8 @@ AWPSoldierCharacter::AWPSoldierCharacter()
     SuppressionComponent = CreateDefaultSubobject<UWPSuppressionComponent>(TEXT("SuppressionComponent"));
     WeaponPresentationComponent = CreateDefaultSubobject<UWPWeaponPresentationComponent>(
         TEXT("WeaponPresentationComponent"));
+    SoldierPresentationComponent = CreateDefaultSubobject<UWPSoldierPresentationComponent>(
+        TEXT("SoldierPresentationComponent"));
 
     GrenadeClass = AWPFragGrenade::StaticClass();
     SmokeGrenadeClass = AWPSmokeGrenade::StaticClass();
@@ -161,6 +164,12 @@ void AWPSoldierCharacter::ApplyLoadoutProfile()
         {
             WeaponPresentationComponent->SetPresentationProfile(
                 LoadoutProfile->WeaponPresentationProfile);
+        }
+
+        if (SoldierPresentationComponent)
+        {
+            SoldierPresentationComponent->SetPresentationProfile(
+                LoadoutProfile->SoldierPresentationProfile);
         }
 
         GrenadesRemaining = FMath::Max(0, LoadoutProfile->FragGrenades);
