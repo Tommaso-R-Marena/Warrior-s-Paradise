@@ -446,7 +446,7 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
     }
 
     DrawText(
-        TEXT("X SWITCH  1 FOLLOW  2 ATTACK  3 HOLD  E USE/REVIVE  T ARTILLERY  Y AIR  Z PRONE  F MELEE  V BANDAGE  G FRAG  H SMOKE"),
+        TEXT("X SWITCH  1 FOLLOW  2 ATTACK  3 HOLD  E USE/REVIVE/TREAT  T ARTILLERY  Y AIR  Z PRONE  F MELEE  V BANDAGE  G FRAG  H SMOKE"),
         FLinearColor(0.78f, 0.78f, 0.74f, 0.85f),
         Width * 0.5f - 260.0f,
         Height - 28.0f,
