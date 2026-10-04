@@ -22,6 +22,10 @@
     {
       "Name": "PoseSearch",
       "Enabled": true
+    },
+    {
+      "Name": "EditorScriptingUtilities",
+      "Enabled": true
     }
   ]
 }
