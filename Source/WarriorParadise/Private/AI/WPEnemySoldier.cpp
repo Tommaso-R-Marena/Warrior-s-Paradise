@@ -160,23 +160,6 @@ AWPSoldierCharacter* AWPEnemySoldier::FindBestTarget() const
         }
     }
 
-    if (!BestTarget)
-    {
-        if (AWPBattlefieldDirector* Director = BattlefieldDirector.Get())
-        {
-            AWPSoldierCharacter* SharedContact = Director->GetSharedEnemyContact(
-                GetCombatTeam(),
-                3.5f);
-
-            if (SharedContact &&
-                SharedContact->GetCombatTeam() != GetCombatTeam() &&
-                SharedContact->IsCombatCapable())
-            {
-                BestTarget = SharedContact;
-            }
-        }
-    }
-
     return BestTarget;
 }
 
@@ -588,6 +571,37 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
             return;
         }
 
+        if (AWPBattlefieldDirector* Director = BattlefieldDirector.Get())
+        {
+            FVector InvestigateLocation = FVector::ZeroVector;
+            bool bHasInvestigation = Director->GetRecentEnemyContactLocation(
+                GetCombatTeam(),
+                InvestigateLocation,
+                3.5f);
+
+            if (!bHasInvestigation)
+            {
+                bHasInvestigation = Director->GetRecentEnemyGunshot(
+                    GetCombatTeam(),
+                    GetActorLocation(),
+                    InvestigateLocation,
+                    4.5f);
+            }
+
+            if (bHasInvestigation)
+            {
+                const FVector InvestigatePoint =
+                    InvestigateLocation + GetFormationOffset() * 0.35f;
+
+                if (FVector::DistSquared2D(GetActorLocation(), InvestigatePoint) >
+                    FMath::Square(150.0f))
+                {
+                    MoveTacticallyToward(InvestigatePoint, 0.88f);
+                }
+                return;
+            }
+        }
+
         const FVector Destination = GetStrategicDestination();
         const float DistanceToDestination = FVector::Dist2D(GetActorLocation(), Destination);
         if (DistanceToDestination > 170.0f)
@@ -598,12 +612,38 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
     }
 
     const bool bTargetVisible = HasLineOfSightTo(Target);
+    const float TargetDistance2D = FVector::Dist2D(
+        GetActorLocation(),
+        Target->GetActorLocation());
+    const bool bCloseAwareness = TargetDistance2D <= 650.0f;
+
     if (bTargetVisible)
     {
         if (AWPBattlefieldDirector* Director = BattlefieldDirector.Get())
         {
             Director->ReportEnemyContact(GetCombatTeam(), Target);
         }
+    }
+    else if (!bCloseAwareness)
+    {
+        FVector LastKnownLocation = FVector::ZeroVector;
+        if (AWPBattlefieldDirector* Director = BattlefieldDirector.Get())
+        {
+            if (Director->GetRecentEnemyContactLocation(
+                GetCombatTeam(),
+                LastKnownLocation,
+                3.5f))
+            {
+                MoveTacticallyToward(
+                    LastKnownLocation + GetFormationOffset() * 0.25f,
+                    0.82f);
+            }
+        }
+
+        CurrentTarget.Reset();
+        GetWeaponComponent()->StopFire();
+        bPulseFiring = false;
+        return;
     }
 
     const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
