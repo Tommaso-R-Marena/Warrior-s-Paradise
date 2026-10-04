@@ -7,6 +7,7 @@
 class AWPSmokeCloud;
 class USphereComponent;
 class UProjectileMovementComponent;
+class UWPSmokePresentationProfile;
 
 UCLASS()
 class WARRIORPARADISE_API AWPSmokeGrenade : public AActor
@@ -18,6 +19,12 @@ public:
 
     void InitializeSmokeGrenade(const FVector& LaunchVelocity);
 
+    UFUNCTION(BlueprintCallable, Category="Smoke|Presentation")
+    void SetPresentationProfile(UWPSmokePresentationProfile* NewProfile)
+    {
+        PresentationProfile = NewProfile;
+    }
+
 protected:
     virtual void BeginPlay() override;
 
@@ -27,6 +34,9 @@ private:
 
     UPROPERTY(VisibleAnywhere, Category="Smoke")
     TObjectPtr<UProjectileMovementComponent> Movement;
+
+    UPROPERTY(EditDefaultsOnly, Category="Smoke|Presentation")
+    TObjectPtr<UWPSmokePresentationProfile> PresentationProfile;
 
     UPROPERTY(EditDefaultsOnly, Category="Smoke")
     TSubclassOf<AWPSmokeCloud> SmokeCloudClass;
