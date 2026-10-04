@@ -625,6 +625,36 @@ void AWPBattlefieldDirector::SpawnBox(
 
     Box->SetActorScale3D(Scale);
 
+    switch (Surface)
+    {
+        case EWPEnvironmentSurface::Wood:
+        case EWPEnvironmentSurface::Roof:
+            Box->Tags.AddUnique(TEXT("WP_Surface_Wood"));
+            break;
+
+        case EWPEnvironmentSurface::Metal:
+            Box->Tags.AddUnique(TEXT("WP_Surface_Metal"));
+            break;
+
+        case EWPEnvironmentSurface::Brick:
+            Box->Tags.AddUnique(TEXT("WP_Surface_Brick"));
+            break;
+
+        case EWPEnvironmentSurface::Plaster:
+            Box->Tags.AddUnique(TEXT("WP_Surface_Plaster"));
+            break;
+
+        case EWPEnvironmentSurface::Concrete:
+            Box->Tags.AddUnique(TEXT("WP_Surface_Concrete"));
+            break;
+
+        case EWPEnvironmentSurface::Stone:
+        case EWPEnvironmentSurface::Ground:
+        default:
+            Box->Tags.AddUnique(TEXT("WP_Surface_Stone"));
+            break;
+    }
+
     if (bCollisionOnly)
     {
         MeshComponent->SetVisibility(false, true);
@@ -657,6 +687,36 @@ void AWPBattlefieldDirector::SpawnDestructibleCover(
         FRotator::ZeroRotator))
     {
         Cover->ConfigureCover(Scale, Health);
+
+        switch (Surface)
+        {
+            case EWPEnvironmentSurface::Wood:
+            case EWPEnvironmentSurface::Roof:
+                Cover->Tags.AddUnique(TEXT("WP_Surface_Wood"));
+                break;
+
+            case EWPEnvironmentSurface::Metal:
+                Cover->Tags.AddUnique(TEXT("WP_Surface_Metal"));
+                break;
+
+            case EWPEnvironmentSurface::Brick:
+                Cover->Tags.AddUnique(TEXT("WP_Surface_Brick"));
+                break;
+
+            case EWPEnvironmentSurface::Plaster:
+                Cover->Tags.AddUnique(TEXT("WP_Surface_Plaster"));
+                break;
+
+            case EWPEnvironmentSurface::Concrete:
+                Cover->Tags.AddUnique(TEXT("WP_Surface_Concrete"));
+                break;
+
+            case EWPEnvironmentSurface::Stone:
+            case EWPEnvironmentSurface::Ground:
+            default:
+                Cover->Tags.AddUnique(TEXT("WP_Surface_Stone"));
+                break;
+        }
 
         if (UMaterialInterface* Material = ResolveSurfaceMaterial(Surface))
         {
