@@ -13,6 +13,7 @@ class AWPCaptureObjective;
 class AWPCoverPoint;
 class AWPEnemySoldier;
 class AWPSoldierCharacter;
+class UAudioComponent;
 class UMaterialInterface;
 class UStaticMesh;
 class UWPBattlePresentationSet;
@@ -238,8 +239,18 @@ private:
 
     FTimerHandle NextWaveTimer;
     FTimerHandle FriendlyReplacementTimer;
+    FTimerHandle DistantBattleTimer;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UAudioComponent> AmbientAudioComponent;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UAudioComponent> WindAudioComponent;
 
     void BuildBattlefield();
+    void BuildAtmosphere();
+    void StartEnvironmentAudio();
+    void PlayDistantBattleOneShot();
     void ScatterEnvironmentProps();
     void BuildObjectives();
     void BuildCoverPoints();
