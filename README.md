@@ -67,14 +67,22 @@ The repository now contains a substantial code-side combined-arms battle rather 
 - damageable cover that breaks into temporary physics debris;
 - penetrable thin cover;
 - UE 5.8 Local Fog Volume tactical smoke with optional Niagara/deploy/hiss presentation;
-- one Allied armored vehicle during the inner-village push;
-- one Axis armored vehicle in the final counterattack;
-- autonomous vehicle movement, turret tracking, cannon fire and coaxial fire;
-- smoke-aware vehicle sight;
-- rifle-caliber armor immunity;
-- **directional front/side/rear shell damage**;
-- tank shells with blast damage/suppression;
-- victory gating on surviving hostile armor.
+- **player-crewable and autonomous tanks**;
+- AP / HE ammunition with target-aware AI shell selection;
+- directional front/side/rear armor response;
+- engine, tracks, turret and ammo-rack subsystem damage;
+- mobility/turret degradation, immobilization and catastrophic ammo-rack damage;
+- player tank driving, turret/gun control, cannon and coax MG;
+- squad transport truck with automatic nearby-squad embark/disembark;
+- player-usable and autonomous armored cars;
+- player-usable and autonomous HMG / anti-tank emplacements;
+- smoke-aware tanks, armored cars and emplacements;
+- physical AT shells shared with tank combat;
+- scripted/AI aircraft flybys, strafing and bombing;
+- physical air-dropped bombs that damage/suppress infantry and damage vehicles/emplacements/cover;
+- limited player-requested air support plus artillery;
+- recurring ambient aircraft passes and existing battlefield/wind/distant-battle audio;
+- victory gating on surviving hostile armor/light vehicles.
 
 ## Production presentation layer
 
@@ -108,7 +116,7 @@ It can download approved redistributable CC0 content, record hashes/provenance, 
 /Game/WarriorParadise/Profiles/DA_WP_BattlePresentation_Free
 ```
 
-The generator recognizes period-weapon candidates, soldier meshes, Motion Matching AnimBPs, tanks, rural buildings, Niagara effects, audio, HDRI/ambience and environment materials. Provider-gated Epic/Fab/Sonniss content is intentionally acquired through the provider rather than scraped or mirrored publicly.
+The generator recognizes period weapons, soldiers, Motion Matching AnimBPs, tanks, transport/light vehicles, HMG/AT emplacements, Allied/Axis aircraft, rural buildings, Niagara effects, audio, HDRI/ambience and environment materials. Provider-gated Epic/Fab/Sonniss content is intentionally acquired through the provider rather than scraped or mirrored publicly.
 
 See [Free Content Workflow](docs/FREE_CONTENT_WORKFLOW.md), [Free Asset Bootstrap](docs/FREE_ASSET_BOOTSTRAP.md) and [Third-Party Assets](docs/THIRD_PARTY_ASSETS.md).
 
@@ -129,12 +137,13 @@ See [Free Content Workflow](docs/FREE_CONTENT_WORKFLOW.md), [Free Asset Bootstra
 | V | Bandage |
 | G | Frag grenade |
 | H | Smoke grenade |
-| E | Revive nearby ally |
+| E | Revive ally / use friendly tank, vehicle or emplacement |
 | X | Switch to next living squadmate |
 | 1 | Squad Follow |
 | 2 | Squad Attack objective |
 | 3 | Squad Hold |
 | T | Designate artillery |
+| Y | Designate air support |
 
 ## Engine and run
 
@@ -169,7 +178,7 @@ Optional packaged Win64 build:
 .\tools\build_local.ps1 -Package
 ```
 
-The validator now checks the **56-file** source surface plus Python tooling, plugin requirements, free-asset/license metadata, smoke/soldier/weapon/vehicle presentation, enterable buildings, material-specific impacts, tracers/decals and the free-content bootstrap contract.
+The validator now checks the **67-file** source surface plus Python tooling, plugin requirements, free-asset/license metadata, smoke/soldier/weapon/vehicle presentation, enterable buildings, material-specific impacts, tracers/decals and the free-content bootstrap contract.
 
 GitHub Actions is manual-only and is not required for development. A **full Unreal C++ compile/playtest has still not been executed from this ChatGPT environment**; a clean local UE 5.8 build remains the next hard validation gate.
 
@@ -185,4 +194,4 @@ The remaining gap is now dominated by **content acquisition, art-direction coher
 - author any hero destruction/animation not supplied by the free sources;
 - compile in UE 5.8, fix UHT/C++/asset-load issues, playtest, tune AI/combat, profile with Unreal Insights and validate a packaged Win64 build.
 
-See [Vertical Slice](docs/VERTICAL_SLICE.md), [Architecture](docs/ARCHITECTURE.md), [Asset Pipeline](docs/ASSET_PIPELINE.md), and [Performance Target](docs/PERFORMANCE_TARGET.md).
+See [Vertical Slice](docs/VERTICAL_SLICE.md), [Combined Arms](docs/COMBINED_ARMS.md), [Architecture](docs/ARCHITECTURE.md), [Asset Pipeline](docs/ASSET_PIPELINE.md), and [Performance Target](docs/PERFORMANCE_TARGET.md).
