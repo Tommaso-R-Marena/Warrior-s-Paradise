@@ -70,6 +70,8 @@ The code now includes production visual/loadout profiles, Motion Matching discov
 - contested force-balance state;
 - reinforcement escalation;
 - artillery with charges/cooldown;
+- limited player air support with charges/cooldown;
+- scripted strafe/bomb missions and ambient flybys;
 - final counterattack;
 - battle score, victory and defeat.
 
@@ -85,18 +87,23 @@ The code now includes production visual/loadout profiles, Motion Matching discov
 - optional CC0 tree/crate/barrel dressing;
 - sun/skylight/volumetric atmosphere with optional HDRI/cloud/ambience resources.
 
-### Combined arms — implemented fallback
+### Combined arms — implemented code baseline
 
-- one Allied and one Axis armored vehicle;
-- autonomous movement/targeting;
-- visible-target-only acquisition;
-- objective advance when no target is visible;
-- turret/cannon/coax behavior;
-- tank shells;
-- front/side/rear armor response;
-- small-arms armor immunity;
-- smoke-aware sight;
-- vehicle destruction and victory accounting.
+- autonomous and **player-crewable tanks**;
+- AP / HE tank ammunition;
+- front/side/rear armor plus engine/track/turret/ammo-rack subsystem damage;
+- cannon/coax combat and smoke-aware targeting;
+- transport truck with squad embark/disembark;
+- autonomous/player armored-car MG combat;
+- usable HMG and anti-tank gun emplacements;
+- autonomous Axis gun-position behavior with traverse limits;
+- physical AT shells shared with tank combat;
+- scripted/AI flyby, strafing and bombing missions;
+- physical air bombs with infantry suppression and combined-arms blast damage;
+- player air-support designation;
+- objective-triggered vehicle/air escalation and final combined-arms counterattack;
+- recurring ambient aircraft flybys;
+- enemy heavy/light vehicle destruction integrated with victory accounting.
 
 ## Production presentation contract — implemented
 
