@@ -16,6 +16,7 @@ class UWPHealthComponent;
 class UWPInfantryLoadoutProfile;
 class UWPInfantryVisualProfile;
 class UWPSuppressionComponent;
+class UWPSoldierPresentationComponent;
 class UWPWeaponComponent;
 class UWPWeaponPresentationComponent;
 
@@ -139,6 +140,9 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Presentation")
     TObjectPtr<UWPWeaponPresentationComponent> WeaponPresentationComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Presentation")
+    TObjectPtr<UWPSoldierPresentationComponent> SoldierPresentationComponent;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat")
     EWPCombatTeam CombatTeam = EWPCombatTeam::Allies;
