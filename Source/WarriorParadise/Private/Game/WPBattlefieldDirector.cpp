@@ -1729,7 +1729,8 @@ void AWPBattlefieldDirector::NotifySoldierKilled(AWPSoldierCharacter* Soldier)
 
     if (bFinalCounterattack)
     {
-        if (ActiveEnemyVehicles <= 0)
+        if (ActiveEnemyVehicles <= 0 &&
+            ActiveEnemyLightVehicles <= 0)
         {
             bBattleWon = true;
         }
@@ -1838,7 +1839,9 @@ void AWPBattlefieldDirector::HandleObjectiveCaptured(AWPCaptureObjective* Object
         GetActiveObjectiveLocation(),
         EWPAirSupportMission::Bombing);
 
-    if (RemainingEnemies == 0 && ActiveEnemyVehicles == 0)
+    if (RemainingEnemies == 0 &&
+        ActiveEnemyVehicles == 0 &&
+        ActiveEnemyLightVehicles == 0)
     {
         bBattleWon = true;
     }
@@ -1927,7 +1930,7 @@ AWPLightVehicle* AWPBattlefieldDirector::SpawnLightVehicle(
 
     if (Team == EWPCombatTeam::Axis)
     {
-        ++ActiveEnemyVehicles;
+        ++ActiveEnemyLightVehicles;
     }
 
     return Vehicle;
@@ -2118,10 +2121,32 @@ void AWPBattlefieldDirector::NotifyVehicleDestroyed(EWPCombatTeam VehicleTeam)
 
         if (bFinalCounterattack &&
             RemainingEnemies == 0 &&
-            ActiveEnemyVehicles == 0)
+            ActiveEnemyVehicles == 0 &&
+            ActiveEnemyLightVehicles == 0)
         {
             bBattleWon = true;
         }
+    }
+}
+
+void AWPBattlefieldDirector::NotifyLightVehicleDestroyed(
+    EWPCombatTeam VehicleTeam)
+{
+    if (VehicleTeam != EWPCombatTeam::Axis)
+    {
+        return;
+    }
+
+    ActiveEnemyLightVehicles =
+        FMath::Max(0, ActiveEnemyLightVehicles - 1);
+    Score += 450;
+
+    if (bFinalCounterattack &&
+        RemainingEnemies == 0 &&
+        ActiveEnemyVehicles == 0 &&
+        ActiveEnemyLightVehicles == 0)
+    {
+        bBattleWon = true;
     }
 }
 
