@@ -14,7 +14,7 @@ DISALLOWED_REFLECTED_TYPES = re.compile(
     r"\b(?:std::|TUniquePtr\s*<|TSharedPtr\s*<|TWeakPtr\s*<)"
 )
 ADD_DYNAMIC_RE = re.compile(
-    r"\.AddDynamic\s*\(\s*this\s*,\s*&([AU][A-Za-z0-9_]*)::([A-Za-z_][A-Za-z0-9_]*)\s*\)",
+    r"\.Add(?:Unique)?Dynamic\s*\(\s*this\s*,\s*&([AU][A-Za-z0-9_]*)::([A-Za-z_][A-Za-z0-9_]*)\s*\)",
     re.DOTALL,
 )
 
@@ -174,7 +174,7 @@ def main() -> int:
                 fail(
                     errors,
                     cpp,
-                    f"AddDynamic target class {class_name} has no reflected project header",
+                    f"dynamic delegate target class {class_name} has no reflected project header",
                 )
                 continue
 
@@ -183,13 +183,13 @@ def main() -> int:
                 fail(
                     errors,
                     cpp,
-                    f"AddDynamic target {class_name}::{method} is not declared in {rel(header)}",
+                    f"dynamic delegate target {class_name}::{method} is not declared in {rel(header)}",
                 )
             elif not has_reflected_handler(htext, method):
                 fail(
                     errors,
                     cpp,
-                    f"AddDynamic target {class_name}::{method} is not declared with UFUNCTION()",
+                    f"dynamic delegate target {class_name}::{method} is not declared with UFUNCTION()",
                 )
 
     build_cs = SOURCE / "WarriorParadise.Build.cs"
