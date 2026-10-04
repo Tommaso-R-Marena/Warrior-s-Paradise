@@ -120,6 +120,9 @@ public:
     UFUNCTION(BlueprintCallable, Category="Combat")
     bool TryReviveSoldier(AWPSoldierCharacter* Target);
 
+    UFUNCTION(BlueprintCallable, Category="Combat|Medicine")
+    bool TryTreatSoldier(AWPSoldierCharacter* Target);
+
     UFUNCTION(BlueprintCallable, Category="Combat")
     bool TryMeleeAttack(AWPSoldierCharacter* Target);
 
@@ -213,6 +216,9 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category="Combat|Medicine", meta=(ClampMin="1.0"))
     float BandageHealAmount = 52.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="Combat|Medicine", meta=(ClampMin="1.0"))
+    float FieldDressingHealAmount = 32.0f;
 
     UPROPERTY(EditDefaultsOnly, Category="Movement")
     float WalkSpeed = 470.0f;
