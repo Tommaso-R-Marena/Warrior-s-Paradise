@@ -13,6 +13,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Game/WPArtilleryStrike.h"
 #include "Game/WPCaptureObjective.h"
 #include "GameFramework/Controller.h"
@@ -143,45 +144,100 @@ void AWPBattlefieldDirector::ReportEnemyContact(
 
     if (ReportingTeam == EWPCombatTeam::Allies)
     {
-        AlliedSharedContact = Contact;
+        AlliedSharedContactLocation = Contact->GetActorLocation();
         AlliedSharedContactTime = GetWorld()->GetTimeSeconds();
     }
     else
     {
-        AxisSharedContact = Contact;
+        AxisSharedContactLocation = Contact->GetActorLocation();
         AxisSharedContactTime = GetWorld()->GetTimeSeconds();
     }
 }
 
-AWPSoldierCharacter* AWPBattlefieldDirector::GetSharedEnemyContact(
+bool AWPBattlefieldDirector::GetRecentEnemyContactLocation(
     EWPCombatTeam ReportingTeam,
+    FVector& OutLocation,
     float MaximumAgeSeconds) const
 {
     if (!GetWorld())
     {
-        return nullptr;
+        return false;
     }
 
     const float Time = GetWorld()->GetTimeSeconds();
-    const TWeakObjectPtr<AWPSoldierCharacter>& Contact =
-        ReportingTeam == EWPCombatTeam::Allies
-            ? AlliedSharedContact
-            : AxisSharedContact;
-
     const float ContactTime =
         ReportingTeam == EWPCombatTeam::Allies
             ? AlliedSharedContactTime
             : AxisSharedContactTime;
 
-    AWPSoldierCharacter* Soldier = Contact.Get();
-    if (!Soldier ||
-        !Soldier->IsCombatCapable() ||
-        Time - ContactTime > FMath::Max(0.0f, MaximumAgeSeconds))
+    if (Time - ContactTime > FMath::Max(0.0f, MaximumAgeSeconds))
     {
-        return nullptr;
+        return false;
     }
 
-    return Soldier;
+    OutLocation =
+        ReportingTeam == EWPCombatTeam::Allies
+            ? AlliedSharedContactLocation
+            : AxisSharedContactLocation;
+
+    return true;
+}
+
+void AWPBattlefieldDirector::ReportGunshot(
+    EWPCombatTeam ShooterTeam,
+    const FVector& Location,
+    float AudibleRadiusCm)
+{
+    if (!GetWorld())
+    {
+        return;
+    }
+
+    const float Time = GetWorld()->GetTimeSeconds();
+    const float Radius = FMath::Max(0.0f, AudibleRadiusCm);
+
+    if (ShooterTeam == EWPCombatTeam::Allies)
+    {
+        AlliedGunshotLocation = Location;
+        AlliedGunshotTime = Time;
+        AlliedGunshotRadiusCm = Radius;
+    }
+    else
+    {
+        AxisGunshotLocation = Location;
+        AxisGunshotTime = Time;
+        AxisGunshotRadiusCm = Radius;
+    }
+}
+
+bool AWPBattlefieldDirector::GetRecentEnemyGunshot(
+    EWPCombatTeam ListeningTeam,
+    const FVector& ListenerLocation,
+    FVector& OutLocation,
+    float MaximumAgeSeconds) const
+{
+    if (!GetWorld())
+    {
+        return false;
+    }
+
+    const bool bListeningAllies = ListeningTeam == EWPCombatTeam::Allies;
+    const FVector& SoundLocation =
+        bListeningAllies ? AxisGunshotLocation : AlliedGunshotLocation;
+    const float SoundTime =
+        bListeningAllies ? AxisGunshotTime : AlliedGunshotTime;
+    const float AudibleRadius =
+        bListeningAllies ? AxisGunshotRadiusCm : AlliedGunshotRadiusCm;
+
+    const float Age = GetWorld()->GetTimeSeconds() - SoundTime;
+    if (Age > FMath::Max(0.0f, MaximumAgeSeconds) ||
+        FVector::DistSquared2D(ListenerLocation, SoundLocation) > FMath::Square(AudibleRadius))
+    {
+        return false;
+    }
+
+    OutLocation = SoundLocation;
+    return true;
 }
 
 bool AWPBattlefieldDirector::RequestArtillery(
@@ -468,6 +524,60 @@ void AWPBattlefieldDirector::SpawnFriendlySquad()
     }
 }
 
+bool AWPBattlefieldDirector::IsFriendlySpawnLocationSafe(const FVector& Location) const
+{
+    if (!GetWorld())
+    {
+        return false;
+    }
+
+    const FVector SpawnEye = Location + FVector(0.0f, 0.0f, 55.0f);
+
+    for (TActorIterator<AWPSoldierCharacter> It(GetWorld()); It; ++It)
+    {
+        const AWPSoldierCharacter* Soldier = *It;
+        if (!Soldier ||
+            Soldier->GetCombatTeam() != EWPCombatTeam::Axis ||
+            !Soldier->IsCombatCapable())
+        {
+            continue;
+        }
+
+        const float DistanceSquared = FVector::DistSquared2D(
+            Location,
+            Soldier->GetActorLocation());
+
+        if (DistanceSquared < FMath::Square(1450.0f))
+        {
+            return false;
+        }
+
+        if (DistanceSquared < FMath::Square(3600.0f))
+        {
+            FHitResult Hit;
+            FCollisionQueryParams Params(SCENE_QUERY_STAT(WPSpawnSafety), true);
+            Params.AddIgnoredActor(Soldier);
+
+            const FVector EnemyEye =
+                Soldier->GetActorLocation() + FVector(0.0f, 0.0f, 55.0f);
+
+            const bool bBlocked = GetWorld()->LineTraceSingleByChannel(
+                Hit,
+                SpawnEye,
+                EnemyEye,
+                ECC_Visibility,
+                Params);
+
+            if (!bBlocked)
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 FVector AWPBattlefieldDirector::GetFriendlySpawnLocation() const
 {
     static const FVector SpawnAnchors[] =
@@ -478,9 +588,53 @@ FVector AWPBattlefieldDirector::GetFriendlySpawnLocation() const
         FVector(0.0f, -2600.0f, 120.0f)
     };
 
-    const int32 SpawnIndex = FMath::Clamp(ActiveObjectiveIndex, 0, UE_ARRAY_COUNT(SpawnAnchors) - 1);
-    const FVector Jitter(FMath::FRandRange(-320.0f, 320.0f), FMath::FRandRange(-180.0f, 180.0f), 0.0f);
-    return SpawnAnchors[SpawnIndex] + Jitter;
+    const int32 SpawnIndex = FMath::Clamp(
+        ActiveObjectiveIndex,
+        0,
+        UE_ARRAY_COUNT(SpawnAnchors) - 1);
+
+    const FVector Anchor = SpawnAnchors[SpawnIndex];
+    FVector BestCandidate = Anchor;
+    float BestNearestEnemyDistanceSquared = -1.0f;
+
+    for (int32 Attempt = 0; Attempt < 12; ++Attempt)
+    {
+        const float Angle = FMath::FRandRange(0.0f, UE_TWO_PI);
+        const float Radius = FMath::FRandRange(120.0f, 620.0f);
+        const FVector Candidate = Anchor + FVector(
+            FMath::Cos(Angle) * Radius,
+            FMath::Sin(Angle) * Radius,
+            0.0f);
+
+        if (IsFriendlySpawnLocationSafe(Candidate))
+        {
+            return Candidate;
+        }
+
+        float NearestEnemyDistanceSquared = TNumericLimits<float>::Max();
+        for (TActorIterator<AWPSoldierCharacter> It(GetWorld()); It; ++It)
+        {
+            const AWPSoldierCharacter* Soldier = *It;
+            if (!Soldier ||
+                Soldier->GetCombatTeam() != EWPCombatTeam::Axis ||
+                !Soldier->IsCombatCapable())
+            {
+                continue;
+            }
+
+            NearestEnemyDistanceSquared = FMath::Min(
+                NearestEnemyDistanceSquared,
+                FVector::DistSquared2D(Candidate, Soldier->GetActorLocation()));
+        }
+
+        if (NearestEnemyDistanceSquared > BestNearestEnemyDistanceSquared)
+        {
+            BestNearestEnemyDistanceSquared = NearestEnemyDistanceSquared;
+            BestCandidate = Candidate;
+        }
+    }
+
+    return BestCandidate;
 }
 
 void AWPBattlefieldDirector::QueueFriendlyReplacement(APlayerController* ControllerNeedingPawn)
