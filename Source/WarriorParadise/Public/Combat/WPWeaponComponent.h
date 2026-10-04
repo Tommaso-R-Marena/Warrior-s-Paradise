@@ -37,6 +37,9 @@ public:
     FWPWeaponSimpleEventSignature OnReloadCompleted;
 
     UPROPERTY(BlueprintAssignable, Category="Weapon|Presentation")
+    FWPWeaponSimpleEventSignature OnReloadCancelled;
+
+    UPROPERTY(BlueprintAssignable, Category="Weapon|Presentation")
     FWPWeaponSimpleEventSignature OnDryFire;
 
     UPROPERTY(BlueprintAssignable, Category="Weapon|Presentation")
@@ -50,6 +53,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Weapon")
     void Reload();
+
+    UFUNCTION(BlueprintCallable, Category="Weapon")
+    void CancelReload();
 
     UFUNCTION(BlueprintCallable, Category="Weapon")
     void SetAiming(bool bNewAiming);
