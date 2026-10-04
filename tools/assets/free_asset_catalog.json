@@ -16,21 +16,142 @@
     "api_attribution": "Powered by Poly Haven",
     "default_resolution": "2k",
     "buckets": [
-      {"slot": "ground_mud", "type": 1, "queries": ["mud ground", "muddy ground", "dirt ground", "soil"]},
-      {"slot": "ground_gravel", "type": 1, "queries": ["gravel ground", "gravel path", "stone ground"]},
-      {"slot": "road_cobble", "type": 1, "queries": ["cobblestone", "cobble road", "stone paving"]},
-      {"slot": "wall_plaster", "type": 1, "queries": ["weathered plaster", "plaster wall", "stucco wall"]},
-      {"slot": "wall_brick", "type": 1, "queries": ["old brick wall", "weathered brick", "brick wall"]},
-      {"slot": "wall_stone", "type": 1, "queries": ["stone wall", "old stone", "masonry wall"]},
-      {"slot": "roof_tile", "type": 1, "queries": ["roof tiles", "terracotta roof", "old roof"]},
-      {"slot": "wood_weathered", "type": 1, "queries": ["weathered wood", "old wood planks", "wood boards"]},
-      {"slot": "metal_rusted", "type": 1, "queries": ["rusted metal", "weathered metal", "rust"]},
-      {"slot": "concrete_worn", "type": 1, "queries": ["worn concrete", "old concrete", "concrete floor"]},
-      {"slot": "foliage_tree", "type": 2, "queries": ["deciduous tree", "oak tree", "forest tree"]},
-      {"slot": "prop_crate", "type": 2, "queries": ["wooden crate", "crate", "wood box"]},
-      {"slot": "prop_barrel", "type": 2, "queries": ["barrel", "wood barrel", "metal barrel"]},
-      {"slot": "hdri_overcast", "type": 0, "queries": ["overcast field", "cloudy countryside", "overcast"]},
-      {"slot": "hdri_sunset", "type": 0, "queries": ["sunset field", "rural sunset", "golden hour"]}
+      {
+        "slot": "ground_mud",
+        "type": 1,
+        "queries": [
+          "mud ground",
+          "muddy ground",
+          "dirt ground",
+          "soil"
+        ]
+      },
+      {
+        "slot": "ground_gravel",
+        "type": 1,
+        "queries": [
+          "gravel ground",
+          "gravel path",
+          "stone ground"
+        ]
+      },
+      {
+        "slot": "road_cobble",
+        "type": 1,
+        "queries": [
+          "cobblestone",
+          "cobble road",
+          "stone paving"
+        ]
+      },
+      {
+        "slot": "wall_plaster",
+        "type": 1,
+        "queries": [
+          "weathered plaster",
+          "plaster wall",
+          "stucco wall"
+        ]
+      },
+      {
+        "slot": "wall_brick",
+        "type": 1,
+        "queries": [
+          "old brick wall",
+          "weathered brick",
+          "brick wall"
+        ]
+      },
+      {
+        "slot": "wall_stone",
+        "type": 1,
+        "queries": [
+          "stone wall",
+          "old stone",
+          "masonry wall"
+        ]
+      },
+      {
+        "slot": "roof_tile",
+        "type": 1,
+        "queries": [
+          "roof tiles",
+          "terracotta roof",
+          "old roof"
+        ]
+      },
+      {
+        "slot": "wood_weathered",
+        "type": 1,
+        "queries": [
+          "weathered wood",
+          "old wood planks",
+          "wood boards"
+        ]
+      },
+      {
+        "slot": "metal_rusted",
+        "type": 1,
+        "queries": [
+          "rusted metal",
+          "weathered metal",
+          "rust"
+        ]
+      },
+      {
+        "slot": "concrete_worn",
+        "type": 1,
+        "queries": [
+          "worn concrete",
+          "old concrete",
+          "concrete floor"
+        ]
+      },
+      {
+        "slot": "foliage_tree",
+        "type": 2,
+        "queries": [
+          "deciduous tree",
+          "oak tree",
+          "forest tree"
+        ]
+      },
+      {
+        "slot": "prop_crate",
+        "type": 2,
+        "queries": [
+          "wooden crate",
+          "crate",
+          "wood box"
+        ]
+      },
+      {
+        "slot": "prop_barrel",
+        "type": 2,
+        "queries": [
+          "barrel",
+          "wood barrel",
+          "metal barrel"
+        ]
+      },
+      {
+        "slot": "hdri_overcast",
+        "type": 0,
+        "queries": [
+          "overcast field",
+          "cloudy countryside",
+          "overcast"
+        ]
+      },
+      {
+        "slot": "hdri_sunset",
+        "type": 0,
+        "queries": [
+          "sunset field",
+          "rural sunset",
+          "golden hour"
+        ]
+      }
     ]
   },
   "direct_cc0": [
@@ -173,6 +294,26 @@
       "acquisition": "Download locally from Sonniss",
       "distribution": "Raw files may not be redistributed as a sound library; ship only synchronized in the game.",
       "purpose": "Professional explosions, impacts, debris, machinery, ambience and foley"
+    },
+    {
+      "id": "fab_free_kar98k",
+      "name": "kar98K",
+      "source": "Fab",
+      "license": "Fab Standard License",
+      "page_url": "https://www.fab.com/listings/85c54714-a384-4cd9-8b66-8c53e9a2cf2c",
+      "acquisition": "Free Fab download; GLB/glTF/USDZ converted from Blender source",
+      "distribution": "Keep raw asset private/local; do not redistribute standalone.",
+      "purpose": "Period-correct German bolt-action rifle production candidate"
+    },
+    {
+      "id": "fab_free_mp40",
+      "name": "MP 40 (Maschinenpistole 40)",
+      "source": "Fab",
+      "license": "Fab Standard License",
+      "page_url": "https://www.fab.com/listings/f1a88218-1482-47d6-a047-0a7838eebd67",
+      "acquisition": "Free Fab download; FBX",
+      "distribution": "Keep raw asset private/local; do not redistribute standalone.",
+      "purpose": "Period-correct German SMG production candidate"
     }
   ]
 }
