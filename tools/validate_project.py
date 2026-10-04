@@ -342,6 +342,16 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/Combat/WPHealthComponent.h", "BleedingDamageThreshold"),
+        ("Source/WarriorParadise/Public/Combat/WPHealthComponent.h", "OnBleedingChanged"),
+        ("Source/WarriorParadise/Private/Combat/WPHealthComponent.cpp", "TryStartBleedingFromDamage"),
+        ("Source/WarriorParadise/Private/Combat/WPHealthComponent.cpp", "TickBleeding"),
+        ("Source/WarriorParadise/Private/Combat/WPHealthComponent.cpp", "StopBleeding"),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "TryTreatSoldier"),
+        ("Source/WarriorParadise/Private/Characters/WPSoldierCharacter.cpp", "HandleDamageReceived"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "FindBleedingAlly"),
+        ("Source/WarriorParadise/Private/UI/WPCombatHUD.cpp", "BLEEDING %d%%"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "bHeadlessBleedingStateValid"),
         ("Source/WarriorParadise/Public/Combat/WPSuppressionComponent.h", "EWPSuppressionState"),
         ("Source/WarriorParadise/Public/Combat/WPSuppressionComponent.h", "PressuredEnterThreshold"),
         ("Source/WarriorParadise/Public/Combat/WPSuppressionComponent.h", "PinnedEnterThreshold"),
@@ -533,7 +543,7 @@ def main() -> None:
         "feedback, tracers, decals, surface impacts, enterable buildings, "
         "crewable tanks, subsystem armor damage, transports, armored cars, "
         "emplacements, scripted air support, battlefield ambience, spatial-audio, "
-        "destruction, squad, suppression-state behavior, support, first-run auto benchmark and Minimal/Low/Medium/High/Ultra scalability contracts checked)."
+        "destruction, squad, suppression-state behavior, bleeding/field-treatment, support, first-run auto benchmark and Minimal/Low/Medium/High/Ultra scalability contracts checked)."
     )
 
 
