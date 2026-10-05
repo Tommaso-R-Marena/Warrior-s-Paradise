@@ -496,6 +496,7 @@ bool AWPEnemySoldier::HasCoveringTeammateForReload(
 
         if (!CandidateWeapon ||
             CandidateWeapon->IsReloading() ||
+            CandidateWeapon->IsCyclingAction() ||
             !CandidateWeapon->HasUsableRound() ||
             CandidateWeapon->GetMagazineFraction() < 0.22f ||
             (CandidateSuppression &&
@@ -566,7 +567,12 @@ bool AWPEnemySoldier::ShouldTacticalReload(
         return false;
     }
 
-    if (bAtCover)
+    const UWPSuppressionComponent* Suppression =
+        GetSuppressionComponent();
+
+    if (bAtCover &&
+        Suppression &&
+        Suppression->IsPinned())
     {
         return true;
     }
