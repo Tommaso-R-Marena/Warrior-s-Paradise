@@ -342,6 +342,16 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "CoverCrouchedEyeHeight"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "CoverStandingEyeHeight"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "CoverPeekCapabilityBonus"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "CoverApproachExposurePenalty"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "HasSelectedPeekCapableCover"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "bCrouchProtected"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "bStandingProtected"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "bApproachProtected"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "Candidate == CurrentCover.Get()"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "peekCapableCovers=%d"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "ManeuverSmokeWaitSeconds"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "ManeuverSmokeDeployDelay"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "ManeuverSmokeWindowSeconds"),
