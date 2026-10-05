@@ -52,6 +52,12 @@ public:
         return bHasHeldGrenadeForFriendly;
     }
 
+    UFUNCTION(BlueprintPure, Category="AI|Tactics")
+    bool HasUsedCoordinatedReload() const
+    {
+        return bHasUsedCoordinatedReload;
+    }
+
 protected:
     virtual void BeginPlay() override;
 
@@ -98,6 +104,18 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="0.0"))
     float FireLaneShiftStrength = 0.34f;
 
+    UPROPERTY(
+        EditDefaultsOnly,
+        Category="AI|Tactics",
+        meta=(ClampMin="0.0", ClampMax="1.0"))
+    float TacticalReloadMagazineThreshold = 0.28f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="100.0"))
+    float ReloadCoveringTeammateRadius = 2200.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="100.0"))
+    float ReloadDangerInterruptRange = 520.0f;
+
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="0.1"))
     float BaseOfFirePulseMultiplier = 1.55f;
 
@@ -124,6 +142,7 @@ private:
     bool bHasUsedCoordinatedTactic = false;
     bool bHasHeldFireForFriendly = false;
     bool bHasHeldGrenadeForFriendly = false;
+    bool bHasUsedCoordinatedReload = false;
 
     UPROPERTY(VisibleInstanceOnly, Category="AI|Tactics")
     EWPAITacticalPosture TacticalPosture =
@@ -147,6 +166,12 @@ private:
         const AWPSoldierCharacter* Target) const;
     bool IsGrenadeTargetSafe(
         const FVector& TargetLocation) const;
+    bool HasCoveringTeammateForReload(
+        const AWPSoldierCharacter* Target) const;
+    bool ShouldTacticalReload(
+        const AWPSoldierCharacter* Target,
+        bool bAtCover,
+        bool bTargetVisible) const;
     float GetManeuverSelectionScore() const;
     FVector GetStrategicDestination() const;
     FVector GetManeuverDestination(
