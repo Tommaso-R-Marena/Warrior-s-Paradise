@@ -55,6 +55,7 @@ The code now includes production visual/loadout profiles, Motion Matching discov
 - friendly fire-lane safety corridor, immediate hold-fire behavior and exposed-shooter lane clearing;
 - downed allies block AI firing corridors as physical casualties;
 - frag deconfliction veto when friendlies are inside a 650 cm predicted-impact safety bubble;
+- coordinated low-magazine reloads under same-target covering fire, with close-threat reload interruption;
 - LOS + close awareness;
 - location-based shared contacts;
 - gunshot investigation;
