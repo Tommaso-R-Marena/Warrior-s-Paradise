@@ -1083,14 +1083,14 @@ void AWPSoldierCharacter::ToggleProne()
         return;
     }
 
-    if (bProne)
-    {
-        ExitProne();
-    }
-    else
-    {
-        EnterProne();
-    }
+    SetProneState(!bProne);
+}
+
+bool AWPSoldierCharacter::SetProneState(bool bNewProne)
+{
+    return bNewProne
+        ? EnterProne()
+        : ExitProne();
 }
 
 bool AWPSoldierCharacter::EnterProne()
