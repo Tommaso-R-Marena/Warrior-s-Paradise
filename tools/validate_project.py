@@ -342,6 +342,14 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "MinimumManeuverCoveringShooters"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "MinimumSuppressedManeuverCoveringShooters"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "HasWaitedForManeuverSupport"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "CountManeuverCoveringShooters"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "HasFireSuperiorityForManeuver"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "Candidate->CurrentTarget.Get() != Target"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "bManeuverSupportReady"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "maneuverSupportWaits=%d"),
         ("Source/WarriorParadise/Public/Combat/WPWeaponComponent.h", "GetMagazineFraction"),
         ("Source/WarriorParadise/Public/Combat/WPWeaponComponent.h", "HasUsableRound"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "TacticalReloadMagazineThreshold"),
