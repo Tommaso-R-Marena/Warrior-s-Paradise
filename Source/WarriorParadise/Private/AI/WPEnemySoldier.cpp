@@ -632,6 +632,8 @@ int32 AWPEnemySoldier::CountManeuverCoveringShooters(
             CandidateWeapon->IsReloading() ||
             CandidateWeapon->IsCyclingAction() ||
             !CandidateWeapon->HasUsableRound() ||
+            !CandidateWeapon->HasFiredRecently(
+                FireSuperiorityRecentFireWindow) ||
             (CandidateSuppression &&
              CandidateSuppression->IsPinned()) ||
             !Candidate->HasLineOfSightTo(Target) ||
