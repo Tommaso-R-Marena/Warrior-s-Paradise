@@ -53,7 +53,8 @@ The repository now contains a substantial code-side combined-arms battle rather 
 - deterministic **base-of-fire / maneuver** coordination around shared visible targets;
 - Assault troops are preferred as the maneuver element while Riflemen anchor covering fire;
 - maneuver troops flank toward a standoff position while base-of-fire troops seek/hold cover and increase firing pressure;
-- elected maneuver troops now wait for **fire superiority** before leaving cover: either the target must already be Pressured/Pinned with at least one viable covering shooter, or at least two same-target shooters must have loaded, clear lanes;
+- elected maneuver troops now wait for **fire superiority** before leaving cover: either the target must already be Pressured/Pinned with at least one viable shooter delivering recent covering fire, or at least two same-target shooters must have recently fired with loaded, clear lanes;
+- only Steady, range-valid troops can be elected as the maneuver element, preventing a pressured or already-too-close soldier from deadlocking the fireteam plan;
 - if covering support collapses mid-maneuver, the mover pauses instead of continuing a solo flank;
 - AI checks a body-width safety corridor before firing, immediately holds fire when a friendly crosses the lane, and sidesteps to reopen the lane when exposed;
 - downed friendlies also block AI fire lanes, preventing covering fire from being dumped through casualties;
