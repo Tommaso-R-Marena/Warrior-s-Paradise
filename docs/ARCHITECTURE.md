@@ -64,6 +64,9 @@ The tactical infantry layer provides:
 - immediate ceasefire when a friendly enters a live lane, with exposed shooters sidestepping to regain a safe lane while covered shooters hold position;
 - downed friendlies remain physical fire-lane blockers;
 - frag throws are vetoed when friendlies occupy a safety bubble extending beyond the grenade's lethal radius;
+- tactical reloads are staggered under visible contact: a low-magazine soldier reloads only with same-target covering fire unless empty or pinned safely in cover;
+- cover providers must be loaded, not reloading/cycling, unpinned, within range, on the same contact and have both LOS and a clear fire lane;
+- close threats can interrupt a non-empty reload, preserving immediate self-defense;
 - independent flanking as a fallback when coordinated tactics are unavailable;
 - role behaviors, including medic prioritization of downed and bleeding allies;
 - grenades/smoke;
