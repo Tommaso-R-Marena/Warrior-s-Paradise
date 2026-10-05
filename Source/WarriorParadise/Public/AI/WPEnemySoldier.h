@@ -209,6 +209,7 @@ private:
         EWPAITacticalPosture::Independent;
 
     TWeakObjectPtr<AWPSoldierCharacter> CurrentTarget;
+    TWeakObjectPtr<AWPSoldierCharacter> ManeuverSupportWaitTarget;
     TWeakObjectPtr<AWPSoldierCharacter> SmokeManeuverTarget;
     TWeakObjectPtr<AWPCoverPoint> CurrentCover;
     TWeakObjectPtr<AWPBattlefieldDirector> BattlefieldDirector;
@@ -241,7 +242,7 @@ private:
         const AWPEnemySoldier* ManeuverElement,
         int32& OutCoveringShooters) const;
     bool TryPrepareSmokeAssistedManeuver(
-        const AWPSoldierCharacter* Target,
+        AWPSoldierCharacter* Target,
         float Time);
     bool IsSmokeAssistedManeuverReady(float Time) const;
     float GetManeuverSelectionScore() const;
