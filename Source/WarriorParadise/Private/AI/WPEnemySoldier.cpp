@@ -685,7 +685,7 @@ bool AWPEnemySoldier::HasFireSuperiorityForManeuver(
 }
 
 bool AWPEnemySoldier::TryPrepareSmokeAssistedManeuver(
-    const AWPSoldierCharacter* Target,
+    AWPSoldierCharacter* Target,
     float Time)
 {
     if (!Target ||
@@ -695,13 +695,21 @@ bool AWPEnemySoldier::TryPrepareSmokeAssistedManeuver(
         return false;
     }
 
+    if (ManeuverSupportWaitTarget.Get() != Target)
+    {
+        ManeuverSupportWaitTarget = Target;
+        ManeuverSupportWaitStartTime = Time;
+        return false;
+    }
+
     if (ManeuverSupportWaitStartTime < 0.0f)
     {
         ManeuverSupportWaitStartTime = Time;
         return false;
     }
 
-    if (ManeuverSmokeExpireTime > Time)
+    if (SmokeManeuverTarget.Get() == Target &&
+        ManeuverSmokeExpireTime > Time)
     {
         return IsSmokeAssistedManeuverReady(Time);
     }
@@ -718,8 +726,7 @@ bool AWPEnemySoldier::TryPrepareSmokeAssistedManeuver(
         return false;
     }
 
-    SmokeManeuverTarget =
-        const_cast<AWPSoldierCharacter*>(Target);
+    SmokeManeuverTarget = Target;
     bHasUsedManeuverSmoke = true;
 
     ManeuverSmokeReadyTime =
@@ -1423,6 +1430,9 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
     if (!Target)
     {
+        ManeuverSupportWaitStartTime = -1.0f;
+        ManeuverSupportWaitTarget.Reset();
+
         GetWeaponComponent()->StopFire();
         bPulseFiring = false;
 
@@ -1669,6 +1679,7 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
                 else
                 {
                     ManeuverSupportWaitStartTime = -1.0f;
+                    ManeuverSupportWaitTarget.Reset();
                 }
             }
 
