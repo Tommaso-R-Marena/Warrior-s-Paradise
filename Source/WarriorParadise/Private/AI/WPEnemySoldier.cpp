@@ -587,6 +587,95 @@ bool AWPEnemySoldier::ShouldTacticalReload(
     return HasCoveringTeammateForReload(Target);
 }
 
+int32 AWPEnemySoldier::CountManeuverCoveringShooters(
+    const AWPSoldierCharacter* Target,
+    const AWPEnemySoldier* ManeuverElement) const
+{
+    if (!Target || !GetWorld())
+    {
+        return 0;
+    }
+
+    int32 CoveringShooters = 0;
+
+    for (TActorIterator<AWPEnemySoldier> It(GetWorld());
+         It;
+         ++It)
+    {
+        AWPEnemySoldier* Candidate = *It;
+        if (!Candidate ||
+            Candidate == ManeuverElement ||
+            Candidate->IsPlayerControlled() ||
+            !Candidate->IsCombatCapable() ||
+            Candidate->GetCombatTeam() !=
+                GetCombatTeam() ||
+            Candidate->CurrentTarget.Get() != Target)
+        {
+            continue;
+        }
+
+        if (FVector::DistSquared2D(
+                Candidate->GetActorLocation(),
+                Target->GetActorLocation()) >
+            FMath::Square(CoordinationRadius))
+        {
+            continue;
+        }
+
+        UWPWeaponComponent* CandidateWeapon =
+            Candidate->GetWeaponComponent();
+        UWPSuppressionComponent* CandidateSuppression =
+            Candidate->GetSuppressionComponent();
+
+        if (!CandidateWeapon ||
+            CandidateWeapon->IsReloading() ||
+            CandidateWeapon->IsCyclingAction() ||
+            !CandidateWeapon->HasUsableRound() ||
+            (CandidateSuppression &&
+             CandidateSuppression->IsPinned()) ||
+            !Candidate->HasLineOfSightTo(Target) ||
+            !Candidate->HasClearFireLaneTo(Target))
+        {
+            continue;
+        }
+
+        ++CoveringShooters;
+    }
+
+    return CoveringShooters;
+}
+
+bool AWPEnemySoldier::HasFireSuperiorityForManeuver(
+    const AWPSoldierCharacter* Target,
+    const AWPEnemySoldier* ManeuverElement,
+    int32& OutCoveringShooters) const
+{
+    OutCoveringShooters =
+        CountManeuverCoveringShooters(
+            Target,
+            ManeuverElement);
+
+    if (!Target)
+    {
+        return false;
+    }
+
+    const UWPSuppressionComponent* TargetSuppression =
+        Target->GetSuppressionComponent();
+
+    const bool bTargetSuppressed =
+        TargetSuppression &&
+        TargetSuppression->GetSuppressionState() !=
+            EWPSuppressionState::Steady;
+
+    const int32 RequiredShooters =
+        bTargetSuppressed
+            ? MinimumSuppressedManeuverCoveringShooters
+            : MinimumManeuverCoveringShooters;
+
+    return OutCoveringShooters >= RequiredShooters;
+}
+
 float AWPEnemySoldier::GetManeuverSelectionScore() const
 {
     float RoleBias = 1000.0f;
@@ -1222,13 +1311,17 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
     const FVector FlatDirection =
         FVector(ToTarget.X, ToTarget.Y, 0.0f).GetSafeNormal();
 
+    AWPEnemySoldier* ManeuverElement = nullptr;
+    bool bManeuverSupportReady = false;
+    int32 ManeuverCoveringShooters = 0;
+
     if (!bPinned &&
         !bPressured &&
         bTargetVisible &&
         Distance > 350.0f)
     {
         int32 EligibleShooters = 0;
-        AWPEnemySoldier* ManeuverElement =
+        ManeuverElement =
             SelectManeuverElement(
                 Target,
                 EligibleShooters);
@@ -1241,6 +1334,21 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
                 Distance > DesiredRange * 0.68f
                     ? EWPAITacticalPosture::Maneuver
                     : EWPAITacticalPosture::BaseOfFire;
+
+            if (TacticalPosture ==
+                EWPAITacticalPosture::Maneuver)
+            {
+                bManeuverSupportReady =
+                    HasFireSuperiorityForManeuver(
+                        Target,
+                        ManeuverElement,
+                        ManeuverCoveringShooters);
+
+                if (!bManeuverSupportReady)
+                {
+                    bHasWaitedForManeuverSupport = true;
+                }
+            }
 
             bHasUsedCoordinatedTactic = true;
         }
@@ -1265,6 +1373,7 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
     if (TacticalPosture ==
             EWPAITacticalPosture::Maneuver &&
+        bManeuverSupportReady &&
         CurrentCover.IsValid())
     {
         ReleaseCover();
@@ -1274,6 +1383,9 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         bPressured ||
         TacticalPosture ==
             EWPAITacticalPosture::BaseOfFire ||
+        (TacticalPosture ==
+             EWPAITacticalPosture::Maneuver &&
+         !bManeuverSupportReady) ||
         Suppression >= CoverTriggerSuppression ||
         HealthNormalized <= 0.45f;
 
@@ -1314,6 +1426,14 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         MoveTacticallyToward(
             GetActorLocation() - FlatDirection * 650.0f,
             0.72f);
+    }
+    else if (TacticalPosture ==
+                 EWPAITacticalPosture::Maneuver &&
+             !bManeuverSupportReady)
+    {
+        // Hold the elected maneuver element until the fire base has
+        // enough loaded, clear lanes or the target is already suppressed.
+        bHasWaitedForManeuverSupport = true;
     }
     else if (TacticalPosture ==
                  EWPAITacticalPosture::Maneuver &&
