@@ -56,6 +56,8 @@ The repository now contains a substantial code-side combined-arms battle rather 
 - AI checks a body-width safety corridor before firing, immediately holds fire when a friendly crosses the lane, and sidesteps to reopen the lane when exposed;
 - downed friendlies also block AI fire lanes, preventing covering fire from being dumped through casualties;
 - AI vetoes frag throws when any friendly is within a 650 cm safety bubble around the predicted impact, protecting maneuver troops and casualties from friendly grenades;
+- low-magazine AI performs tactical reloads only when contact is lost, when pinned safely in cover, or when a nearby same-target teammate has ammunition, LOS and a clear fire lane to provide cover;
+- close visible threats interrupt non-empty tactical reloads so soldiers do not die finishing an unnecessary magazine change;
 - basic independent lateral flanking remains as a fallback when coordinated tactics are unavailable;
 - grenade decisions;
 - medic smoke/revive behavior;
