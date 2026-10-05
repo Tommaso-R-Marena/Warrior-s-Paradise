@@ -64,6 +64,12 @@ public:
         return bHasWaitedForManeuverSupport;
     }
 
+    UFUNCTION(BlueprintPure, Category="AI|Tactics")
+    bool HasUsedCoverPosture() const
+    {
+        return bHasUsedCoverPosture;
+    }
+
 protected:
     virtual void BeginPlay() override;
 
@@ -97,6 +103,15 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category="AI|Cover")
     float CoverTriggerSuppression = 0.38f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Cover", meta=(ClampMin="0.1"))
+    float CoverPeekDuration = 0.72f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Cover", meta=(ClampMin="0.1"))
+    float CoverHideDuration = 0.58f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Cover", meta=(ClampMin="0.0"))
+    float CoverPostureJitter = 0.18f;
 
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="500.0"))
     float CoordinationRadius = 2400.0f;
@@ -153,12 +168,15 @@ private:
     float NextSupportSearchTime = 0.0f;
     float NextEngineerSupplyTime = 0.0f;
     float StopFireTime = 0.0f;
+    float NextCoverPostureChangeTime = 0.0f;
     bool bPulseFiring = false;
+    bool bPeekingFromCover = false;
     bool bHasUsedCoordinatedTactic = false;
     bool bHasHeldFireForFriendly = false;
     bool bHasHeldGrenadeForFriendly = false;
     bool bHasUsedCoordinatedReload = false;
     bool bHasWaitedForManeuverSupport = false;
+    bool bHasUsedCoverPosture = false;
 
     UPROPERTY(VisibleInstanceOnly, Category="AI|Tactics")
     EWPAITacticalPosture TacticalPosture =
@@ -201,6 +219,11 @@ private:
         const AWPSoldierCharacter* Target) const;
     FVector GetFormationOffset() const;
     void MoveTacticallyToward(const FVector& Destination, float InputScale = 1.0f);
+    void ApplyAIStance(bool bCrouch, bool bGoProne);
+    void UpdateCoverPosture(
+        bool bAtCover,
+        bool bPinned,
+        float Time);
     void ReleaseCover();
     bool HandleMedicSupport();
     bool HandleEngineerSupport();
