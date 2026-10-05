@@ -88,6 +88,18 @@ public:
     int32 GetMagazineSize() const { return MagazineSize; }
 
     UFUNCTION(BlueprintPure, Category="Weapon")
+    float GetMagazineFraction() const
+    {
+        return MagazineSize > 0
+            ? static_cast<float>(AmmoInMagazine) /
+                static_cast<float>(MagazineSize)
+            : 0.0f;
+    }
+
+    UFUNCTION(BlueprintPure, Category="Weapon")
+    bool HasUsableRound() const { return AmmoInMagazine > 0; }
+
+    UFUNCTION(BlueprintPure, Category="Weapon")
     bool IsReloading() const { return bReloading; }
 
     UFUNCTION(BlueprintPure, Category="Weapon")
