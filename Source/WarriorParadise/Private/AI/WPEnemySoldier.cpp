@@ -457,6 +457,129 @@ bool AWPEnemySoldier::IsGrenadeTargetSafe(
     return true;
 }
 
+bool AWPEnemySoldier::HasCoveringTeammateForReload(
+    const AWPSoldierCharacter* Target) const
+{
+    if (!Target || !GetWorld())
+    {
+        return false;
+    }
+
+    for (TActorIterator<AWPEnemySoldier> It(GetWorld());
+         It;
+         ++It)
+    {
+        AWPEnemySoldier* Candidate = *It;
+        if (!Candidate ||
+            Candidate == this ||
+            Candidate->IsPlayerControlled() ||
+            !Candidate->IsCombatCapable() ||
+            Candidate->GetCombatTeam() !=
+                GetCombatTeam())
+        {
+            continue;
+        }
+
+        if (FVector::DistSquared2D(
+                GetActorLocation(),
+                Candidate->GetActorLocation()) >
+            FMath::Square(
+                ReloadCoveringTeammateRadius))
+        {
+            continue;
+        }
+
+        UWPWeaponComponent* CandidateWeapon =
+            Candidate->GetWeaponComponent();
+        UWPSuppressionComponent* CandidateSuppression =
+            Candidate->GetSuppressionComponent();
+
+        if (!CandidateWeapon ||
+            CandidateWeapon->IsReloading() ||
+            !CandidateWeapon->HasUsableRound() ||
+            CandidateWeapon->GetMagazineFraction() < 0.22f ||
+            (CandidateSuppression &&
+             CandidateSuppression->IsPinned()))
+        {
+            continue;
+        }
+
+        const float TargetDistance =
+            FVector::Dist2D(
+                Candidate->GetActorLocation(),
+                Target->GetActorLocation());
+
+        if (TargetDistance >
+                Candidate->MaximumEngagementRange ||
+            !Candidate->HasLineOfSightTo(Target) ||
+            !Candidate->HasClearFireLaneTo(Target))
+        {
+            continue;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+bool AWPEnemySoldier::ShouldTacticalReload(
+    const AWPSoldierCharacter* Target,
+    bool bAtCover,
+    bool bTargetVisible) const
+{
+    const UWPWeaponComponent* Weapon =
+        GetWeaponComponent();
+
+    if (!Weapon ||
+        Weapon->IsReloading() ||
+        Weapon->GetReserveAmmo() <= 0 ||
+        Weapon->GetAmmoInMagazine() >=
+            Weapon->GetMagazineSize())
+    {
+        return false;
+    }
+
+    if (!Weapon->HasUsableRound())
+    {
+        return true;
+    }
+
+    if (Weapon->GetMagazineFraction() >
+        TacticalReloadMagazineThreshold)
+    {
+        return false;
+    }
+
+    if (!Target || !bTargetVisible)
+    {
+        return true;
+    }
+
+    const float Distance =
+        FVector::Dist2D(
+            GetActorLocation(),
+            Target->GetActorLocation());
+
+    if (Distance <= ReloadDangerInterruptRange)
+    {
+        return false;
+    }
+
+    if (bAtCover)
+    {
+        return true;
+    }
+
+    if (TacticalPosture ==
+        EWPAITacticalPosture::Maneuver)
+    {
+        return false;
+    }
+
+    return HasCoveringTeammateForReload(Target);
+}
+
 float AWPEnemySoldier::GetManeuverSelectionScore() const
 {
     float RoleBias = 1000.0f;
@@ -955,6 +1078,14 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         GetWeaponComponent()->StopFire();
         bPulseFiring = false;
 
+        if (ShouldTacticalReload(
+                nullptr,
+                false,
+                false))
+        {
+            GetWeaponComponent()->Reload();
+        }
+
         if (bPressured)
         {
             if (AWPCoverPoint* Cover = CurrentCover.Get())
@@ -1256,6 +1387,36 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         AddMovementInput(
             Strafe,
             FMath::Sin(Time * 0.85f + static_cast<float>(GetUniqueID())) * StrafeStrength);
+    }
+
+    UWPWeaponComponent* Weapon =
+        GetWeaponComponent();
+
+    if (Weapon &&
+        Weapon->IsReloading() &&
+        bTargetVisible &&
+        Distance <= ReloadDangerInterruptRange &&
+        Weapon->HasUsableRound())
+    {
+        Weapon->CancelReload();
+    }
+
+    const bool bCoveringReloadAvailable =
+        bTargetVisible &&
+        HasCoveringTeammateForReload(Target);
+
+    if (ShouldTacticalReload(
+            Target,
+            bAtCover,
+            bTargetVisible))
+    {
+        if (bTargetVisible &&
+            bCoveringReloadAvailable)
+        {
+            bHasUsedCoordinatedReload = true;
+        }
+
+        Weapon->Reload();
     }
 
     const bool bClearFireLane =
