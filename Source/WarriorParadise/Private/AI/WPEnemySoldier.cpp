@@ -714,11 +714,36 @@ bool AWPEnemySoldier::TryPrepareSmokeAssistedManeuver(
         return IsSmokeAssistedManeuverReady(Time);
     }
 
+    if (SmokeManeuverTarget.Get() == Target &&
+        ManeuverSmokeExpireTime >= 0.0f &&
+        Time > ManeuverSmokeExpireTime)
+    {
+        SmokeManeuverTarget.Reset();
+        ManeuverSmokeTargetLocation =
+            FVector::ZeroVector;
+        ManeuverSmokeReadyTime = -1.0f;
+        ManeuverSmokeExpireTime = -1.0f;
+        ManeuverSupportWaitStartTime = Time;
+        return false;
+    }
+
     if (Time - ManeuverSupportWaitStartTime <
         ManeuverSmokeWaitSeconds)
     {
         return false;
     }
+
+    UWPWeaponComponent* Weapon =
+        GetWeaponComponent();
+
+    if (Weapon)
+    {
+        Weapon->StopFire();
+        Weapon->CancelReload();
+    }
+
+    bPulseFiring = false;
+    ApplyAIStance(false, false);
 
     const FVector SmokeTarget =
         GetManeuverSmokeTarget(Target);
