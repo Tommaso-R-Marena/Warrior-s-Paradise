@@ -60,6 +60,8 @@ The repository now contains a substantial code-side combined-arms battle rather 
 - smoke-assisted movement waits for the grenade fuse and verifies a real smoke cloud exists near the intended screen before leaving cover; the temporary concealment window is bound to the specific enemy contact and cannot authorize a different flank later;
 - the smoke screen is placed off the direct target line so the base of fire can retain its lane whenever geometry permits;
 - reserved-cover troops now use actual stance cycles: crouch while protected/reloading/pinned, rise for short firing windows, and drop back down between exposures;
+- cover selection now distinguishes **fighting cover** from mere concealment: it rewards positions that hide a crouched soldier but expose a standing firing line, penalizes uncovered approaches, and mildly favors retaining a good current position to reduce cover thrashing;
+- fully concealed/dead-end positions remain usable when necessary, but score below peek-capable cover; exposed pseudo-cover receives a heavy penalty;
 - pinned troops without cover go prone and crawl away from the threat instead of remaining upright in the open;
 - AI LOS, fire-lane checks and cover evaluation now use stance-aware pawn view locations, so crouching/prone materially changes exposure instead of being cosmetic;
 - short cover-contact memory lets a crouched soldier rise to reacquire a recently seen target without granting continuous hidden-position tracking;
