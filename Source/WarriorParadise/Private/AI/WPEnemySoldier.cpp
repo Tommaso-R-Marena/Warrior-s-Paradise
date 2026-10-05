@@ -387,8 +387,10 @@ AWPEnemySoldier* AWPEnemySoldier::SelectManeuverElement(
 
         UWPSuppressionComponent* CandidateSuppression =
             Candidate->GetSuppressionComponent();
+
         if (CandidateSuppression &&
-            CandidateSuppression->IsPinned())
+            CandidateSuppression->GetSuppressionState() !=
+                EWPSuppressionState::Steady)
         {
             continue;
         }
@@ -398,7 +400,9 @@ AWPEnemySoldier* AWPEnemySoldier::SelectManeuverElement(
                 Candidate->GetActorLocation(),
                 Target->GetActorLocation());
 
-        if (TargetDistance >
+        if (TargetDistance <=
+                Candidate->DesiredRange * 0.68f ||
+            TargetDistance >
                 Candidate->MaximumEngagementRange * 1.15f ||
             !Candidate->HasLineOfSightTo(Target))
         {
