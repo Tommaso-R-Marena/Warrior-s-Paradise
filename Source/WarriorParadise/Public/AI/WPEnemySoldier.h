@@ -76,6 +76,12 @@ public:
         return bHasUsedManeuverSmoke;
     }
 
+    UFUNCTION(BlueprintPure, Category="AI|Cover")
+    bool HasSelectedPeekCapableCover() const
+    {
+        return bHasSelectedPeekCapableCover;
+    }
+
 protected:
     virtual void BeginPlay() override;
 
@@ -121,6 +127,24 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category="AI|Cover", meta=(ClampMin="0.1"))
     float CoverContactMemorySeconds = 1.8f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Cover", meta=(ClampMin="0.0"))
+    float CoverCrouchedEyeHeight = 38.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Cover", meta=(ClampMin="0.0"))
+    float CoverStandingEyeHeight = 68.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Cover", meta=(ClampMin="0.0"))
+    float CoverPeekCapabilityBonus = 700.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Cover", meta=(ClampMin="0.0"))
+    float CoverDeepConcealmentPenalty = 180.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Cover", meta=(ClampMin="0.0"))
+    float CoverExposedPenalty = 1250.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Cover", meta=(ClampMin="0.0"))
+    float CoverApproachExposurePenalty = 420.0f;
 
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="500.0"))
     float CoordinationRadius = 2400.0f;
@@ -207,6 +231,7 @@ private:
     bool bHasWaitedForManeuverSupport = false;
     bool bHasUsedCoverPosture = false;
     bool bHasUsedManeuverSmoke = false;
+    bool bHasSelectedPeekCapableCover = false;
 
     UPROPERTY(VisibleInstanceOnly, Category="AI|Tactics")
     EWPAITacticalPosture TacticalPosture =
@@ -222,7 +247,7 @@ private:
     AWPSoldierCharacter* FindDownedAlly(float MaximumRange) const;
     AWPSoldierCharacter* FindBleedingAlly(float MaximumRange) const;
     AWPSoldierCharacter* FindAmmoTarget(float MaximumRange) const;
-    AWPCoverPoint* FindBestCover(const AWPSoldierCharacter* Threat) const;
+    AWPCoverPoint* FindBestCover(const AWPSoldierCharacter* Threat);
     AWPEnemySoldier* SelectManeuverElement(
         const AWPSoldierCharacter* Target,
         int32& OutEligibleShooters) const;
