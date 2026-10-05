@@ -54,6 +54,8 @@ The code now includes production visual/loadout profiles, Motion Matching discov
 - Assault-biased maneuver selection with Riflemen/other troops forming the fire base;
 - maneuver initiation gated on recent live covering fire / target suppression, with continuous support reevaluation and pause-on-support-loss behavior;
 - maneuver candidates must be Steady and far enough from the target to execute the assigned flank;
+- stance-aware cover usage: crouched protection/reload phases, timed exposure to fire, and pinned-prone behavior when no cover is available;
+- stance-aware LOS/fire-lane/cover evaluation plus short reacquisition memory for concealed troops;
 - friendly fire-lane safety corridor, immediate hold-fire behavior and exposed-shooter lane clearing;
 - downed allies block AI firing corridors as physical casualties;
 - frag deconfliction veto when friendlies are inside a 650 cm predicted-impact safety bubble;
