@@ -63,6 +63,9 @@ The tactical infantry layer provides:
 - fire-superiority gating: the elected mover remains in/near cover until either a suppressed target has at least one viable shooter that fired recently or an unsuppressed target has at least two same-target shooters that fired recently and still have loaded, clear lanes;
 - maneuver election excludes Pressured/Pinned or already-too-close candidates so every elected mover can actually execute the assigned flank;
 - support is continuously reevaluated, so a maneuver pauses if those covering conditions collapse;
+- cover occupation has an explicit posture cycle: protected crouch/reload phases alternate with brief standing firing windows, while pinned troops without reserved cover go prone;
+- a short cover-contact memory exists only to permit a hidden soldier to stand and reacquire; hidden target position is not continuously consumed for firing/movement;
+- LOS, fire-lane and cover-exposure traces use actual pawn view positions so stance changes simulation geometry;
 - body-width friendly fire-lane sweeps before every AI firing decision;
 - immediate ceasefire when a friendly enters a live lane, with exposed shooters sidestepping to regain a safe lane while covered shooters hold position;
 - downed friendlies remain physical fire-lane blockers;
