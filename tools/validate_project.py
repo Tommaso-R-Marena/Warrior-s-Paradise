@@ -342,6 +342,16 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/Combat/WPWeaponComponent.h", "GetMagazineFraction"),
+        ("Source/WarriorParadise/Public/Combat/WPWeaponComponent.h", "HasUsableRound"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "TacticalReloadMagazineThreshold"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "ReloadCoveringTeammateRadius"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "ReloadDangerInterruptRange"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "HasUsedCoordinatedReload"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "HasCoveringTeammateForReload"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "ShouldTacticalReload"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "Candidate->CurrentTarget.Get() != Target"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "coordinatedReloads=%d"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "GrenadeFriendlySafetyRadius"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "HasHeldGrenadeForFriendly"),
         ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "IsGrenadeTargetSafe"),
