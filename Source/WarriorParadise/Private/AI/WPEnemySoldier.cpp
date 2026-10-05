@@ -494,7 +494,8 @@ bool AWPEnemySoldier::HasCoveringTeammateForReload(
         UWPSuppressionComponent* CandidateSuppression =
             Candidate->GetSuppressionComponent();
 
-        if (!CandidateWeapon ||
+        if (Candidate->CurrentTarget.Get() != Target ||
+            !CandidateWeapon ||
             CandidateWeapon->IsReloading() ||
             CandidateWeapon->IsCyclingAction() ||
             !CandidateWeapon->HasUsableRound() ||
