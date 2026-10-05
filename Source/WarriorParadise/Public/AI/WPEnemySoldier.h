@@ -122,6 +122,9 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="100.0"))
     float ReloadDangerInterruptRange = 520.0f;
 
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="0.1"))
+    float FireSuperiorityRecentFireWindow = 1.35f;
+
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="1"))
     int32 MinimumManeuverCoveringShooters = 2;
 
