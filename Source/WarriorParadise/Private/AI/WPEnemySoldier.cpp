@@ -684,6 +684,63 @@ bool AWPEnemySoldier::HasFireSuperiorityForManeuver(
     return OutCoveringShooters >= RequiredShooters;
 }
 
+bool AWPEnemySoldier::TryPrepareSmokeAssistedManeuver(
+    const AWPSoldierCharacter* Target,
+    float Time)
+{
+    if (!Target ||
+        GetSoldierRole() != EWPSoldierRole::Assault ||
+        GetSmokeGrenadesRemaining() <= 0)
+    {
+        return false;
+    }
+
+    if (ManeuverSupportWaitStartTime < 0.0f)
+    {
+        ManeuverSupportWaitStartTime = Time;
+        return false;
+    }
+
+    if (ManeuverSmokeExpireTime > Time)
+    {
+        return IsSmokeAssistedManeuverReady(Time);
+    }
+
+    if (Time - ManeuverSupportWaitStartTime <
+        ManeuverSmokeWaitSeconds)
+    {
+        return false;
+    }
+
+    if (!ThrowSmokeGrenadeAt(
+            GetManeuverSmokeTarget(Target)))
+    {
+        return false;
+    }
+
+    SmokeManeuverTarget =
+        const_cast<AWPSoldierCharacter*>(Target);
+    bHasUsedManeuverSmoke = true;
+
+    ManeuverSmokeReadyTime =
+        Time + ManeuverSmokeDeployDelay;
+    ManeuverSmokeExpireTime =
+        ManeuverSmokeReadyTime +
+        ManeuverSmokeWindowSeconds;
+
+    return false;
+}
+
+bool AWPEnemySoldier::IsSmokeAssistedManeuverReady(
+    float Time) const
+{
+    return
+        SmokeManeuverTarget.IsValid() &&
+        ManeuverSmokeReadyTime >= 0.0f &&
+        Time >= ManeuverSmokeReadyTime &&
+        Time <= ManeuverSmokeExpireTime;
+}
+
 float AWPEnemySoldier::GetManeuverSelectionScore() const
 {
     float RoleBias = 1000.0f;
@@ -778,6 +835,53 @@ FVector AWPEnemySoldier::GetManeuverDestination(
         Target->GetActorLocation() -
         Forward * Standoff +
         Lateral * FlankDistance;
+}
+
+FVector AWPEnemySoldier::GetManeuverSmokeTarget(
+    const AWPSoldierCharacter* Target) const
+{
+    if (!Target)
+    {
+        return GetActorLocation();
+    }
+
+    FVector ToTarget =
+        Target->GetActorLocation() - GetActorLocation();
+    ToTarget.Z = 0.0f;
+
+    const FVector Forward =
+        ToTarget.GetSafeNormal();
+
+    if (Forward.IsNearlyZero())
+    {
+        return GetActorLocation();
+    }
+
+    FVector Lateral =
+        FVector::CrossProduct(
+            FVector::UpVector,
+            Forward).GetSafeNormal();
+
+    if ((GetUniqueID() & 1U) != 0U)
+    {
+        Lateral *= -1.0f;
+    }
+
+    const FVector ManeuverDestination =
+        GetManeuverDestination(Target);
+
+    FVector SmokePoint =
+        FMath::Lerp(
+            GetActorLocation(),
+            ManeuverDestination,
+            0.62f);
+
+    SmokePoint +=
+        Lateral * ManeuverSmokeLateralOffset;
+    SmokePoint.Z =
+        GetActorLocation().Z;
+
+    return SmokePoint;
 }
 
 bool AWPEnemySoldier::HasClearFireLaneTo(
@@ -1425,7 +1529,13 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         return;
     }
 
-    const bool bTargetVisible = HasLineOfSightTo(Target);
+    const bool bTargetVisible =
+        HasLineOfSightTo(Target);
+
+    const bool bSmokeManeuverWindowActive =
+        SmokeManeuverTarget.Get() == Target &&
+        IsSmokeAssistedManeuverReady(Time);
+
     const float TargetDistance2D = FVector::Dist2D(
         GetActorLocation(),
         Target->GetActorLocation());
@@ -1440,7 +1550,8 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
             Director->ReportEnemyContact(GetCombatTeam(), Target);
         }
     }
-    else if (!bCloseAwareness)
+    else if (!bCloseAwareness &&
+             !bSmokeManeuverWindowActive)
     {
         const bool bCanPeekRememberedContact =
             CurrentCover.IsValid() &&
@@ -1503,8 +1614,19 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
     if (!bPinned &&
         !bPressured &&
-        bTargetVisible &&
+        bSmokeManeuverWindowActive &&
         Distance > 350.0f)
+    {
+        ManeuverElement = this;
+        TacticalPosture =
+            EWPAITacticalPosture::Maneuver;
+        bManeuverSupportReady = true;
+        bHasUsedCoordinatedTactic = true;
+    }
+    else if (!bPinned &&
+             !bPressured &&
+             bTargetVisible &&
+             Distance > 350.0f)
     {
         int32 EligibleShooters = 0;
         ManeuverElement =
@@ -1533,6 +1655,20 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
                 if (!bManeuverSupportReady)
                 {
                     bHasWaitedForManeuverSupport = true;
+
+                    const bool bSmokeReady =
+                        TryPrepareSmokeAssistedManeuver(
+                            Target,
+                            Time);
+
+                    if (bSmokeReady)
+                    {
+                        bManeuverSupportReady = true;
+                    }
+                }
+                else
+                {
+                    ManeuverSupportWaitStartTime = -1.0f;
                 }
             }
 
@@ -1623,8 +1759,8 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
                  EWPAITacticalPosture::Maneuver &&
              !bManeuverSupportReady)
     {
-        // Hold the elected maneuver element until the fire base has
-        // enough loaded, clear lanes or the target is already suppressed.
+        // Hold until live fire superiority exists or an Assault smoke
+        // screen has actually deployed on the maneuver corridor.
         bHasWaitedForManeuverSupport = true;
     }
     else if (TacticalPosture ==
@@ -1783,7 +1919,8 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         }
     }
 
-    if (!bPinned)
+    if (!bPinned &&
+        !bSmokeManeuverWindowActive)
     {
         HandleGrenadeOpportunity(Target, Distance);
     }
