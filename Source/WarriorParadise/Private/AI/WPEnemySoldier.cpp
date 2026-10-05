@@ -790,11 +790,9 @@ bool AWPEnemySoldier::HasClearFireLaneTo(
     }
 
     const FVector Start =
-        GetActorLocation() +
-        FVector(0.0f, 0.0f, 58.0f);
+        GetPawnViewLocation();
     const FVector End =
-        Target->GetActorLocation() +
-        FVector(0.0f, 0.0f, 45.0f);
+        Target->GetPawnViewLocation();
 
     TArray<FHitResult> Hits;
 
@@ -848,8 +846,14 @@ bool AWPEnemySoldier::HasLineOfSightTo(const AActor* Target) const
         return false;
     }
 
-    const FVector Start = GetActorLocation() + FVector(0.0f, 0.0f, 58.0f);
-    const FVector End = Target->GetActorLocation() + FVector(0.0f, 0.0f, 45.0f);
+    const FVector Start =
+        GetPawnViewLocation();
+
+    const APawn* TargetPawn =
+        Cast<APawn>(Target);
+    const FVector End = TargetPawn
+        ? TargetPawn->GetPawnViewLocation()
+        : Target->GetActorLocation();
 
     for (TActorIterator<AWPSmokeCloud> It(GetWorld()); It; ++It)
     {
@@ -953,6 +957,116 @@ void AWPEnemySoldier::MoveTacticallyToward(const FVector& Destination, float Inp
     AddMovementInput(Direction, FMath::Clamp(InputScale, 0.0f, 1.0f));
 }
 
+void AWPEnemySoldier::ApplyAIStance(
+    bool bCrouch,
+    bool bGoProne)
+{
+    if (bGoProne)
+    {
+        UnCrouch();
+        if (SetProneState(true))
+        {
+            bHasUsedCoverPosture = true;
+        }
+        return;
+    }
+
+    if (IsProne())
+    {
+        SetProneState(false);
+    }
+
+    if (bCrouch)
+    {
+        Crouch();
+        bHasUsedCoverPosture = true;
+    }
+    else
+    {
+        UnCrouch();
+    }
+}
+
+void AWPEnemySoldier::UpdateCoverPosture(
+    bool bAtCover,
+    bool bPinned,
+    float Time)
+{
+    UWPWeaponComponent* Weapon =
+        GetWeaponComponent();
+
+    if (!bAtCover)
+    {
+        bPeekingFromCover = false;
+
+        if (bPinned)
+        {
+            ApplyAIStance(false, true);
+        }
+        else
+        {
+            ApplyAIStance(false, false);
+        }
+
+        return;
+    }
+
+    if (bPinned ||
+        (Weapon && Weapon->IsReloading()))
+    {
+        bPeekingFromCover = false;
+        ApplyAIStance(true, false);
+        NextCoverPostureChangeTime =
+            Time +
+            CoverHideDuration +
+            FMath::FRandRange(
+                0.0f,
+                CoverPostureJitter);
+        return;
+    }
+
+    if (bPulseFiring)
+    {
+        bPeekingFromCover = true;
+        ApplyAIStance(false, false);
+        NextCoverPostureChangeTime =
+            FMath::Max(
+                NextCoverPostureChangeTime,
+                StopFireTime +
+                    0.20f +
+                    FMath::FRandRange(
+                        0.0f,
+                        CoverPostureJitter));
+        return;
+    }
+
+    if (Time < NextCoverPostureChangeTime)
+    {
+        ApplyAIStance(
+            !bPeekingFromCover,
+            false);
+        return;
+    }
+
+    bPeekingFromCover =
+        !bPeekingFromCover;
+
+    ApplyAIStance(
+        !bPeekingFromCover,
+        false);
+
+    bHasUsedCoverPosture = true;
+
+    NextCoverPostureChangeTime =
+        Time +
+        (bPeekingFromCover
+            ? CoverPeekDuration
+            : CoverHideDuration) +
+        FMath::FRandRange(
+            0.0f,
+            CoverPostureJitter);
+}
+
 void AWPEnemySoldier::ReleaseCover()
 {
     if (AWPCoverPoint* Cover = CurrentCover.Get())
@@ -961,6 +1075,12 @@ void AWPEnemySoldier::ReleaseCover()
     }
 
     CurrentCover.Reset();
+    bPeekingFromCover = false;
+
+    if (!IsPlayerControlled())
+    {
+        ApplyAIStance(false, false);
+    }
 }
 
 bool AWPEnemySoldier::HandleMedicSupport()
@@ -1197,12 +1317,20 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
                     GetActorLocation(),
                     Cover->GetActorLocation());
 
-                if (CoverDistance > 115.0f)
+                const bool bAtCover =
+                    CoverDistance <= 115.0f;
+
+                if (!bAtCover)
                 {
                     MoveTacticallyToward(
                         Cover->GetActorLocation(),
                         bPinned ? 1.0f : 0.82f);
                 }
+
+                UpdateCoverPosture(
+                    bAtCover,
+                    bPinned,
+                    Time);
                 return;
             }
         }
@@ -1426,6 +1554,11 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
                     : FMath::Lerp(0.95f, 0.7f, Suppression));
         }
     }
+    UpdateCoverPosture(
+        bAtCover,
+        bPinned,
+        Time);
+
     else if (bPinned)
     {
         // If no reservable cover exists, break contact instead of
@@ -1553,8 +1686,13 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         Weapon->Reload();
     }
 
+    const bool bCoverExposureReady =
+        !bAtCover ||
+        bPeekingFromCover;
+
     const bool bClearFireLane =
         bTargetVisible &&
+        bCoverExposureReady &&
         HasClearFireLaneTo(Target);
 
     if (bTargetVisible &&
