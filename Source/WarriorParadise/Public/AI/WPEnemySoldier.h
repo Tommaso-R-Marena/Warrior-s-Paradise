@@ -209,6 +209,7 @@ private:
         EWPAITacticalPosture::Independent;
 
     TWeakObjectPtr<AWPSoldierCharacter> CurrentTarget;
+    TWeakObjectPtr<AWPSoldierCharacter> SmokeManeuverTarget;
     TWeakObjectPtr<AWPCoverPoint> CurrentCover;
     TWeakObjectPtr<AWPBattlefieldDirector> BattlefieldDirector;
 
