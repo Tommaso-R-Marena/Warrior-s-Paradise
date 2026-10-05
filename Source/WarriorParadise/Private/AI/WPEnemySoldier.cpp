@@ -1513,7 +1513,8 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
                 0.03f,
                 1.0f);
 
-        if (Distance <= MaximumEngagementRange &&
+        if (!Weapon->IsReloading() &&
+            Distance <= MaximumEngagementRange &&
             bTargetVisible &&
             bClearFireLane &&
             FireChance > 0.0f &&
