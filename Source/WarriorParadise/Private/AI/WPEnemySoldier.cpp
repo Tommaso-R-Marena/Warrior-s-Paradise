@@ -371,7 +371,8 @@ AWPEnemySoldier* AWPEnemySoldier::SelectManeuverElement(
         if (!Candidate ||
             Candidate->IsPlayerControlled() ||
             !Candidate->IsCombatCapable() ||
-            Candidate->GetCombatTeam() != GetCombatTeam())
+            Candidate->GetCombatTeam() != GetCombatTeam() ||
+            Candidate->CurrentTarget.Get() != Target)
         {
             continue;
         }
