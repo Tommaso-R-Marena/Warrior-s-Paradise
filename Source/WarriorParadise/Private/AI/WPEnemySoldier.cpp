@@ -999,7 +999,8 @@ void AWPEnemySoldier::UpdateCoverPosture(
     {
         bPeekingFromCover = false;
 
-        if (bPinned)
+        if (bPinned &&
+            !CurrentCover.IsValid())
         {
             ApplyAIStance(false, true);
         }
@@ -1290,8 +1291,27 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         !CurrentTarget.IsValid() ||
         !CurrentTarget->IsCombatCapable())
     {
-        CurrentTarget = FindBestTarget();
-        NextTargetSearchTime = Time + RetargetInterval + FMath::FRandRange(0.0f, 0.18f);
+        AWPSoldierCharacter* NewTarget =
+            FindBestTarget();
+
+        if (NewTarget)
+        {
+            CurrentTarget = NewTarget;
+            LastVisibleTargetTime = Time;
+        }
+        else if (!CurrentTarget.IsValid() ||
+                 !CurrentTarget->IsCombatCapable() ||
+                 !CurrentCover.IsValid() ||
+                 Time - LastVisibleTargetTime >
+                     CoverContactMemorySeconds)
+        {
+            CurrentTarget.Reset();
+        }
+
+        NextTargetSearchTime =
+            Time +
+            RetargetInterval +
+            FMath::FRandRange(0.0f, 0.18f);
     }
 
     AWPSoldierCharacter* Target = CurrentTarget.Get();
@@ -1412,6 +1432,8 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
 
     if (bTargetVisible)
     {
+        LastVisibleTargetTime = Time;
+
         if (AWPBattlefieldDirector* Director = BattlefieldDirector.Get())
         {
             Director->ReportEnemyContact(GetCombatTeam(), Target);
@@ -1419,6 +1441,34 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
     }
     else if (!bCloseAwareness)
     {
+        const bool bCanPeekRememberedContact =
+            CurrentCover.IsValid() &&
+            Time - LastVisibleTargetTime <=
+                CoverContactMemorySeconds;
+
+        if (bCanPeekRememberedContact)
+        {
+            const float CoverDistance =
+                FVector::Dist2D(
+                    GetActorLocation(),
+                    CurrentCover->GetActorLocation());
+
+            if (CoverDistance <= 115.0f)
+            {
+                bPeekingFromCover = true;
+                ApplyAIStance(false, false);
+                NextCoverPostureChangeTime =
+                    Time +
+                    CoverPeekDuration +
+                    FMath::FRandRange(
+                        0.0f,
+                        CoverPostureJitter);
+
+                GetWeaponComponent()->StopFire();
+                bPulseFiring = false;
+                return;
+            }
+        }
         FVector LastKnownLocation = FVector::ZeroVector;
         if (AWPBattlefieldDirector* Director = BattlefieldDirector.Get())
         {
@@ -1559,10 +1609,11 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         bPinned,
         Time);
 
-    else if (bPinned)
+    if (!CurrentCover.IsValid() &&
+        bPinned)
     {
-        // If no reservable cover exists, break contact instead of
-        // standing in the open trading accurate fire.
+        // If no reservable cover exists, lower the profile and
+        // break contact rather than trading fire in the open.
         MoveTacticallyToward(
             GetActorLocation() - FlatDirection * 650.0f,
             0.72f);
@@ -1690,13 +1741,17 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         !bAtCover ||
         bPeekingFromCover;
 
-    const bool bClearFireLane =
+    const bool bFriendlyLaneClear =
         bTargetVisible &&
-        bCoverExposureReady &&
         HasClearFireLaneTo(Target);
 
+    const bool bClearFireLane =
+        bFriendlyLaneClear &&
+        bCoverExposureReady;
+
     if (bTargetVisible &&
-        !bClearFireLane)
+        bCoverExposureReady &&
+        !bFriendlyLaneClear)
     {
         bHasHeldFireForFriendly = true;
 
