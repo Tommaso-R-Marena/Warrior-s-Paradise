@@ -67,6 +67,9 @@ The tactical infantry layer provides:
 - smoke authorization is contact-specific and time-bounded; losing/changing the contact cannot reuse an older smoke window, and an expired screen must be deliberately re-established;
 - the corridor target is laterally offset from the direct shooter-target line to reduce the chance of blinding the base of fire while still covering the mover;
 - cover occupation has an explicit posture cycle: protected crouch/reload phases alternate with brief standing firing windows, while pinned troops without reserved cover go prone;
+- cover selection explicitly scores crouched protection, standing peek exposure, approach-route exposure, desired engagement range, authored cover quality and current-cover retention;
+- the preferred fighting-cover profile is crouch-occluded / stand-visible: enough geometry to protect the soldier between bursts without turning the position into a dead-end firing hole;
+- fully occluded cover receives a modest concealment penalty, fully exposed positions a large penalty, and an exposed approach receives an additional cost; a retention bonus reduces oscillation between nearly equivalent reserved points;
 - a short cover-contact memory exists only to permit a hidden soldier to stand and reacquire; hidden target position is not continuously consumed for firing/movement;
 - LOS, fire-lane and cover-exposure traces use actual pawn view positions so stance changes simulation geometry;
 - body-width friendly fire-lane sweeps before every AI firing decision;
