@@ -113,6 +113,9 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="AI|Cover", meta=(ClampMin="0.0"))
     float CoverPostureJitter = 0.18f;
 
+    UPROPERTY(EditDefaultsOnly, Category="AI|Cover", meta=(ClampMin="0.1"))
+    float CoverContactMemorySeconds = 1.8f;
+
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="500.0"))
     float CoordinationRadius = 2400.0f;
 
@@ -169,6 +172,7 @@ private:
     float NextEngineerSupplyTime = 0.0f;
     float StopFireTime = 0.0f;
     float NextCoverPostureChangeTime = 0.0f;
+    float LastVisibleTargetTime = -1000.0f;
     bool bPulseFiring = false;
     bool bPeekingFromCover = false;
     bool bHasUsedCoordinatedTactic = false;
