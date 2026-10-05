@@ -70,6 +70,12 @@ public:
         return bHasUsedCoverPosture;
     }
 
+    UFUNCTION(BlueprintPure, Category="AI|Tactics")
+    bool HasUsedManeuverSmoke() const
+    {
+        return bHasUsedManeuverSmoke;
+    }
+
 protected:
     virtual void BeginPlay() override;
 
@@ -152,6 +158,18 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="0.1"))
     float BaseOfFirePulseMultiplier = 1.55f;
 
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics|Smoke", meta=(ClampMin="0.0"))
+    float ManeuverSmokeWaitSeconds = 1.15f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics|Smoke", meta=(ClampMin="0.1"))
+    float ManeuverSmokeDeployDelay = 3.1f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics|Smoke", meta=(ClampMin="1.0"))
+    float ManeuverSmokeWindowSeconds = 12.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics|Smoke", meta=(ClampMin="100.0"))
+    float ManeuverSmokeLateralOffset = 520.0f;
+
     UPROPERTY(EditDefaultsOnly, Category="AI|Grenade")
     float GrenadeMinimumRange = 650.0f;
 
@@ -173,6 +191,9 @@ private:
     float StopFireTime = 0.0f;
     float NextCoverPostureChangeTime = 0.0f;
     float LastVisibleTargetTime = -1000.0f;
+    float ManeuverSupportWaitStartTime = -1.0f;
+    float ManeuverSmokeReadyTime = -1.0f;
+    float ManeuverSmokeExpireTime = -1.0f;
     bool bPulseFiring = false;
     bool bPeekingFromCover = false;
     bool bHasUsedCoordinatedTactic = false;
@@ -181,6 +202,7 @@ private:
     bool bHasUsedCoordinatedReload = false;
     bool bHasWaitedForManeuverSupport = false;
     bool bHasUsedCoverPosture = false;
+    bool bHasUsedManeuverSmoke = false;
 
     UPROPERTY(VisibleInstanceOnly, Category="AI|Tactics")
     EWPAITacticalPosture TacticalPosture =
@@ -217,9 +239,15 @@ private:
         const AWPSoldierCharacter* Target,
         const AWPEnemySoldier* ManeuverElement,
         int32& OutCoveringShooters) const;
+    bool TryPrepareSmokeAssistedManeuver(
+        const AWPSoldierCharacter* Target,
+        float Time);
+    bool IsSmokeAssistedManeuverReady(float Time) const;
     float GetManeuverSelectionScore() const;
     FVector GetStrategicDestination() const;
     FVector GetManeuverDestination(
+        const AWPSoldierCharacter* Target) const;
+    FVector GetManeuverSmokeTarget(
         const AWPSoldierCharacter* Target) const;
     FVector GetFormationOffset() const;
     void MoveTacticallyToward(const FVector& Destination, float InputScale = 1.0f);
