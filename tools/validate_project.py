@@ -342,6 +342,17 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "ManeuverSmokeWaitSeconds"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "ManeuverSmokeDeployDelay"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "ManeuverSmokeWindowSeconds"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "ManeuverSmokeVerificationTolerance"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "HasUsedManeuverSmoke"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "TryPrepareSmokeAssistedManeuver"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "IsSmokeAssistedManeuverReady"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "GetManeuverSmokeTarget"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "SmokeManeuverTarget.Get() == Target"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "GetSmokeRadiusCm"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "maneuverSmokeUses=%d"),
         ("Source/WarriorParadise/Public/Characters/WPSoldierCharacter.h", "SetProneState"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "CoverPeekDuration"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "CoverHideDuration"),
