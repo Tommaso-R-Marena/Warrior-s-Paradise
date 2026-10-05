@@ -720,12 +720,16 @@ bool AWPEnemySoldier::TryPrepareSmokeAssistedManeuver(
         return false;
     }
 
-    if (!ThrowSmokeGrenadeAt(
-            GetManeuverSmokeTarget(Target)))
+    const FVector SmokeTarget =
+        GetManeuverSmokeTarget(Target);
+
+    if (!ThrowSmokeGrenadeAt(SmokeTarget))
     {
         return false;
     }
 
+    ManeuverSmokeTargetLocation =
+        SmokeTarget;
     SmokeManeuverTarget = Target;
     bHasUsedManeuverSmoke = true;
 
@@ -741,11 +745,39 @@ bool AWPEnemySoldier::TryPrepareSmokeAssistedManeuver(
 bool AWPEnemySoldier::IsSmokeAssistedManeuverReady(
     float Time) const
 {
-    return
-        SmokeManeuverTarget.IsValid() &&
-        ManeuverSmokeReadyTime >= 0.0f &&
-        Time >= ManeuverSmokeReadyTime &&
-        Time <= ManeuverSmokeExpireTime;
+    if (!GetWorld() ||
+        !SmokeManeuverTarget.IsValid() ||
+        ManeuverSmokeReadyTime < 0.0f ||
+        Time < ManeuverSmokeReadyTime ||
+        Time > ManeuverSmokeExpireTime)
+    {
+        return false;
+    }
+
+    for (TActorIterator<AWPSmokeCloud> It(GetWorld());
+         It;
+         ++It)
+    {
+        const AWPSmokeCloud* Smoke = *It;
+        if (!Smoke)
+        {
+            continue;
+        }
+
+        const float AllowedDistance =
+            Smoke->GetSmokeRadiusCm() +
+            ManeuverSmokeVerificationTolerance;
+
+        if (FVector::DistSquared2D(
+                Smoke->GetActorLocation(),
+                ManeuverSmokeTargetLocation) <=
+            FMath::Square(AllowedDistance))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 float AWPEnemySoldier::GetManeuverSelectionScore() const
