@@ -103,6 +103,14 @@ FString UWPWeaponComponent::GetOperationLabel() const
         : TEXT("SEMI");
 }
 
+bool UWPWeaponComponent::HasFiredRecently(
+    float WindowSeconds) const
+{
+    return GetWorld() &&
+        GetWorld()->GetTimeSeconds() - LastFireTime <=
+            FMath::Max(0.0f, WindowSeconds);
+}
+
 void UWPWeaponComponent::SetAccuracyMultiplier(float Multiplier)
 {
     AccuracyMultiplier = FMath::Clamp(Multiplier, 0.45f, 3.5f);
