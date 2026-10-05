@@ -100,6 +100,9 @@ public:
     bool HasUsableRound() const { return AmmoInMagazine > 0; }
 
     UFUNCTION(BlueprintPure, Category="Weapon")
+    bool HasFiredRecently(float WindowSeconds = 1.0f) const;
+
+    UFUNCTION(BlueprintPure, Category="Weapon")
     bool IsReloading() const { return bReloading; }
 
     UFUNCTION(BlueprintPure, Category="Weapon")
