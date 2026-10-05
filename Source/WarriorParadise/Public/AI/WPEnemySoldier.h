@@ -58,6 +58,12 @@ public:
         return bHasUsedCoordinatedReload;
     }
 
+    UFUNCTION(BlueprintPure, Category="AI|Tactics")
+    bool HasWaitedForManeuverSupport() const
+    {
+        return bHasWaitedForManeuverSupport;
+    }
+
 protected:
     virtual void BeginPlay() override;
 
@@ -116,6 +122,12 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="100.0"))
     float ReloadDangerInterruptRange = 520.0f;
 
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="1"))
+    int32 MinimumManeuverCoveringShooters = 2;
+
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="1"))
+    int32 MinimumSuppressedManeuverCoveringShooters = 1;
+
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics", meta=(ClampMin="0.1"))
     float BaseOfFirePulseMultiplier = 1.55f;
 
@@ -143,6 +155,7 @@ private:
     bool bHasHeldFireForFriendly = false;
     bool bHasHeldGrenadeForFriendly = false;
     bool bHasUsedCoordinatedReload = false;
+    bool bHasWaitedForManeuverSupport = false;
 
     UPROPERTY(VisibleInstanceOnly, Category="AI|Tactics")
     EWPAITacticalPosture TacticalPosture =
@@ -172,6 +185,13 @@ private:
         const AWPSoldierCharacter* Target,
         bool bAtCover,
         bool bTargetVisible) const;
+    int32 CountManeuverCoveringShooters(
+        const AWPSoldierCharacter* Target,
+        const AWPEnemySoldier* ManeuverElement) const;
+    bool HasFireSuperiorityForManeuver(
+        const AWPSoldierCharacter* Target,
+        const AWPEnemySoldier* ManeuverElement,
+        int32& OutCoveringShooters) const;
     float GetManeuverSelectionScore() const;
     FVector GetStrategicDestination() const;
     FVector GetManeuverDestination(
