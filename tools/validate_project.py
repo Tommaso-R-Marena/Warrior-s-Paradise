@@ -342,6 +342,15 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/Characters/WPSoldierCharacter.h", "SetProneState"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "CoverPeekDuration"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "CoverHideDuration"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "CoverContactMemorySeconds"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "HasUsedCoverPosture"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "UpdateCoverPosture"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "GetPawnViewLocation"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "bPeekingFromCover"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "coverPostureUsers=%d"),
         ("Source/WarriorParadise/Public/Combat/WPWeaponComponent.h", "HasFiredRecently"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "FireSuperiorityRecentFireWindow"),
         ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "HasFiredRecently"),
