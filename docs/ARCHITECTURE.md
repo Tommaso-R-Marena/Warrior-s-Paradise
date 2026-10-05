@@ -63,6 +63,9 @@ The tactical infantry layer provides:
 - fire-superiority gating: the elected mover remains in/near cover until either a suppressed target has at least one viable shooter that fired recently or an unsuppressed target has at least two same-target shooters that fired recently and still have loaded, clear lanes;
 - maneuver election excludes Pressured/Pinned or already-too-close candidates so every elected mover can actually execute the assigned flank;
 - support is continuously reevaluated, so a maneuver pauses if those covering conditions collapse;
+- an Assault maneuver element that remains unsupported can fall back to a target-bound smoke tactic: it waits before committing a smoke grenade, throws laterally onto the planned maneuver corridor, waits through deployment, and advances only after an actual `AWPSmokeCloud` is detected near the intended screen;
+- smoke authorization is contact-specific and time-bounded; losing/changing the contact cannot reuse an older smoke window, and an expired screen must be deliberately re-established;
+- the corridor target is laterally offset from the direct shooter-target line to reduce the chance of blinding the base of fire while still covering the mover;
 - cover occupation has an explicit posture cycle: protected crouch/reload phases alternate with brief standing firing windows, while pinned troops without reserved cover go prone;
 - a short cover-contact memory exists only to permit a hidden soldier to stand and reacquire; hidden target position is not continuously consumed for firing/movement;
 - LOS, fire-lane and cover-exposure traces use actual pawn view positions so stance changes simulation geometry;
