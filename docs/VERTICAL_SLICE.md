@@ -56,6 +56,7 @@ The code now includes production visual/loadout profiles, Motion Matching discov
 - Assault maneuverers can deploy a lateral smoke screen after support stalls, wait for an actual deployed smoke cloud, then use a short target-bound concealed-movement window;
 - maneuver candidates must be Steady and far enough from the target to execute the assigned flank;
 - stance-aware cover usage: crouched protection/reload phases, timed exposure to fire, and pinned-prone behavior when no cover is available;
+- fighting-cover scoring favors crouch-protected / stand-exposed peek geometry, safe approaches and stable retention over dead-end concealment or exposed pseudo-cover;
 - stance-aware LOS/fire-lane/cover evaluation plus short reacquisition memory for concealed troops;
 - friendly fire-lane safety corridor, immediate hold-fire behavior and exposed-shooter lane clearing;
 - downed allies block AI firing corridors as physical casualties;
