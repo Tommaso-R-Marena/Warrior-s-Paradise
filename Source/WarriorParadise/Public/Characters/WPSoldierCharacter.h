@@ -108,6 +108,9 @@ public:
     UFUNCTION(BlueprintPure, Category="Movement")
     bool IsProne() const { return bProne; }
 
+    UFUNCTION(BlueprintCallable, Category="Movement")
+    bool SetProneState(bool bNewProne);
+
     UFUNCTION(BlueprintPure, Category="Movement")
     bool IsCrouchedStance() const { return bIsCrouched; }
 
