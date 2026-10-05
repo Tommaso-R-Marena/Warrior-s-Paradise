@@ -216,6 +216,7 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
     int32 FriendlyGrenadeHolds = 0;
     int32 CoordinatedReloads = 0;
     int32 ManeuverSupportWaits = 0;
+    int32 CoverPostureUsers = 0;
 
     for (TActorIterator<AWPEnemySoldier> It(GetWorld()); It; ++It)
     {
@@ -249,6 +250,11 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
         {
             ++ManeuverSupportWaits;
         }
+
+        if (Soldier->HasUsedCoverPosture())
+        {
+            ++CoverPostureUsers;
+        }
     }
 
     UE_LOG(
@@ -259,7 +265,8 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
             "enemyArmor=%d enemyLight=%d objective=%d score=%d "
             "coordinatedAI=%d friendlyFireHolds=%d "
             "friendlyGrenadeHolds=%d coordinatedReloads=%d "
-            "maneuverSupportWaits=%d won=%d lost=%d"),
+            "maneuverSupportWaits=%d coverPostureUsers=%d "
+            "won=%d lost=%d"),
         bPassed ? TEXT("PASS") : TEXT("FAIL"),
         Director ? Director->GetFriendlySoldiersAlive() : -1,
         Director ? Director->GetRemainingEnemies() : -1,
@@ -272,6 +279,7 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
         FriendlyGrenadeHolds,
         CoordinatedReloads,
         ManeuverSupportWaits,
+        CoverPostureUsers,
         Director ? Director->IsBattleWon() : false,
         Director ? Director->IsBattleLost() : false);
 
