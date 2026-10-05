@@ -342,6 +342,11 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/Combat/WPWeaponComponent.h", "HasFiredRecently"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "FireSuperiorityRecentFireWindow"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "HasFiredRecently"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "Candidate->DesiredRange * 0.68f"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "EWPSuppressionState::Steady"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "MinimumManeuverCoveringShooters"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "MinimumSuppressedManeuverCoveringShooters"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "HasWaitedForManeuverSupport"),
