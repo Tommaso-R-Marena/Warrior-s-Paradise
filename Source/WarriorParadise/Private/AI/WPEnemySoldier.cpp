@@ -303,7 +303,8 @@ AWPCoverPoint* AWPEnemySoldier::FindBestCover(const AWPSoldierCharacter* Threat)
     AWPCoverPoint* BestCover = nullptr;
     float BestScore = TNumericLimits<float>::Max();
 
-    const FVector ThreatEye = Threat->GetActorLocation() + FVector(0.0f, 0.0f, 58.0f);
+    const FVector ThreatEye =
+        Threat->GetPawnViewLocation();
 
     for (TActorIterator<AWPCoverPoint> It(GetWorld()); It; ++It)
     {
