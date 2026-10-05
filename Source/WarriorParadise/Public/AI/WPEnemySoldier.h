@@ -170,6 +170,9 @@ private:
     UPROPERTY(EditDefaultsOnly, Category="AI|Tactics|Smoke", meta=(ClampMin="100.0"))
     float ManeuverSmokeLateralOffset = 520.0f;
 
+    UPROPERTY(EditDefaultsOnly, Category="AI|Tactics|Smoke", meta=(ClampMin="0.0"))
+    float ManeuverSmokeVerificationTolerance = 250.0f;
+
     UPROPERTY(EditDefaultsOnly, Category="AI|Grenade")
     float GrenadeMinimumRange = 650.0f;
 
@@ -194,6 +197,7 @@ private:
     float ManeuverSupportWaitStartTime = -1.0f;
     float ManeuverSmokeReadyTime = -1.0f;
     float ManeuverSmokeExpireTime = -1.0f;
+    FVector ManeuverSmokeTargetLocation = FVector::ZeroVector;
     bool bPulseFiring = false;
     bool bPeekingFromCover = false;
     bool bHasUsedCoordinatedTactic = false;
