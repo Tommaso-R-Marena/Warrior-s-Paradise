@@ -60,6 +60,8 @@ The tactical infantry layer provides:
 - deterministic shared-target maneuver election;
 - Base Of Fire and Maneuver tactical postures, with Assault role preference for the maneuver element;
 - target-centered election so soldiers fighting the same contact converge on one mover rather than independently self-electing;
+- fire-superiority gating: the elected mover remains in/near cover until either a suppressed target has at least one viable covering shooter or an unsuppressed target has at least two loaded same-target shooters with LOS and clear lanes;
+- support is continuously reevaluated, so a maneuver pauses if those covering conditions collapse;
 - body-width friendly fire-lane sweeps before every AI firing decision;
 - immediate ceasefire when a friendly enters a live lane, with exposed shooters sidestepping to regain a safe lane while covered shooters hold position;
 - downed friendlies remain physical fire-lane blockers;
