@@ -53,6 +53,7 @@ The code now includes production visual/loadout profiles, Motion Matching discov
 - coordinated Base Of Fire / Maneuver behavior against shared visible targets;
 - Assault-biased maneuver selection with Riflemen/other troops forming the fire base;
 - maneuver initiation gated on recent live covering fire / target suppression, with continuous support reevaluation and pause-on-support-loss behavior;
+- Assault maneuverers can deploy a lateral smoke screen after support stalls, wait for an actual deployed smoke cloud, then use a short target-bound concealed-movement window;
 - maneuver candidates must be Steady and far enough from the target to execute the assigned flank;
 - stance-aware cover usage: crouched protection/reload phases, timed exposure to fire, and pinned-prone behavior when no cover is available;
 - stance-aware LOS/fire-lane/cover evaluation plus short reacquisition memory for concealed troops;
