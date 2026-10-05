@@ -293,7 +293,8 @@ AWPSoldierCharacter* AWPEnemySoldier::FindAmmoTarget(float MaximumRange) const
     return BestTarget;
 }
 
-AWPCoverPoint* AWPEnemySoldier::FindBestCover(const AWPSoldierCharacter* Threat) const
+AWPCoverPoint* AWPEnemySoldier::FindBestCover(
+    const AWPSoldierCharacter* Threat)
 {
     if (!GetWorld() || !Threat)
     {
@@ -302,51 +303,153 @@ AWPCoverPoint* AWPEnemySoldier::FindBestCover(const AWPSoldierCharacter* Threat)
 
     AWPCoverPoint* BestCover = nullptr;
     float BestScore = TNumericLimits<float>::Max();
+    bool bBestPeekCapable = false;
 
     const FVector ThreatEye =
         Threat->GetPawnViewLocation();
 
+    FCollisionQueryParams QueryParams(
+        SCENE_QUERY_STAT(WPCoverExposure),
+        true,
+        this);
+    QueryParams.AddIgnoredActor(this);
+    QueryParams.AddIgnoredActor(Threat);
+
+    auto IsOccludedFromThreat =
+        [this, &ThreatEye, &QueryParams](
+            const FVector& TestLocation)
+        {
+            FHitResult Hit;
+            return GetWorld()->LineTraceSingleByChannel(
+                Hit,
+                ThreatEye,
+                TestLocation,
+                ECC_Visibility,
+                QueryParams);
+        };
+
     for (TActorIterator<AWPCoverPoint> It(GetWorld()); It; ++It)
     {
         AWPCoverPoint* Candidate = *It;
-        if (!Candidate || !Candidate->IsAvailableFor(this))
+        if (!Candidate ||
+            !Candidate->IsAvailableFor(this))
         {
             continue;
         }
 
-        const float OwnDistance = FVector::Dist2D(GetActorLocation(), Candidate->GetActorLocation());
+        const FVector CoverLocation =
+            Candidate->GetActorLocation();
+
+        const float OwnDistance =
+            FVector::Dist2D(
+                GetActorLocation(),
+                CoverLocation);
+
         if (OwnDistance > CoverSearchRadius)
         {
             continue;
         }
 
-        const FVector CoverEye = Candidate->GetActorLocation() + FVector(0.0f, 0.0f, 55.0f);
-        FHitResult Hit;
-        FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(WPCoverExposure), true, this);
-        QueryParams.AddIgnoredActor(this);
-        QueryParams.AddIgnoredActor(Threat);
+        const FVector CrouchedEye =
+            CoverLocation +
+            FVector(
+                0.0f,
+                0.0f,
+                CoverCrouchedEyeHeight);
 
-        const bool bOccluded = GetWorld()->LineTraceSingleByChannel(
-            Hit,
-            ThreatEye,
-            CoverEye,
-            ECC_Visibility,
-            QueryParams);
+        const FVector StandingEye =
+            CoverLocation +
+            FVector(
+                0.0f,
+                0.0f,
+                CoverStandingEyeHeight);
 
-        const float ThreatDistance = FVector::Dist2D(
-            Candidate->GetActorLocation(),
-            Threat->GetActorLocation());
+        const bool bCrouchProtected =
+            IsOccludedFromThreat(CrouchedEye);
 
-        const float RangePenalty = FMath::Abs(ThreatDistance - DesiredRange) * 0.25f;
-        const float ExposurePenalty = bOccluded ? -850.0f : 1100.0f;
-        const float QualityBonus = -Candidate->GetCoverQuality() * 420.0f;
-        const float Score = OwnDistance + RangePenalty + ExposurePenalty + QualityBonus;
+        const bool bStandingProtected =
+            IsOccludedFromThreat(StandingEye);
+
+        const bool bPeekCapable =
+            bCrouchProtected &&
+            !bStandingProtected;
+
+        FVector ApproachPoint =
+            FMath::Lerp(
+                GetActorLocation(),
+                CoverLocation,
+                0.55f);
+        ApproachPoint.Z =
+            GetActorLocation().Z +
+            CoverCrouchedEyeHeight;
+
+        const bool bApproachProtected =
+            IsOccludedFromThreat(ApproachPoint);
+
+        const float ThreatDistance =
+            FVector::Dist2D(
+                CoverLocation,
+                Threat->GetActorLocation());
+
+        const float RangePenalty =
+            FMath::Abs(
+                ThreatDistance -
+                DesiredRange) *
+            0.25f;
+
+        float ExposureScore = 0.0f;
+
+        if (bPeekCapable)
+        {
+            ExposureScore -=
+                CoverPeekCapabilityBonus;
+        }
+        else if (bCrouchProtected &&
+                 bStandingProtected)
+        {
+            ExposureScore +=
+                CoverDeepConcealmentPenalty;
+        }
+        else
+        {
+            ExposureScore +=
+                CoverExposedPenalty;
+        }
+
+        const float ApproachPenalty =
+            bApproachProtected
+                ? 0.0f
+                : CoverApproachExposurePenalty;
+
+        const float QualityBonus =
+            -Candidate->GetCoverQuality() *
+            420.0f;
+
+        const float RetentionBonus =
+            Candidate == CurrentCover.Get()
+                ? -220.0f
+                : 0.0f;
+
+        const float Score =
+            OwnDistance +
+            RangePenalty +
+            ExposureScore +
+            ApproachPenalty +
+            QualityBonus +
+            RetentionBonus;
 
         if (Score < BestScore)
         {
             BestScore = Score;
             BestCover = Candidate;
+            bBestPeekCapable = bPeekCapable;
         }
+    }
+
+    if (BestCover &&
+        bBestPeekCapable)
+    {
+        bHasSelectedPeekCapableCover = true;
     }
 
     return BestCover;
