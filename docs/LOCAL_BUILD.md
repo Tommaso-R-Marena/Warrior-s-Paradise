@@ -16,10 +16,12 @@ tools\build_local.bat
 
 ## What the default command does
 
-1. runs `python tools/validate_project.py`;
-2. discovers an Unreal Engine 5.8 installation;
-3. invokes Unreal Build Tool through Epic's `Build.bat`;
-4. builds `WarriorParadiseEditor Win64 Development`.
+1. validates the project and asset catalog with `tools/validate_project.py`;
+2. runs `tools/check_compile_readiness.py` to audit Unreal reflection, includes and delegate definitions;
+3. runs dependency-free `unittest` regression tests for the checker;
+4. discovers an Unreal Engine 5.8 installation;
+5. invokes Unreal Build Tool through Epic's `Build.bat`;
+6. builds `WarriorParadiseEditor Win64 Development`.
 
 ## Engine discovery
 
@@ -72,7 +74,23 @@ See `docs/GPU_LESS_MODE.md`.
 .\tools\build_local.ps1 -ValidateOnly
 ```
 
-This checks C++ source contracts, project/plugin configuration, Python syntax, the free-asset catalog, license labels, acquisition/distribution metadata, import/material/profile scripts and the gameplay/presentation integration.
+This checks C++ source contracts, project/plugin configuration, Python syntax, the free-asset catalog, license labels, acquisition/distribution metadata, import/material/profile scripts, gameplay/presentation integration and regression-tested dynamic-delegate handler declarations/implementations. It needs **Python 3 only**; neither Unreal nor GitHub Actions is required.
+
+From a Windows PowerShell terminal at the repository root:
+
+```powershell
+.\tools\build_local.ps1 -ValidateOnly
+```
+
+On macOS/Linux or any machine with Python 3, run the equivalent directly:
+
+```bash
+python3 tools/validate_project.py
+python3 tools/check_compile_readiness.py
+python3 -m unittest discover -s tools/tests -p 'test_*.py' -v
+```
+
+The source-only check is not a C++ compilation or gameplay test.
 
 ## Package a local Windows build
 
@@ -97,3 +115,9 @@ Packaging uses Unreal Automation Tool `BuildCookRun` with Win64 Development, bui
 ## Why this exists
 
 The local build and the Windows self-hosted GitHub Actions compile gate are the authoritative validation paths while hosted CI minutes are unavailable. A source-contract pass is useful but is **not** a substitute for Unreal Header Tool, C++ compilation, asset loading and PIE/package validation. The first clean local UE 5.8 build should be treated as a milestone and any compiler/runtime defect should be fixed before expanding game systems again.
+
+## Automatic GitHub source checks
+
+`.github/workflows/validate.yml` now triggers on relevant pushes to `main`, pull requests into `main`, or a manual dispatch. Multiple quick commits on the same branch cancel older in-flight checks to conserve GitHub-hosted runner minutes. Documentation-only edits do not trigger static CI.
+
+GitHub can reject a hosted job **before any script runs** because of runner/account/Actions availability. In this case the run may show a failure with no steps or logs. The local `-ValidateOnly` command above remains the independent, no-Unreal fallback. Inspect the GitHub Actions run banner and account Actions/billing settings if hosted checks never start. Do not label source verification as a UE compile pass.
