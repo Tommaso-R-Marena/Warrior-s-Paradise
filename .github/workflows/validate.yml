@@ -1,25 +1,75 @@
 name: Validate project
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/validate.yml"
+      - "tools/**"
+      - "Source/**"
+      - "Config/**"
+      - "Content/Python/**"
+      - "WarriorParadise.uproject"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/validate.yml"
+      - "tools/**"
+      - "Source/**"
+      - "Config/**"
+      - "Content/Python/**"
+      - "WarriorParadise.uproject"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# Many small source commits occur during feature development. Run only the
+# newest in-flight check for a branch rather than spend runner minutes on stale
+# commits; manual UE compilation remains a separate self-hosted workflow.
+concurrency:
+  group: wp-validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   repository-contract:
+    name: Source and regression checks (no Unreal install required)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout without third-party actions
+      - name: Checkout exact requested commit (no third-party actions)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           git init .
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch --depth=1 origin "${GITHUB_SHA}"
+          git fetch --no-tags --depth=1 origin "${GITHUB_SHA}"
           git checkout --detach FETCH_HEAD
+          # Do not retain an authenticated origin URL in the working tree.
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
 
-      - name: Validate Unreal project structure
+      - name: Validate Unreal project contracts and Python syntax
+        run: python3 tools/validate_project.py
+
+      - name: Audit UHT, includes and dynamic delegate implementations
+        run: python3 tools/check_compile_readiness.py
+
+      - name: Run checker regression tests
+        run: python3 -m unittest discover -s tools/tests -p 'test_*.py' -v
+
+      - name: Publish static validation scope
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
         run: |
-          python3 tools/validate_project.py
-          python3 tools/check_compile_readiness.py
+          {
+            echo "## Warrior's Paradise static validation"
+            echo ""
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Result: **${JOB_STATUS}**"
+            echo "- Validated: project contracts, Python syntax, UE reflection/include patterns, delegate implementation presence, checker regression tests."
+            echo "- Not validated: UnrealHeaderTool, MSVC/Clang UE build, cook, rendered play or NullRHI runtime."
+          } >> "${GITHUB_STEP_SUMMARY}"
