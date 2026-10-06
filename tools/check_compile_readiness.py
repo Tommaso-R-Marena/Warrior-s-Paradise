@@ -57,6 +57,28 @@ def has_reflected_handler(header_text: str, method: str) -> bool:
     return bool(pattern.search(header_text))
 
 
+def has_handler_implementation(
+    class_name: str,
+    method: str,
+    header_text: str,
+    cpp_texts: dict[Path, str],
+) -> bool:
+    """Catch missing bound handlers before UHT/linking; allow inline definitions."""
+    qualified_definition = re.compile(
+        rf"\b{re.escape(class_name)}\s*::\s*{re.escape(method)}\s*\("
+    )
+    if any(qualified_definition.search(text) for text in cpp_texts.values()):
+        return True
+
+    # Inline UFUNCTION handlers can be defined in their own headers.
+    inline_definition = re.compile(
+        rf"\b{re.escape(method)}\s*\([^;{{}}]*\)\s*"
+        r"(?:(?:const|override|final|noexcept)\s*)*\{",
+        re.DOTALL,
+    )
+    return bool(inline_definition.search(header_text))
+
+
 def main() -> int:
     if not SOURCE.is_dir():
         raise AuditError(f"source directory not found: {SOURCE}")
@@ -67,6 +89,7 @@ def main() -> int:
 
     header_by_basename = {path.name: path for path in headers}
     header_text = {path: read(path) for path in headers}
+    cpp_texts = {path: read(path) for path in cpps}
 
     class_to_header: dict[str, Path] = {}
     for path, text in header_text.items():
@@ -141,7 +164,7 @@ def main() -> int:
                 fail(errors, path, f"project include does not exist: {include}")
 
     for cpp in cpps:
-        text = read(cpp)
+        text = cpp_texts[cpp]
 
         for include in INCLUDE_RE.findall(text):
             basename = Path(include).name
@@ -191,6 +214,14 @@ def main() -> int:
                     cpp,
                     f"dynamic delegate target {class_name}::{method} is not declared with UFUNCTION()",
                 )
+            elif not has_handler_implementation(
+                class_name, method, htext, cpp_texts
+            ):
+                fail(
+                    errors,
+                    cpp,
+                    f"dynamic delegate target {class_name}::{method} has no C++ implementation",
+                )
 
     build_cs = SOURCE / "WarriorParadise.Build.cs"
     build_text = read(build_cs)
@@ -232,7 +263,7 @@ def main() -> int:
     )
     print(
         "Checked UHT generated-header discipline, reflected types, project includes, "
-        "dynamic delegate handlers, target files, and module dependencies."
+        "dynamic delegate declarations/implementations, target files, and module dependencies."
     )
     return 0
 
