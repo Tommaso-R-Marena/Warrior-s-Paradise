@@ -190,6 +190,18 @@ Invoke-Checked -Executable $Python -Arguments @(
     (Join-Path $RepoRoot "tools\check_compile_readiness.py")
 )
 
+Write-Step "Running compile-readiness auditor regression tests"
+Invoke-Checked -Executable $Python -Arguments @(
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    (Join-Path $RepoRoot "tools\tests"),
+    "-p",
+    "test_*.py",
+    "-v"
+)
+
 if ($ValidateOnly) {
     Write-Host ""
     Write-Host "Validation completed successfully." -ForegroundColor Green
