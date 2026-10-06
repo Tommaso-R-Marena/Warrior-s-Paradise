@@ -49,7 +49,7 @@ The workflow:
 
 1. checks out the exact requested commit;
 2. verifies Python and the project/build scripts;
-3. runs `tools/validate_project.py`;
+3. runs `tools/validate_project.py`, `tools/check_compile_readiness.py` and the regression tests;
 4. deletes project `Binaries` and `Intermediate` for a clean build when requested;
 5. builds `WarriorParadiseEditor Win64`;
 6. builds the shipping-relevant `WarriorParadise Win64` game target;
@@ -76,3 +76,13 @@ To package after compilation:
 ## Security
 
 Keep the runner attached to the private repository. If the repository is ever made public, do not allow arbitrary fork pull requests to execute on a persistent self-hosted machine.
+
+## Lightweight validation without a runner
+
+For quick validation **before installing Unreal Engine**, use PowerShell from the repository root:
+
+```powershell
+.\tools\build_local.ps1 -ValidateOnly
+```
+
+This invokes Python-only source checks and checker regression tests. A separate GitHub-hosted `Validate project` workflow is also configured for source pushes/PRs with stale-run cancellation. If GitHub-hosted jobs fail before any steps start, use the local command and inspect the Actions account/runner availability rather than assuming the game source failed. Only the actual UE 5.8 compile and NullRHI smoke gate can provide a real Unreal verdict.
