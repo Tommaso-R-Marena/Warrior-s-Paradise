@@ -57,7 +57,9 @@ The repository now contains a substantial code-side combined-arms battle rather 
 - only Steady, range-valid troops can be elected as the maneuver element, preventing a pressured or already-too-close soldier from deadlocking the fireteam plan;
 - if covering support collapses mid-maneuver, the mover pauses instead of continuing a solo flank;
 - when an elected **Assault** flanker cannot establish enough fire superiority, it can deploy smoke laterally onto the maneuver corridor rather than charging unsupported;
-- smoke-assisted movement waits for the grenade fuse and verifies a real smoke cloud exists near the intended screen before leaving cover; the temporary concealment window is bound to the specific enemy contact and cannot authorize a different flank later;
+- smoke-assisted movement waits for grenade deployment and verifies a real smoke cloud exists near the intended screen; throwing the soldier's **last** smoke grenade no longer disables the already-active screen;
+- while smoke obscures the enemy, the flanker retains its original contact only for the bounded screen window and moves toward a **frozen waypoint planned before the throw**, never chasing an updated hidden enemy position;
+- smoke timing is bound to the specific original contact, and the headless test distinguishes smoke grenades thrown from soldiers that actually advanced at least 140 cm under smoke;
 - the smoke screen is placed off the direct target line so the base of fire can retain its lane whenever geometry permits;
 - reserved-cover troops now use actual stance cycles: crouch while protected/reloading/pinned, rise for short firing windows, and drop back down between exposures;
 - cover selection now distinguishes **fighting cover** from mere concealment: it rewards positions that hide a crouched soldier but expose a standing firing line, penalizes uncovered approaches, and mildly favors retaining a good current position to reduce cover thrashing;
