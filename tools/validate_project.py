@@ -10,6 +10,7 @@ REQUIRED = [
     "tools/check_compile_readiness.py",
     "tools/tests/test_compile_readiness.py",
     "tools/tests/test_smoke_maneuver_contracts.py",
+    "tools/tests/test_headless_smoke_contracts.py",
     "WarriorParadise.uproject",
     "Config/DefaultEngine.ini",
     "Config/DefaultGame.ini",
@@ -344,6 +345,9 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "ExpectedFriendlies"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "TActorIterator<AWPSoldierCharacter>"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "subject=%s"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "HasAdvancedUnderManeuverSmoke"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "ManeuverSmokeFlankDestination"),
         ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "bRetainSmokeContact"),
