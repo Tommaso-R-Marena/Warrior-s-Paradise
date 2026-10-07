@@ -64,7 +64,9 @@ The tactical infantry layer provides:
 - maneuver election excludes Pressured/Pinned or already-too-close candidates so every elected mover can actually execute the assigned flank;
 - support is continuously reevaluated, so a maneuver pauses if those covering conditions collapse;
 - an Assault maneuver element that remains unsupported can fall back to a target-bound smoke tactic: it waits before committing a smoke grenade, throws laterally onto the planned maneuver corridor, waits through deployment, and advances only after an actual `AWPSmokeCloud` is detected near the intended screen;
-- smoke authorization is contact-specific and time-bounded; losing/changing the contact cannot reuse an older smoke window, and an expired screen must be deliberately re-established;
+- smoke authorization is contact-specific and time-bounded; a screen remains usable after throwing the last grenade, and an expired screen must be deliberately re-established;
+- smoke retains the original contact during deployment and verified concealment without granting live hidden-target tracking: the maneuver waypoint is snapped at throw time, and movement under smoke follows only that frozen waypoint;
+- headless telemetry counts smoke throws separately from verified under-smoke travel (over 140 cm from the throwing location);
 - the corridor target is laterally offset from the direct shooter-target line to reduce the chance of blinding the base of fire while still covering the mover;
 - cover occupation has an explicit posture cycle: protected crouch/reload phases alternate with brief standing firing windows, while pinned troops without reserved cover go prone;
 - cover selection explicitly scores crouched protection, standing peek exposure, approach-route exposure, desired engagement range, authored cover quality and current-cover retention;
