@@ -76,6 +76,12 @@ public:
         return bHasUsedManeuverSmoke;
     }
 
+    UFUNCTION(BlueprintPure, Category="AI|Tactics")
+    bool HasAdvancedUnderManeuverSmoke() const
+    {
+        return bHasAdvancedUnderManeuverSmoke;
+    }
+
     UFUNCTION(BlueprintPure, Category="AI|Cover")
     bool HasSelectedPeekCapableCover() const
     {
@@ -222,6 +228,7 @@ private:
     float ManeuverSmokeReadyTime = -1.0f;
     float ManeuverSmokeExpireTime = -1.0f;
     FVector ManeuverSmokeTargetLocation = FVector::ZeroVector;
+    FVector ManeuverSmokeFlankDestination = FVector::ZeroVector;
     bool bPulseFiring = false;
     bool bPeekingFromCover = false;
     bool bHasUsedCoordinatedTactic = false;
@@ -231,6 +238,7 @@ private:
     bool bHasWaitedForManeuverSupport = false;
     bool bHasUsedCoverPosture = false;
     bool bHasUsedManeuverSmoke = false;
+    bool bHasAdvancedUnderManeuverSmoke = false;
     bool bHasSelectedPeekCapableCover = false;
 
     UPROPERTY(VisibleInstanceOnly, Category="AI|Tactics")
