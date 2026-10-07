@@ -812,6 +812,7 @@ bool AWPEnemySoldier::TryPrepareSmokeAssistedManeuver(
         SmokeManeuverTarget.Reset();
         ManeuverSmokeTargetLocation = FVector::ZeroVector;
         ManeuverSmokeFlankDestination = FVector::ZeroVector;
+        ManeuverSmokeStartLocation = FVector::ZeroVector;
         ManeuverSmokeReadyTime = -1.0f;
         ManeuverSmokeExpireTime = -1.0f;
         ManeuverSupportWaitTarget = Target;
@@ -866,6 +867,7 @@ bool AWPEnemySoldier::TryPrepareSmokeAssistedManeuver(
 
     ManeuverSmokeTargetLocation = SmokeTarget;
     ManeuverSmokeFlankDestination = PlannedFlank;
+    ManeuverSmokeStartLocation = GetActorLocation();
     SmokeManeuverTarget = Target;
     bHasUsedManeuverSmoke = true;
 
@@ -1833,7 +1835,16 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
                 MoveTacticallyToward(
                     ManeuverSmokeFlankDestination,
                     0.96f);
-                bHasAdvancedUnderManeuverSmoke = true;
+
+                // Do not count a path request as successful movement.
+                // The metric only records observable pawn displacement.
+                if (FVector::DistSquared2D(
+                        GetActorLocation(),
+                        ManeuverSmokeStartLocation) >
+                    FMath::Square(140.0f))
+                {
+                    bHasAdvancedUnderManeuverSmoke = true;
+                }
             }
             else
             {
