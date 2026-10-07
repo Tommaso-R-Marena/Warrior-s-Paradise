@@ -101,13 +101,42 @@ void AWPCombatGameMode::StartHeadlessSmokeTest()
         Director->GetRemainingEnemies() > 0 &&
         Director->GetActiveObjectiveNumber() > 0;
 
-    AWPSoldierCharacter* Player = Cast<AWPSoldierCharacter>(
+    AWPSoldierCharacter* TestSoldier = Cast<AWPSoldierCharacter>(
         UGameplayStatics::GetPlayerCharacter(this, 0));
 
-    if (Player && Player->GetSuppressionComponent())
+    bool bUsingPlayerSubject =
+        TestSoldier &&
+        TestSoldier->IsCombatCapable() &&
+        TestSoldier->GetCombatTeam() == EWPCombatTeam::Allies;
+
+    if (!bUsingPlayerSubject)
+    {
+        TestSoldier = nullptr;
+
+        // NullRHI/commandlet-like game runs may not have a local player
+        // controller. Still test real spawned Allied health/suppression.
+        for (TActorIterator<AWPSoldierCharacter> It(GetWorld());
+             It;
+             ++It)
+        {
+            AWPSoldierCharacter* Candidate = *It;
+            if (Candidate &&
+                Candidate->IsCombatCapable() &&
+                Candidate->GetCombatTeam() ==
+                    EWPCombatTeam::Allies &&
+                Candidate->GetHealthComponent() &&
+                Candidate->GetSuppressionComponent())
+            {
+                TestSoldier = Candidate;
+                break;
+            }
+        }
+    }
+
+    if (TestSoldier && TestSoldier->GetSuppressionComponent())
     {
         UWPSuppressionComponent* Suppression =
-            Player->GetSuppressionComponent();
+            TestSoldier->GetSuppressionComponent();
 
         Suppression->ClearSuppression();
         const bool bStartedSteady =
@@ -136,15 +165,15 @@ void AWPCombatGameMode::StartHeadlessSmokeTest()
             bRecoveredSteady;
     }
 
-    if (Player && Player->GetHealthComponent())
+    if (TestSoldier && TestSoldier->GetHealthComponent())
     {
         UWPHealthComponent* Health =
-            Player->GetHealthComponent();
+            TestSoldier->GetHealthComponent();
 
         Health->RestoreToFull();
 
         UGameplayStatics::ApplyDamage(
-            Player,
+            TestSoldier,
             35.0f,
             nullptr,
             this,
@@ -176,10 +205,14 @@ void AWPCombatGameMode::StartHeadlessSmokeTest()
         Display,
         TEXT(
             "WP_HEADLESS_SMOKE START initial=%s suppression=%s "
-            "bleeding=%s duration=%.1f friendly=%d enemies=%d objective=%d"),
+            "bleeding=%s subject=%s duration=%.1f "
+            "friendly=%d enemies=%d objective=%d"),
         bHeadlessSmokeInitialStateValid ? TEXT("PASS") : TEXT("FAIL"),
         bHeadlessSuppressionStateValid ? TEXT("PASS") : TEXT("FAIL"),
         bHeadlessBleedingStateValid ? TEXT("PASS") : TEXT("FAIL"),
+        TestSoldier
+            ? (bUsingPlayerSubject ? TEXT("player") : TEXT("alliedAI"))
+            : TEXT("missing"),
         Duration,
         Director ? Director->GetFriendlySoldiersAlive() : -1,
         Director ? Director->GetRemainingEnemies() : -1,
