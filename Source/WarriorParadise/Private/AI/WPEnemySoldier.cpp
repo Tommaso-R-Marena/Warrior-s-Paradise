@@ -792,9 +792,30 @@ bool AWPEnemySoldier::TryPrepareSmokeAssistedManeuver(
     float Time)
 {
     if (!Target ||
-        GetSoldierRole() != EWPSoldierRole::Assault ||
-        GetSmokeGrenadesRemaining() <= 0)
+        GetSoldierRole() != EWPSoldierRole::Assault)
     {
+        return false;
+    }
+
+    // A deployed screen remains usable even when the throw consumed
+    // our final grenade. Check its target-bound window BEFORE ammo.
+    if (SmokeManeuverTarget.Get() == Target &&
+        ManeuverSmokeExpireTime > Time)
+    {
+        return IsSmokeAssistedManeuverReady(Time);
+    }
+
+    if (SmokeManeuverTarget.Get() == Target &&
+        ManeuverSmokeExpireTime >= 0.0f &&
+        Time >= ManeuverSmokeExpireTime)
+    {
+        SmokeManeuverTarget.Reset();
+        ManeuverSmokeTargetLocation = FVector::ZeroVector;
+        ManeuverSmokeFlankDestination = FVector::ZeroVector;
+        ManeuverSmokeReadyTime = -1.0f;
+        ManeuverSmokeExpireTime = -1.0f;
+        ManeuverSupportWaitTarget = Target;
+        ManeuverSupportWaitStartTime = Time;
         return false;
     }
 
@@ -811,27 +832,9 @@ bool AWPEnemySoldier::TryPrepareSmokeAssistedManeuver(
         return false;
     }
 
-    if (SmokeManeuverTarget.Get() == Target &&
-        ManeuverSmokeExpireTime > Time)
-    {
-        return IsSmokeAssistedManeuverReady(Time);
-    }
-
-    if (SmokeManeuverTarget.Get() == Target &&
-        ManeuverSmokeExpireTime >= 0.0f &&
-        Time > ManeuverSmokeExpireTime)
-    {
-        SmokeManeuverTarget.Reset();
-        ManeuverSmokeTargetLocation =
-            FVector::ZeroVector;
-        ManeuverSmokeReadyTime = -1.0f;
-        ManeuverSmokeExpireTime = -1.0f;
-        ManeuverSupportWaitStartTime = Time;
-        return false;
-    }
-
-    if (Time - ManeuverSupportWaitStartTime <
-        ManeuverSmokeWaitSeconds)
+    if (GetSmokeGrenadesRemaining() <= 0 ||
+        Time - ManeuverSupportWaitStartTime <
+            ManeuverSmokeWaitSeconds)
     {
         return false;
     }
@@ -851,13 +854,18 @@ bool AWPEnemySoldier::TryPrepareSmokeAssistedManeuver(
     const FVector SmokeTarget =
         GetManeuverSmokeTarget(Target);
 
+    // Capture a fixed waypoint while the contact is visible.
+    // Concealment must not turn live target transforms into knowledge.
+    const FVector PlannedFlank =
+        GetManeuverDestination(Target);
+
     if (!ThrowSmokeGrenadeAt(SmokeTarget))
     {
         return false;
     }
 
-    ManeuverSmokeTargetLocation =
-        SmokeTarget;
+    ManeuverSmokeTargetLocation = SmokeTarget;
+    ManeuverSmokeFlankDestination = PlannedFlank;
     SmokeManeuverTarget = Target;
     bHasUsedManeuverSmoke = true;
 
