@@ -1579,13 +1579,28 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
             CurrentTarget = NewTarget;
             LastVisibleTargetTime = Time;
         }
-        else if (!CurrentTarget.IsValid() ||
+        else
+        {
+            // Do not drop the planned contact solely because our own
+            // smoke hid it or because the flanker left its cover slot.
+            const bool bRetainSmokeContact =
+                CurrentTarget.IsValid() &&
+                CurrentTarget->IsCombatCapable() &&
+                SmokeManeuverTarget.Get() ==
+                    CurrentTarget.Get() &&
+                ManeuverSmokeExpireTime > Time &&
+                (Time < ManeuverSmokeReadyTime ||
+                 IsSmokeAssistedManeuverReady(Time));
+
+            if (!bRetainSmokeContact &&
+                (!CurrentTarget.IsValid() ||
                  !CurrentTarget->IsCombatCapable() ||
                  !CurrentCover.IsValid() ||
                  Time - LastVisibleTargetTime >
-                     CoverContactMemorySeconds)
-        {
-            CurrentTarget.Reset();
+                     CoverContactMemorySeconds))
+            {
+                CurrentTarget.Reset();
+            }
         }
 
         NextTargetSearchTime =
@@ -1714,6 +1729,11 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         SmokeManeuverTarget.Get() == Target &&
         IsSmokeAssistedManeuverReady(Time);
 
+    const bool bSmokeDeploymentPending =
+        SmokeManeuverTarget.Get() == Target &&
+        ManeuverSmokeReadyTime > Time &&
+        ManeuverSmokeExpireTime > Time;
+
     const float TargetDistance2D = FVector::Dist2D(
         GetActorLocation(),
         Target->GetActorLocation());
@@ -1729,7 +1749,8 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         }
     }
     else if (!bCloseAwareness &&
-             !bSmokeManeuverWindowActive)
+             !bSmokeManeuverWindowActive &&
+             !bSmokeDeploymentPending)
     {
         const bool bCanPeekRememberedContact =
             CurrentCover.IsValid() &&
@@ -1776,6 +1797,50 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
         CurrentTarget.Reset();
         GetWeaponComponent()->StopFire();
         bPulseFiring = false;
+        return;
+    }
+
+    // The grenade fuse and cloud window are not permission to aim or
+    // track a hidden actor. Hold during deployment, then advance toward
+    // the waypoint frozen when the smoke grenade was thrown.
+    if (!bTargetVisible &&
+        bSmokeDeploymentPending)
+    {
+        GetWeaponComponent()->StopFire();
+        bPulseFiring = false;
+        return;
+    }
+
+    if (!bTargetVisible &&
+        bSmokeManeuverWindowActive)
+    {
+        GetWeaponComponent()->StopFire();
+        bPulseFiring = false;
+
+        if (!bPinned &&
+            !bPressured)
+        {
+            if (CurrentCover.IsValid())
+            {
+                ReleaseCover();
+            }
+
+            if (FVector::DistSquared2D(
+                    GetActorLocation(),
+                    ManeuverSmokeFlankDestination) >
+                FMath::Square(135.0f))
+            {
+                MoveTacticallyToward(
+                    ManeuverSmokeFlankDestination,
+                    0.96f);
+                bHasAdvancedUnderManeuverSmoke = true;
+            }
+            else
+            {
+                ApplyAIStance(true, false);
+            }
+        }
+
         return;
     }
 
