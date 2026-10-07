@@ -218,6 +218,7 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
     int32 ManeuverSupportWaits = 0;
     int32 CoverPostureUsers = 0;
     int32 ManeuverSmokeUses = 0;
+    int32 ManeuverSmokeAdvances = 0;
     int32 PeekCapableCoverSelections = 0;
 
     for (TActorIterator<AWPEnemySoldier> It(GetWorld()); It; ++It)
@@ -263,6 +264,11 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
             ++ManeuverSmokeUses;
         }
 
+        if (Soldier->HasAdvancedUnderManeuverSmoke())
+        {
+            ++ManeuverSmokeAdvances;
+        }
+
         if (Soldier->HasSelectedPeekCapableCover())
         {
             ++PeekCapableCoverSelections;
@@ -278,8 +284,8 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
             "coordinatedAI=%d friendlyFireHolds=%d "
             "friendlyGrenadeHolds=%d coordinatedReloads=%d "
             "maneuverSupportWaits=%d coverPostureUsers=%d "
-            "maneuverSmokeUses=%d peekCapableCovers=%d "
-            "won=%d lost=%d"),
+            "maneuverSmokeUses=%d smokeManeuverAdvances=%d "
+            "peekCapableCovers=%d won=%d lost=%d"),
         bPassed ? TEXT("PASS") : TEXT("FAIL"),
         Director ? Director->GetFriendlySoldiersAlive() : -1,
         Director ? Director->GetRemainingEnemies() : -1,
@@ -294,6 +300,7 @@ void AWPCombatGameMode::FinishHeadlessSmokeTest()
         ManeuverSupportWaits,
         CoverPostureUsers,
         ManeuverSmokeUses,
+        ManeuverSmokeAdvances,
         PeekCapableCoverSelections,
         Director ? Director->IsBattleWon() : false,
         Director ? Director->IsBattleLost() : false);
