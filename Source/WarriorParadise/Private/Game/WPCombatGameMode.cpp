@@ -95,14 +95,20 @@ void AWPCombatGameMode::StartHeadlessSmokeTest()
             this,
             AWPBattlefieldDirector::StaticClass()));
 
-    bHeadlessSmokeInitialStateValid =
-        Director != nullptr &&
-        Director->GetFriendlySoldiersAlive() >= 6 &&
-        Director->GetRemainingEnemies() > 0 &&
-        Director->GetActiveObjectiveNumber() > 0;
-
+    // The player pawn is optional in unattended NullRHI runs.
+    // With a player the squad is 1 + 5 AI; without one, it is 5 AI.
     AWPSoldierCharacter* TestSoldier = Cast<AWPSoldierCharacter>(
         UGameplayStatics::GetPlayerCharacter(this, 0));
+
+    const int32 ExpectedFriendlies =
+        TestSoldier ? 6 : 5;
+
+    bHeadlessSmokeInitialStateValid =
+        Director != nullptr &&
+        Director->GetFriendlySoldiersAlive() >=
+            ExpectedFriendlies &&
+        Director->GetRemainingEnemies() > 0 &&
+        Director->GetActiveObjectiveNumber() > 0;
 
     bool bUsingPlayerSubject =
         TestSoldier &&
