@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = [
     "tools/check_compile_readiness.py",
     "tools/tests/test_compile_readiness.py",
+    "tools/tests/test_smoke_maneuver_contracts.py",
     "WarriorParadise.uproject",
     "Config/DefaultEngine.ini",
     "Config/DefaultGame.ini",
@@ -343,6 +344,12 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "HasAdvancedUnderManeuverSmoke"),
+        ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "ManeuverSmokeFlankDestination"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "bRetainSmokeContact"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "bSmokeDeploymentPending"),
+        ("Source/WarriorParadise/Private/AI/WPEnemySoldier.cpp", "ManeuverSmokeStartLocation"),
+        ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "smokeManeuverAdvances=%d"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "CoverCrouchedEyeHeight"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "CoverStandingEyeHeight"),
         ("Source/WarriorParadise/Public/AI/WPEnemySoldier.h", "CoverPeekCapabilityBonus"),
