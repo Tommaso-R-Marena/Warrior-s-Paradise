@@ -1827,6 +1827,16 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
                 ReleaseCover();
             }
 
+            // Observe displacement independently of the movement
+            // command. Reaching the waypoint should still count.
+            if (FVector::DistSquared2D(
+                    GetActorLocation(),
+                    ManeuverSmokeStartLocation) >
+                FMath::Square(140.0f))
+            {
+                bHasAdvancedUnderManeuverSmoke = true;
+            }
+
             if (FVector::DistSquared2D(
                     GetActorLocation(),
                     ManeuverSmokeFlankDestination) >
@@ -1835,16 +1845,6 @@ void AWPEnemySoldier::Tick(float DeltaSeconds)
                 MoveTacticallyToward(
                     ManeuverSmokeFlankDestination,
                     0.96f);
-
-                // Do not count a path request as successful movement.
-                // The metric only records observable pawn displacement.
-                if (FVector::DistSquared2D(
-                        GetActorLocation(),
-                        ManeuverSmokeStartLocation) >
-                    FMath::Square(140.0f))
-                {
-                    bHasAdvancedUnderManeuverSmoke = true;
-                }
             }
             else
             {
