@@ -229,6 +229,7 @@ private:
     float ManeuverSmokeExpireTime = -1.0f;
     FVector ManeuverSmokeTargetLocation = FVector::ZeroVector;
     FVector ManeuverSmokeFlankDestination = FVector::ZeroVector;
+    FVector ManeuverSmokeStartLocation = FVector::ZeroVector;
     bool bPulseFiring = false;
     bool bPeekingFromCover = false;
     bool bHasUsedCoordinatedTactic = false;
