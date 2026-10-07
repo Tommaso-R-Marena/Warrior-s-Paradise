@@ -38,6 +38,12 @@ The command compiles the editor target, launches `UnrealEditor-Cmd.exe` with `-n
 
 The self-hosted GitHub Actions compile gate also runs this test after compiling both Unreal targets.
 
+The startup smoke contract supports both a local player pawn and an **AI-only NullRHI world**. It expects six Allied soldiers when a player pawn is present (one player plus five AI), or five AI soldiers otherwise. In either case it selects a combat-capable Allied test soldier, exercises the real Steady/Pressured/Pinned suppression transitions and real-damage bleeding/stabilization, and reports `subject=player` or `subject=alliedAI` in the startup log. A missing test subject is a failure.
+
+The final log distinguishes `maneuverSmokeUses` (grenades thrown) from `smokeManeuverAdvances` (soldiers that moved over 140 cm from the throw position under verified smoke). The test does **not** require stochastic tactical counts to be nonzero; this prevents short simulations from failing merely because no opportunity arose.
+
+These behaviors have source-level regression guards under `tools/tests/`. The definitive result still requires executing the Unreal 5.8 NullRHI smoke test.
+
 ### Direct engine launch
 
 The underlying runtime flags are:
