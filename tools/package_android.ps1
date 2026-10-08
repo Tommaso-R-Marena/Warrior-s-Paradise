@@ -42,7 +42,7 @@ if ($LASTEXITCODE -ne 0) {
 $ExternalAssets = Join-Path $RepoRoot "ExternalAssets"
 $HasSourceArt = (Test-Path $ExternalAssets) -and
     ($null -ne (Get-ChildItem $ExternalAssets -Recurse -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.Extension -in @(".obj", ".fbx", ".glb", ".gltf", ".png", ".jpg", ".wav") } |
+        Where-Object { $_.Extension -in @(".obj", ".fbx", ".glb", ".gltf", ".png", ".jpg", ".jpeg", ".tga", ".tif", ".tiff", ".exr", ".hdr", ".wav") } |
         Select-Object -First 1))
 if ($HasSourceArt -or $Configuration -eq "Shipping") {
     & $PythonCommand.Source (Join-Path $RepoRoot "tools\assets\validate_asset_provenance.py") --root $RepoRoot
