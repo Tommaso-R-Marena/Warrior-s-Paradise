@@ -198,7 +198,9 @@ void AWPCombatHUD::DrawMobileTouchOverlay(
     }
 
     const FVector2D ViewSize(Width, Height);
-    const APawn* Pawn = GetOwningPawn();
+    const APawn* Pawn = GetOwningPlayerController()
+        ? GetOwningPlayerController()->GetPawn()
+        : nullptr;
     const EWPMobileMode Mode =
         Cast<AWPArmoredVehicle>(Pawn) ? EWPMobileMode::Tank :
         Cast<AWPLightVehicle>(Pawn) ? EWPMobileMode::LightVehicle :
