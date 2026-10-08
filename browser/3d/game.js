@@ -794,6 +794,7 @@ function dynamicGeometry(){
   const distance=Math.hypot(actor.x-player.x,actor.z-player.z);
   if(rig.ready&&skinner&&distance<viewDist&&skinnedActors<maxActors){
    const drawn=skinner.append(m,rig.model,actor,team,game.elapsed);
+   if(art?.fieldEquipment)art.fieldEquipment(m,actor,team);
    skinnedActors++;skinnedTriangles+=drawn.triangles;
   }else if(art)art.soldier(m,actor,team,game.elapsed,actor.moveSpeed||0);
   else{
