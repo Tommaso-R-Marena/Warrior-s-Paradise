@@ -1,0 +1,19 @@
+{
+  "name": "Warrior's Paradise — Field Edition",
+  "short_name": "Warrior's Paradise",
+  "description": "Offline-friendly lightweight WWII-inspired browser skirmish",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111c1a",
+  "theme_color": "#101b1a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
