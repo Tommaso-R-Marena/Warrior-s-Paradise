@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "title": "Kenney Nature Kit for Warrior's Paradise browser",
+  "creator": "Kenney",
+  "original_source": "https://kenney.nl/assets/nature-kit",
+  "mirror_source": "https://github.com/Hidencod/tge-assets",
+  "license": "CC0-1.0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "scope": "five curated Nature Kit v2.1 geometry models",
+  "format": "canonical Base64 text encodes unmodified GLB 2.0 bytes (transport only)",
+  "note": "Mirrored model Git blob SHA1 checks commit provenance; check original publisher if changing source. No external runtime asset requests.",
+  "assets": [
+    {
+      "name": "tree-oak",
+      "original_mirror_path": "packs/nature-kit/tree-oak.glb",
+      "repository_path": "browser/3d/assets/kenney/tree-oak.glb.b64",
+      "source_git_blob_sha1": "b136723ada4b5574b71f727120ab21fa579bf2fb",
+      "original_bytes": 14644
+    },
+    {
+      "name": "tree-pinedefaulta",
+      "original_mirror_path": "packs/nature-kit/tree-pinedefaulta.glb",
+      "repository_path": "browser/3d/assets/kenney/tree-pinedefaulta.glb.b64",
+      "source_git_blob_sha1": "f1217a9ee5b1d8f2027d39fe6bd151d20be5ab84",
+      "original_bytes": 17220
+    },
+    {
+      "name": "rock-largea",
+      "original_mirror_path": "packs/nature-kit/rock-largea.glb",
+      "repository_path": "browser/3d/assets/kenney/rock-largea.glb.b64",
+      "source_git_blob_sha1": "40e1365a43b706bd78c2658b48b189c9a35f8923",
+      "original_bytes": 7552
+    },
+    {
+      "name": "plant-bush",
+      "original_mirror_path": "packs/nature-kit/plant-bush.glb",
+      "repository_path": "browser/3d/assets/kenney/plant-bush.glb.b64",
+      "source_git_blob_sha1": "185be95ecccc59f8edc874587508c44b6a39431b",
+      "original_bytes": 4396
+    },
+    {
+      "name": "fence-simple",
+      "original_mirror_path": "packs/nature-kit/fence-simple.glb",
+      "repository_path": "browser/3d/assets/kenney/fence-simple.glb.b64",
+      "source_git_blob_sha1": "9b4839f428b9f5b8d9efd201232eae3753ed2874",
+      "original_bytes": 5712
+    }
+  ]
+}
