@@ -32,12 +32,39 @@ void UWPGameUserSettings::SetToDefaults()
     WPSettingsVersion = CurrentWPSettingsVersion;
 
     SetVSyncEnabled(false);
+#if PLATFORM_ANDROID || PLATFORM_IOS
+    // Native phone launches default conservatively; GPU tier selection is
+    // governed by Android/iOS device profiles, not a desktop GPU benchmark.
+    SetFrameRateLimit(30.0f);
+#else
     SetFrameRateLimit(60.0f);
     SetFullscreenMode(EWindowMode::WindowedFullscreen);
+#endif
 }
 
 void UWPGameUserSettings::EnsureInitialHardwareBenchmark()
 {
+#if PLATFORM_ANDROID || PLATFORM_IOS
+    // Mobile GPUs are selected through renderer device profiles and should
+    // never execute the PC hardware benchmark on first launch.
+    if (WPSettingsVersion != CurrentWPSettingsVersion)
+    {
+        WPSettingsVersion = CurrentWPSettingsVersion;
+        bHasRunInitialHardwareBenchmark = false;
+        GraphicsPreset = EWPGraphicsPreset::Auto;
+    }
+
+    if (!bHasRunInitialHardwareBenchmark)
+    {
+        RunAutoBenchmark();
+    }
+    else if (GraphicsPreset != EWPGraphicsPreset::Auto)
+    {
+        ApplyGraphicsPreset(GraphicsPreset, false);
+    }
+    return;
+#endif
+
     if (WPSettingsVersion != CurrentWPSettingsVersion)
     {
         WPSettingsVersion = CurrentWPSettingsVersion;
@@ -62,6 +89,19 @@ void UWPGameUserSettings::EnsureInitialHardwareBenchmark()
 
 void UWPGameUserSettings::RunAutoBenchmark()
 {
+#if PLATFORM_ANDROID || PLATFORM_IOS
+    // Respect Android_Low/Mid/High and GPU-family overrides. Avoid
+    // RunHardwareBenchmark and desktop-specific Lumen/VSM toggles.
+    SetFrameRateLimit(30.0f);
+    SetDynamicResolutionEnabled(false);
+    GraphicsPreset = EWPGraphicsPreset::Auto;
+    bHasRunInitialHardwareBenchmark = true;
+    WPSettingsVersion = CurrentWPSettingsVersion;
+    ApplySettings(false);
+    SaveSettings();
+    return;
+#endif
+
     // UE's benchmark populates per-group scalability values from the
     // project's PerfIndexThresholds. Keep it deliberately mixed rather
     // than forcing every group to one level.
@@ -99,6 +139,11 @@ void UWPGameUserSettings::ApplyManualQuality(
 
 void UWPGameUserSettings::ApplyMinimalRenderingOverrides(bool bEnable)
 {
+#if PLATFORM_ANDROID || PLATFORM_IOS
+    // Desktop feature CVar defaults must not override Mobile Forward.
+    return;
+#endif
+
     struct FCVarSetting
     {
         const TCHAR* Name;
