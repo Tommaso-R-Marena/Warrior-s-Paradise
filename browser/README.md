@@ -1,5 +1,7 @@
 # Warrior's Paradise — Field Edition
 
+**3D Frontline tactical update (October 8, 2026):** The free WebGL2 skirmish now features two AI squadmates, Follow/Hold orders, enemy targeting and suppressive fire against the fireteam, sandbag positions that block movement/fire, artillery with danger-close damage, aimable grenades, crouching, optional Recruit/Regular/Veteran enemy skill, visible projectile tracers, procedural firearm/explosion audio, navigation bearings, a capture progress bar and resupply after capturing sectors. Desktop shortcuts: **C** crouch, **X** Follow/Hold, **T** artillery, **Q** switch weapon. Phones have **DUCK**, **ORDER** and **ARTY** actions. Ammunition is preserved when switching loadouts. The world remains generated low-poly geometry, not photorealistic art; frame rates, sound quality and ergonomics still require physical device QA.
+
 The Cloudflare-hosted browser build now offers **two distinct experiences**:
 
 - **[3D Frontline](https://warriors-paradise-field.pages.dev/3d/):** a genuine WebGL2 3D client with rendered meshes, mobile controls, three weapons and capture objectives.
