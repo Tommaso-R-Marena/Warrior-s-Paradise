@@ -20,7 +20,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
+from pathlib import Path
 import random
+import runpy
 
 import unreal
 
@@ -56,14 +58,19 @@ def require_provenance() -> None:
     lock = unreal.Paths.convert_relative_path_to_full(
         unreal.Paths.project_dir() + "ExternalAssets/asset-lock.json"
     )
-    from pathlib import Path
-
-    if not Path(lock).is_file() and os.environ.get("WP_ALLOW_BLOCKOUT") != "1":
+    if os.environ.get("WP_ALLOW_BLOCKOUT") == "1":
+        log("Explicit blockout mode: this scene is NOT production-art validated.")
+        return
+    if not Path(lock).is_file():
         raise RuntimeError(
-            "ExternalAssets/asset-lock.json is missing. Import license-tracked "
-            "art before creating a production map, or set WP_ALLOW_BLOCKOUT=1 "
-            "to make an explicitly incomplete art-blockout map."
+            "ExternalAssets/asset-lock.json is missing. Generate the original "
+            "props or acquire license-tracked art before scene generation."
         )
+    project_root = Path(unreal.Paths.project_dir()).resolve()
+    script = project_root / "tools/assets/validate_asset_provenance.py"
+    check = runpy.run_path(str(script), run_name="__map_integrity_gate__")
+    report = check["validate_root"](project_root)
+    log(f"Verified {report['importable_files']} source assets before authoring.")
 
 
 def imported_static_meshes() -> list[tuple[str, unreal.StaticMesh]]:
