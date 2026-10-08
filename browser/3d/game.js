@@ -597,6 +597,11 @@ function button(id,on,off){
 button("fire",()=>{input.fire=true;},()=>{input.fire=false;});
 button("aim",()=>setAim(true),()=>setAim(false));
 button("reload",reload);button("grenade",grenade);button("heal",heal);button("swap",swap);
+// Register the root offline cache from the 3D subdirectory too. The
+// existing PWA service worker will cache these assets after first use.
+if("serviceWorker" in navigator && location.protocol!=="file:"){
+  navigator.serviceWorker.register("../sw.js").catch(()=>{});
+}
 $("deploy").addEventListener("click",reset);
 $("quality").value=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent||"")?"low":"medium";
 game.quality=$("quality").value;
