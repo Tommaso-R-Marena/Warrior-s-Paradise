@@ -49,3 +49,5 @@
 #sound-toggle[aria-pressed="true"]{background:#44352b;color:#ecdac4}
 #assetstatus{min-height:14px;color:#d5e0ce;font-size:11px;letter-spacing:.04em;margin-bottom:9px}
 #menu .disclaimer a{display:inline;color:#e0cc97;font-weight:600;margin:0}
+
+#rigstatus{color:#d4dfcc;font-size:11px;letter-spacing:.04em;min-height:15px;margin:0 0 8px}
