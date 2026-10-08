@@ -22,6 +22,14 @@ enum class EWPMobileButton : uint8
     Jump
 };
 
+enum class EWPMobileMode : uint8
+{
+    Infantry,
+    Tank,
+    LightVehicle,
+    Emplacement
+};
+
 struct FWPMobileButtonSpec
 {
     EWPMobileButton Action;
@@ -60,7 +68,48 @@ namespace WPMobileControls
                FMath::Abs(NormalizedPos.Y - Button.Center.Y) <= Button.HalfSize.Y;
     }
 
-    inline EWPMobileButton HitTest(const FVector2D& PixelPosition, const FVector2D& ViewSize)
+    inline bool IsAvailable(EWPMobileButton Action, EWPMobileMode Mode)
+    {
+        if (Mode == EWPMobileMode::Infantry)
+        {
+            return Action != EWPMobileButton::None;
+        }
+        if (Mode == EWPMobileMode::Tank)
+        {
+            return Action == EWPMobileButton::Fire ||
+                   Action == EWPMobileButton::Aim ||
+                   Action == EWPMobileButton::Reload ||
+                   Action == EWPMobileButton::Interact;
+        }
+        return Action == EWPMobileButton::Fire ||
+               Action == EWPMobileButton::Interact;
+    }
+
+    inline const TCHAR* GetLabel(EWPMobileButton Action, EWPMobileMode Mode,
+                                 const TCHAR* InfantryLabel)
+    {
+        if (Mode == EWPMobileMode::Tank)
+        {
+            switch (Action)
+            {
+                case EWPMobileButton::Fire: return TEXT("CANNON");
+                case EWPMobileButton::Aim: return TEXT("MG");
+                case EWPMobileButton::Reload: return TEXT("SHELL");
+                case EWPMobileButton::Interact: return TEXT("EXIT");
+                default: break;
+            }
+        }
+        if (Mode != EWPMobileMode::Infantry &&
+            Action == EWPMobileButton::Interact)
+        {
+            return TEXT("EXIT");
+        }
+        return InfantryLabel;
+    }
+
+    inline EWPMobileButton HitTest(const FVector2D& PixelPosition,
+                                  const FVector2D& ViewSize,
+                                  EWPMobileMode Mode = EWPMobileMode::Infantry)
     {
         if (ViewSize.X <= 0.0f || ViewSize.Y <= 0.0f)
         {
@@ -71,7 +120,8 @@ namespace WPMobileControls
         const FWPMobileButtonSpec* Buttons = GetButtons(Count);
         for (int32 Index = 0; Index < Count; ++Index)
         {
-            if (IsInside(Normalized, Buttons[Index]))
+            if (IsAvailable(Buttons[Index].Action, Mode) &&
+                IsInside(Normalized, Buttons[Index]))
             {
                 return Buttons[Index].Action;
             }
