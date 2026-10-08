@@ -1,5 +1,18 @@
 # Warrior's Paradise — Field Edition
 
+## CC0 models in the Cloudflare 3D battlefield (October 2026)
+
+The `/3d/` game now loads **five real glTF 2.0 mesh assets from Kenney Nature Kit (CC0)**: oak tree, pine, rock, bush and fence. They are bundled in `browser/3d/assets/kenney/` as canonical Base64 transport files containing the original unmodified GLB bytes. See `MANIFEST.json` for original artist, license, mirror and upstream Git blob hashes.
+
+A small, auditable static GLB importer (`browser/3d/asset-loader.js`) extracts geometry from the models, places instances into the existing WebGL2 scene and draws them with a coherent Normandy palette. Trees block walking and firing sightlines through their trunks. This is an **actual imported 3D asset path**, not a screenshot or a placeholder citation.
+
+The entire client and all its deployed model bytes are hosted on **Cloudflare Pages**. No third-party asset servers, API keys, graphics server, payments or CDN JavaScript are required at playtime. The existing service worker caches successfully fetched models for subsequent offline use. If downloading or decoding the optional art fails, the procedural battlefield remains playable.
+
+**Important limitation:** this is a static mesh importer for curated, uncompressed glTF/GLB geometry and base-color materials. It is **not** a full GLTFLoader, and does not yet support skeletal animations, skinning, textured PBR materials, compressed geometry or animated soldier/weapon GLBs. Kenney's simple low-poly nature kit is legal foundation art rather than photorealistic foliage. High-fidelity military assets must be licensed individually and integrated through a proper textured/animated importer.
+
+Run the offline binary integrity check: `node tools/tests/browser_cc0_glb_smoke.js` and the regular WebGL gameplay smoke. The integrity test verifies all geometry and checks that each committed GLB's Git object identity matches the recorded original source.
+
+
 **3D Frontline tactical update (October 8, 2026):** The free WebGL2 skirmish now features two AI squadmates, Follow/Hold orders, enemy targeting and suppressive fire against the fireteam, sandbag positions that block movement/fire, artillery with danger-close damage, aimable grenades, crouching, optional Recruit/Regular/Veteran enemy skill, visible projectile tracers, procedural firearm/explosion audio, navigation bearings, a capture progress bar and resupply after capturing sectors. Desktop shortcuts: **C** crouch, **X** Follow/Hold, **T** artillery, **Q** switch weapon. Phones have **DUCK**, **ORDER** and **ARTY** actions. Ammunition is preserved when switching loadouts. The world remains generated low-poly geometry, not photorealistic art; frame rates, sound quality and ergonomics still require physical device QA.
 
 The Cloudflare-hosted browser build now offers **two distinct experiences**:
