@@ -1,13 +1,15 @@
 /* Warrior's Paradise — spatial, multi-layered battlefield audio.
- * Entirely original synthesized sounds. No audio downloads, CDN or analytics.
+ * Original synthesized sounds plus one credited, optionally loaded CC0 gunshot.
+ * No third-party playtime CDN, sound telemetry or streamed audio.
  * All audio is initiated by a direct user gesture and can be muted instantly.
  */
 (function(root){"use strict";
 let context=null,master=null,ambience=null,active=false,muted=false;
 const buffers=new Map();
 let lastFootstep=0,ambientStarted=false,shotCount=0;
+let recordedShot=null,recordLoading=false,recordError="";
 const state=()=>({available:!!(root.AudioContext||root.webkitAudioContext),active,
- muted,ambience:ambientStarted,shotCount});
+ muted,ambience:ambientStarted,shotCount,recordedReady:!!recordedShot,recordError});
 function noise(duration,kind="broad"){
  if(!context)return null;
  const key=kind+":"+duration;
@@ -35,7 +37,31 @@ function boot(){
  if(context.state==="suspended")context.resume().catch(()=>{});
  active=true;
  if(!ambientStarted)wind();
+ if(!recordedShot&&!recordLoading)loadRecordedShot();
  return true;
+}
+async function loadRecordedShot(){
+ if(!context||typeof context.decodeAudioData!=="function"||typeof fetch!=="function")return;
+ recordLoading=true;
+ try{
+  const response=await fetch("./assets/audio/cc0-gunshot.wav.b64",{cache:"force-cache"});
+  if(!response.ok)throw Error("recording HTTP "+response.status);
+  const encoded=(await response.text()).replace(/\s/g,"");
+  if(encoded.length>600000||!/^[-a-zA-Z0-9+/]*={0,2}$/.test(encoded))throw Error("invalid recording");
+  const b=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
+  recordedShot=await context.decodeAudioData(b.buffer.slice(0));
+ }catch(error){recordError=String(error);}finally{recordLoading=false;}
+}
+function playRecorded(weapon,x,z,ear){
+ if(!recordedShot||!active||muted)return false;
+ try{
+  const src=context.createBufferSource(),gain=context.createGain();
+  src.buffer=recordedShot;
+  if(src.playbackRate)src.playbackRate.value=weapon==="smg"?1.34:weapon==="lmg"?.90:1.07;
+  gain.gain.value=weapon==="smg"?.19:.27;
+  src.connect(gain);place(gain,x,z,ear);src.start();
+  return true;
+ }catch{return false}
 }
 function wind(){
  if(!context||ambientStarted)return;
@@ -80,8 +106,9 @@ function shot(weapon,x=0,z=0,ear){
  if(!boot())return;
  shotCount++;
  const spec=weapon==="smg"?{f:950,d:.12,l:.18}:weapon==="lmg"?{f:690,d:.19,l:.22}:{f:610,d:.31,l:.29};
- burst({freq:spec.f,duration:spec.d,loud:spec.l,x,z,ear});
- burst({freq:95,duration:.14,loud:spec.l*.65,x,z,ear});
+ const recorded=playRecorded(weapon,x,z,ear);
+ burst({freq:spec.f,duration:spec.d,loud:recorded?spec.l*.30:spec.l,x,z,ear});
+ burst({freq:95,duration:.14,loud:spec.l*(recorded?.30:.65),x,z,ear});
 }
 function explosion(x=0,z=0,ear){
  if(!boot())return;
