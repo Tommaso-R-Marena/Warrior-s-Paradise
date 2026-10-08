@@ -403,8 +403,8 @@ function heal(){
 function swap(){
  if(!game.playing)return;
  const names=Object.keys(WEAPONS),idx=names.indexOf(player.weapon);
- player.weapon=names[(idx+1)%names.length];
  game.loadouts[player.weapon]={ammo:player.ammo,reserve:player.reserve};
+ player.weapon=names[(idx+1)%names.length];
  const w=WEAPONS[player.weapon],store=game.loadouts[player.weapon];
  player.ammo=store.ammo;player.reserve=store.reserve;
  player.reload=0;msg("EQUIPPED "+w.name,1.3);
