@@ -46,7 +46,7 @@ async function scenario(shouldLoad,farms=true){
  const sources=[];
  const fetchMock=async url=>{
   sources.push(url);
-  const match=/^\.\/assets\/(kenney|quaternius)\/([a-z0-9-]+)\.glb\.b64$/.exec(url);
+  const match=/^\.\/assets\/(kenney|quaternius)\/([a-z0-9_-]+)\.glb\.b64$/.exec(url);
   if(!shouldLoad||!match||(match[1]==="quaternius"&&!farms)||
     !models[match[1]+"/"+match[2]])return {ok:false,status:404};
   return {ok:true,text:async()=>models[match[1]+"/"+match[2]]};
