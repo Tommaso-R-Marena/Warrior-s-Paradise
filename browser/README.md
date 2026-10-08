@@ -2,7 +2,7 @@
 
 **A playable, lightweight browser skirmish for phones and low-power computers.**
 
-This is deliberately a **separate implementation**, NOT the full Unreal Engine 5.8 game and not a streamed desktop build. It uses Canvas 2D software raycasting and standard JavaScript; no WebGL dependency, Unreal Engine download, external JavaScript framework, paid backend, signup or account is required. Visuals, map, squad size and weapon fidelity are simpler than the UE project.
+This is deliberately a **separate implementation**, NOT the full Unreal Engine 5.8 game and not a streamed desktop build. It uses textured Canvas 2D raycasting and procedural art (still not full mesh-based 3D), with no WebGL dependency, Unreal Engine download, external JavaScript framework, paid backend, signup or account. Visuals, map, squad size and weapon fidelity are simpler than the UE project.
 
 ## Play from the repository
 
@@ -28,11 +28,11 @@ Open `http://<COMPUTER-LAN-IP>:8000/` on the phone. If your OS firewall blocks p
 
 | Device | Controls |
 |---|---|
-| Desktop | WASD move, mouse aim, click/hold fire, Shift sprint, R reload, V heal, Q switch soldier; Esc pause |
-| Phone/tablet | Left thumbstick moves, drag right side to aim, FIRE, reload, heal and squad-switch buttons |
+| Desktop | WASD movement, mouse aim, click/hold fire, **right-click ADS**, Shift sprint, R reload, F frag, T smoke, C crouch, V heal, Q squad-switch, X follow/hold orders, Esc pause |
+| Phone/tablet | Left thumbstick moves; drag on the right to turn/aim; FIRE, **hold ADS**, reload, frag, smoke, field dressing, switch soldier and follow/hold buttons |
 | Any | ECO/BALANCED/SHARP rendering selectable before deployment; the default is ECO on touch devices |
 
-Capture the sector by standing near its flag **after enemies are cleared**. Secure three sectors to win. You have a three-person infantry squad and can switch to another surviving soldier after casualties. The two computer-controlled squadmates provide covering fire.
+Capture the sector by standing near its flag **after defenders are cleared**. Secure three sectors to win. Your three-person squad uses different loadouts (Lee-Enfield / Sten / Bren), and surviving squadmates can provide covering fire. Enemies and friendlies use lightweight cached grid navigation around obstacles; suppression and smoke affect vision, with timed frag explosives. The Field Edition is still a small single-player skirmish and **not** feature- or graphics-equivalent to World War Heroes.
 
 ## Offline install / home screen
 
@@ -62,9 +62,21 @@ UE **Pixel Streaming** also permits phone/browser access to the full desktop edi
 ## Hardware honesty
 
 - The browser edition is **CPU-first**, but the OS/browser may still use an integrated GPU for canvas composition. It does not require a discrete GPU.
-- ECO renders at ~225 internal horizontal pixels and caps near 28 fps; BALANCED at ~330 / 35 fps; SHARP at ~440 / 45 fps. These are targets, not measured FPS.
+- ECO renders at ~225 internal horizontal pixels and caps near 28 fps; BALANCED at ~330 / 35 fps; SHARP at ~440 / 45 fps. These are targets, not measured FPS. Optional procedural textures, tactical smoke effects and soldier billboards use Canvas 2D.
 - Performance varies by device. If the browser or phone cannot run JavaScript Canvas 2D, it cannot play this game. Phones that support modern browsers generally can, but have not been device-tested here.
 - This version is local single-player: no account, global multiplayer, or server synchronization. A static server cannot host the full native UE physics/AI simulation.
+
+## Testing
+
+The dependency-free Node runtime smoke command is:
+
+```bash
+node tools/tests/browser_runtime_smoke.js
+```
+
+It simulates portrait and landscape sessions through 445 game frames and verifies that ADS/fire/reload/grenade/squad controls execute and visuals generate draw calls. It is **not** a real browser image review or phone performance benchmark.
+
+The native Android plan and full mobile parity gaps are documented in [`docs/MOBILE_RELEASE_PLAN.md`](../docs/MOBILE_RELEASE_PLAN.md).
 
 ## What remains
 
