@@ -26,7 +26,10 @@ const FS=[
  "void main(){vec3 n=normalize(vNorm);float sun=max(dot(n,normalize(vec3(.53,.88,-.36))),0.);",
  "float light=.37+.65*sun;vec3 rgb=vColor*light;",
  "float fog=clamp((distance(vPos,uEye)-20.)/86.,0.,.78);",
- "rgb=mix(rgb,vec3(.63,.68,.65),fog);outColor=vec4(pow(max(rgb,0.),vec3(.94)),1.);}"
+ "float grain=fract(sin(dot(floor(vPos.xz*5.),vec2(12.9898,78.233)))*43758.5453);",
+ "rgb*=mix(.91,1.08,grain);rgb=mix(rgb,vec3(.63,.68,.65),fog);",
+ "rgb=(rgb*(2.51*rgb+.03))/(rgb*(2.43*rgb+.59)+.14);",
+ "outColor=vec4(pow(max(rgb,0.),vec3(.93)),1.);}"
 ].join("\n");
 function shader(type,source){
  const o=gl.createShader(type);gl.shaderSource(o,source);gl.compileShader(o);
@@ -117,15 +120,20 @@ const boxes=[
  [35,-27,10,12],[-8,38,10,11]
 ];
 const flags=[{x:-12,z:-5,title:"FARM APPROACH"},{x:11,z:11,title:"CROSSROADS"},{x:31,z:29,title:"RADIO POST"}];
+const covers=flags.flatMap(f=>[
+ [f.x-6,f.z-7,4,.85],[f.x+6,f.z+6,4,.85],
+ [f.x-6,f.z+5,.85,4],[f.x+5,f.z-6,.85,4]
+]);
 const within=(x,z,b,pad=0)=>Math.abs(x-b[0])<(b[2]/2+pad)&&Math.abs(z-b[1])<(b[3]/2+pad);
 function blocked(x,z,r=.42){
  if(x<-47+r||x>47-r||z<-47+r||z>47-r)return true;
- return boxes.some(b=>within(x,z,b,r));
+ return boxes.some(b=>within(x,z,b,r))||covers.some(b=>within(x,z,b,r));
 }
 function openLOS(ax,az,bx,bz){
  const d=Math.hypot(bx-ax,bz-az),segments=Math.ceil(d/.55);
  for(let i=1;i<segments;i++){
-  const t=i/segments;if(boxes.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.12)))return false;
+  const t=i/segments;if(boxes.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.12))||
+      covers.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05)))return false;
  }
  return true;
 }
@@ -176,6 +184,31 @@ function buildWorld(){
    m.box(x,.45,z+.43,.9,.12,.12,COLORS.timber);
   }else{
    m.box(x,.18,z,.3+rnd()*.8,.35,.7,COLORS.stone);
+  }
+ }
+ for(const [x,z,w,d] of covers){
+  const alongX=w>d;
+  for(let i=0;i<4;i++){
+   const offset=(i-1.5)*(alongX?w:d)/4;
+   for(let layer=0;layer<2;layer++)m.box(
+    x+(alongX?offset:0)+(layer?.1:0),.24+layer*.42,z+(alongX?0:offset),
+    alongX?w/4+.1:w,.40,alongX?d:d/4+.1,layer?COLORS.sand:COLORS.mud);
+  }
+ }
+ // Rough fencing and scattered shell-scarred earth.
+ for(let i=0;i<18;i++){
+  const x=-43+i*4,z=-43+(i%3)*1.5;
+  if(blocked(x,z,1.2))continue;
+  m.box(x,.72,z,.12,1.44,.12,COLORS.timber);
+  m.box(x,1.03,z+1.2,.09,.09,2.5,COLORS.wood);
+ }
+ for(let i=0;i<35;i++){
+  const x=-42+rnd()*84,z=-41+rnd()*82,r=.45+rnd()*.8;
+  if(blocked(x,z,1.8))continue;
+  for(let n=0;n<10;n++){
+   const t=n*Math.PI/5,nt=(n+1)*Math.PI/5;
+   m.tri([x,-.04,z],[x+Math.cos(t)*r,.006,z+Math.sin(t)*r],
+    [x+Math.cos(nt)*r,.006,z+Math.sin(nt)*r],COLORS.mud);
   }
  }
  for(const f of flags){
