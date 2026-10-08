@@ -10,11 +10,14 @@ const root=path.resolve(__dirname,"../../browser/3d");
 const loader=fs.readFileSync(path.join(root,"asset-loader.js"),"utf8");
 const gameplay=fs.readFileSync(path.join(root,"game.js"),"utf8");
 const infantry=fs.readFileSync(path.join(root,"battle-art.js"),"utf8");
+const skinning=fs.readFileSync(path.join(root,"skinning.js"),"utf8");
 const spatialAudio=fs.readFileSync(path.join(root,"battle-audio.js"),"utf8");
 const kenney=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
 const quaternius=["barn","chicken_coop","windmill","well"];
+const character="character_medium";
 const models=Object.fromEntries([
  ...kenney.map(name=>["kenney/"+name,fs.readFileSync(path.join(root,"assets/kenney",name+".glb.b64"),"utf8")]),
+ ["kenney/"+character,fs.readFileSync(path.join(root,"assets/kenney",character+".glb.b64"),"utf8")],
  ...quaternius.map(name=>["quaternius/"+name,fs.readFileSync(path.join(root,"assets/quaternius",name+".glb.b64"),"utf8")])
 ]);
 
@@ -59,6 +62,7 @@ async function scenario(shouldLoad,farms=true){
   Uint8Array,ArrayBuffer,DataView,Float32Array,Math,Error};
  vm.createContext(sandbox);
  vm.runInContext(loader,sandbox,{filename:"asset-loader.js",timeout:15000});
+ vm.runInContext(skinning,sandbox,{filename:"skinning.js",timeout:15000});
  vm.runInContext(infantry,sandbox,{filename:"battle-art.js",timeout:15000});
  vm.runInContext(spatialAudio,sandbox,{filename:"battle-audio.js",timeout:15000});
  assert(win.WPBattleArt&&win.WPBattleSound,"Full presentation modules failed to initialize");
@@ -67,13 +71,14 @@ async function scenario(shouldLoad,farms=true){
  for(let i=0;i<120;i++){
   await Promise.resolve();
   const state=win.WP3DDiagnostics();
-  if(shouldLoad?(state.assetsLoaded&&(state.buildingsLoaded===4||state.farmError)):state.assetError)break;
+  if(shouldLoad?(state.assetsLoaded&&state.rigLoaded&&(state.buildingsLoaded===4||state.farmError)):state.assetError)break;
  }
  const before=win.WP3DDiagnostics();
  assert.equal(before.assetsLoaded,shouldLoad,JSON.stringify(before));
- assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length:kenney.length);
+ assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length+1:kenney.length+1);
  assert(sources.every(url=>/^\.\/assets\/(kenney|quaternius)\//.test(url)));
  if(shouldLoad){
+  assert(before.rigLoaded,"Licensed character rig failed to load");
   assert(before.assetInstances>=157&&before.assetTriangles>15000);
   assert(before.geometryTriangles>24000);
   assert.equal(before.buildingsLoaded,farms?4:0);
@@ -84,6 +89,7 @@ async function scenario(shouldLoad,farms=true){
  }else{
   assert(before.assetError.includes("404"));
   assert.equal(before.assetInstances,0);
+  assert.equal(before.rigLoaded,false);
   assert(before.geometryTriangles>5000);
  }
  el("deploy").fire("click");
@@ -93,6 +99,7 @@ async function scenario(shouldLoad,farms=true){
   raf.shift()((i+1)*34);
  }
  assert(stats.draws>=100,"No geometry drawn");
+ if(shouldLoad)assert(win.WP3DDiagnostics().skinActors>0,"Skinning not present in actual gameplay draw");
  assert(stats.uploads>=50,"Rendering stopped");
  return {loaded:before.assetsLoaded,triangles:before.geometryTriangles,
   props:before.assetInstances,draws:stats.draws};
