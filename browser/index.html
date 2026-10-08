@@ -17,16 +17,18 @@
     <div id="damage-flash"></div>
     <header id="hud">
       <div class="brand">WARRIOR'S <strong>PARADISE</strong> <small>FIELD EDITION</small></div>
-      <div class="stats"><span id="health">HP 100</span><span id="ammo">08 / 48</span><span id="medkits">✚ 2</span></div>
+      <div class="stats"><span id="health">HP 100</span><span id="ammo">08 / 48</span><span id="medkits">✚ 2</span><span id="grenades">◉ 2</span></div>
       <div class="status" id="mission">SECURE THE FORWARD FARM</div>
       <div class="status small" id="progress">SECTOR 1 / 3 · REACH THE MARKER</div>
+      <div class="status small" id="loadout">LEE-ENFIELD · FOLLOW</div>
     </header>
     <canvas id="radar" width="136" height="136" aria-label="Tactical minimap"></canvas>
     <div id="crosshair" aria-hidden="true"><i></i><i></i></div>
+    <div id="aim-ring" aria-hidden="true"></div>
     <div id="hitmarker" aria-hidden="true">×</div>
     <div id="bottom-bar">
       <div><span id="squad">SQUAD · 3 ALIVE</span><span id="quality-label">ECO</span></div>
-      <div id="tip">WASD MOVE · MOUSE AIM · CLICK FIRE · R RELOAD · V HEAL · Q SWITCH</div>
+      <div id="tip">WASD MOVE · MOUSE AIM · CLICK FIRE · RMB ADS · R RELOAD · F FRAG · T SMOKE · V HEAL · Q SWITCH · C CROUCH · X SQUAD ORDER</div>
     </div>
     <div id="touch" aria-label="Touch game controls">
       <div id="move-pad" aria-label="Move joystick"><div class="pad-ring"></div><div class="pad-knob" id="move-knob"></div></div>
@@ -36,6 +38,10 @@
         <button id="reload-btn" class="action" aria-label="Reload">↻</button>
         <button id="heal-btn" class="action" aria-label="Use medkit">✚</button>
         <button id="switch-btn" class="action" aria-label="Switch squadmate">⇄</button>
+        <button id="ads-btn" class="action" aria-label="Aim down sights">ADS</button>
+        <button id="frag-btn" class="action" aria-label="Throw fragmentation grenade">FRAG</button>
+        <button id="smoke-btn" class="action" aria-label="Throw smoke grenade">SMK</button>
+        <button id="order-btn" class="action" aria-label="Toggle squad follow or hold">TEAM</button>
       </div>
     </div>
     <section id="modal" class="shown" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -51,7 +57,7 @@
             <select id="quality"><option value="eco">ECO · CPU FIRST</option><option value="balanced">BALANCED</option><option value="sharp">SHARP</option></select>
           </label>
         </div>
-        <p class="fine-print">Desktop: WASD + mouse, click to fire, R reload, V heal, Q switch squadmate. Mobile: left joystick + drag right to aim; tap FIRE. *Offline replay requires installing/caching from HTTPS or localhost first.</p>
+        <p class="fine-print">Desktop: WASD, mouse, click fire, right-click aim, R reload, F frag, T smoke, C crouch, V heal, Q change soldier, X team orders. Phone: two-thumb movement and aiming, dedicated action buttons. *Offline replay requires HTTPS/localhost caching first.</p>
       </div>
     </section>
   </main>
