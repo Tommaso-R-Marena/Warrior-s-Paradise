@@ -13,7 +13,7 @@ GAME3D = BROWSER / "3d"
 
 class WebGL3DTests(unittest.TestCase):
     def test_cloudflare_fully_static_with_low_end_fallback(self):
-        for name in ("index.html", "style.css", "game.js"):
+        for name in ("index.html", "style.css", "game.js", "asset-loader.js"):
             self.assertTrue((GAME3D / name).is_file(), name)
         html = (GAME3D / "index.html").read_text(encoding="utf-8")
         script = (GAME3D / "game.js").read_text(encoding="utf-8")
@@ -55,7 +55,9 @@ class WebGL3DTests(unittest.TestCase):
         node = shutil.which("node")
         if not node:
             self.skipTest("Node is required to execute the WebGL2 runtime mock")
-        for file in (GAME3D / "game.js", ROOT / "tools/tests/browser_webgl3d_smoke.js"):
+        for file in (GAME3D / "game.js", GAME3D / "asset-loader.js",
+                     ROOT / "tools/tests/browser_webgl3d_smoke.js",
+                     ROOT / "tools/tests/browser_cc0_glb_smoke.js"):
             p = subprocess.run([node, "--check", str(file)], capture_output=True,
                                text=True, timeout=15, check=False)
             self.assertEqual(p.returncode, 0, p.stdout+p.stderr)
@@ -63,6 +65,10 @@ class WebGL3DTests(unittest.TestCase):
                            capture_output=True, text=True, timeout=50, check=False)
         self.assertEqual(p.returncode, 0, p.stdout+p.stderr)
         self.assertIn("PASS WebGL2 mobile combat smoke:", p.stdout)
+        art = subprocess.run([node, str(ROOT / "tools/tests/browser_cc0_glb_smoke.js")],
+                             capture_output=True, text=True, timeout=30, check=False)
+        self.assertEqual(art.returncode, 0, art.stdout + art.stderr)
+        self.assertIn("PASS CC0 GLB source and geometry:", art.stdout)
 
 
 if __name__ == "__main__":
