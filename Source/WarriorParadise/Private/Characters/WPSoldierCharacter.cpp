@@ -826,6 +826,58 @@ void AWPSoldierCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
     PlayerInputComponent->BindAction(TEXT("CallAirSupport"), IE_Pressed, this, &AWPSoldierCharacter::CallAirSupportInput);
 }
 
+void AWPSoldierCharacter::ExecuteMobileAction(
+    EWPMobileButton Action,
+    bool bPressed)
+{
+    // Held actions receive both edges; discrete actions only fire once.
+    if (!bPressed)
+    {
+        switch (Action)
+        {
+            case EWPMobileButton::Fire: StopFireInput(); break;
+            case EWPMobileButton::Aim: StopAim(); break;
+            case EWPMobileButton::Sprint: StopSprint(); break;
+            case EWPMobileButton::Jump: StopJumping(); break;
+            default: break;
+        }
+        return;
+    }
+
+    switch (Action)
+    {
+        case EWPMobileButton::Fire: StartFireInput(); break;
+        case EWPMobileButton::Aim: StartAim(); break;
+        case EWPMobileButton::Reload: ReloadInput(); break;
+        case EWPMobileButton::Frag: ThrowGrenadeInput(); break;
+        case EWPMobileButton::Smoke: ThrowSmokeGrenadeInput(); break;
+        case EWPMobileButton::Bandage: StartBandage(); break;
+        case EWPMobileButton::Switch: SwitchSquadmateInput(); break;
+        case EWPMobileButton::Interact: InteractInput(); break;
+        case EWPMobileButton::Crouch:
+            if (bIsCrouched) StopCrouch();
+            else StartCrouch();
+            break;
+        case EWPMobileButton::Prone: ToggleProne(); break;
+        case EWPMobileButton::Sprint: StartSprint(); break;
+        case EWPMobileButton::Jump: JumpInput(); break;
+        case EWPMobileButton::Squad:
+            if (const AWPBattlefieldDirector* Director = GetBattlefieldDirector())
+            {
+                switch (Director->GetSquadOrder())
+                {
+                    case EWPSquadOrder::Follow: IssueAttackOrder(); break;
+                    case EWPSquadOrder::AttackObjective: IssueHoldOrder(); break;
+                    case EWPSquadOrder::HoldPosition: IssueFollowOrder(); break;
+                    default: IssueFollowOrder(); break;
+                }
+            }
+            break;
+        case EWPMobileButton::None:
+        default: break;
+    }
+}
+
 void AWPSoldierCharacter::StartFireInput()
 {
     if (!IsCombatCapable())
