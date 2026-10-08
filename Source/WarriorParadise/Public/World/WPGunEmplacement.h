@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Combat/WPCombatTypes.h"
 #include "GameFramework/Pawn.h"
+#include "UI/WPMobileControls.h"
 #include "WPGunEmplacement.generated.h"
 
 class AWPSoldierCharacter;
@@ -23,6 +24,11 @@ public:
 
     virtual void Tick(float DeltaSeconds) override;
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
+    // Native Android/iOS gestures reuse established vehicle mechanics.
+    void ApplyMobileMovement(float Forward, float Steering);
+    void ApplyMobileLook(float Yaw, float Pitch);
+    void ExecuteMobileAction(EWPMobileButton Action, bool bPressed);
 
     UFUNCTION(BlueprintCallable, Category="Emplacement")
     void Configure(
