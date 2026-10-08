@@ -43,7 +43,7 @@ public:
     UFUNCTION(BlueprintPure, Category="Mobile")
     FVector2D GetMobileMoveAnchor() const { return MobileMoveAnchor; }
 
-    UFUNCTION(BlueprintPure, Category="Mobile")
+    // C++-only: EWPMobileButton is a lightweight native enum, not UENUM.
     bool IsMobileButtonHeld(EWPMobileButton Button) const;
 
 protected:
