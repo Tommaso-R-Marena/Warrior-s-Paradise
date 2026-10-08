@@ -44,6 +44,7 @@ SLOTS = (
     AssetSlot("fence", (("wood", "fence"), ("fence",)), 18),
     AssetSlot("barrel", (("barrel",), ("drum",)), 10),
     AssetSlot("stump", (("stump",), ("log",)), 9),
+    AssetSlot("sandbag", (("sandbag",), ("sand", "bag")), 28),
 )
 
 
