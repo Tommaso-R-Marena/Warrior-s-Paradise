@@ -15,7 +15,7 @@ const ids=new Set([...html.matchAll(/id="([\w-]+)"/g)].map(x=>x[1]));
 for(const [,id] of game.matchAll(/\$\("([\w-]+)"\)/g)){
  assert(ids.has(id),"missing button/control in HTML: "+id);
 }
-function testDevice(width,height) {
+function testDevice(width,height,map="farm",mode="assault",quality="eco",short=false) {
  const elements={},listeners={},frames=[];
  let draws=0;
  const ctx={};
@@ -51,8 +51,20 @@ function testDevice(width,height) {
  vm.runInContext(visuals,ctx0,{filename:"visuals.js"});
  vm.runInContext(game,ctx0,{filename:"game.js"});
  const frame=i=>{const fn=frames.shift();assert(fn,"no animation frame");fn((i+1)*36)};
+ el("battlefield").value=map;el("mode").value=mode;
+ el("difficulty").value="regular";el("quality").value=quality;
+ el("quality").fire("change");
  el("start-btn").fire("click");
- for(let i=0;i<120;i++)frame(i);
+ for(let i=0;i<(short?70:120);i++)frame(i);
+ if(short){
+   assert(el("world").width>0&&el("world").height>0);
+   assert(draws>20,"new map did not render textures");
+   assert(el("mission").textContent.length>0,"new map has no mission text");
+   if(mode==="defense")assert.match(el("progress").textContent,/WAVE 1 / 5/);
+   else assert.match(el("progress").textContent,/SECTOR 1 / 3/);
+   console.log("PASS",map,mode,quality,"map initialization/render frames");
+   return;
+ }
  const start=el("ammo").textContent;
  el("ads-btn").fire("pointerdown");
  el("fire-btn").fire("pointerdown");
@@ -74,7 +86,11 @@ function testDevice(width,height) {
  assert.match(el("loadout").textContent,/STEN MK II.*HOLD/);
  assert(draws>50,"texture/sprite renderer did not run");
  assert(el("world").width>0&&el("world").height>0);
- console.log("PASS",width+"x"+height,"445 simulated frames","Canvas drawImage calls:",draws);
+ console.log("PASS",width+"x"+height,map,mode,"445 simulated frames","Canvas drawImage calls:",draws);
 }
 testDevice(390,844);
 testDevice(844,390);
+for(const battlefield of ["farm","town","forest"]){
+ testDevice(390,844,battlefield,"assault","sharp",true);
+ testDevice(844,390,battlefield,"defense","ultra",true);
+}
