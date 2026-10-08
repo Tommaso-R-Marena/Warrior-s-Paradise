@@ -15,9 +15,10 @@ The Field Edition is a smaller single-player 2.5D raycasting game: its goals are
 - Procedurally textured stone/wood cover, atmospheric sky, distant ridges, trees/crates, soldier textures and improved first-person gun.
 - Lee-Enfield, Sten and Bren role loadouts with differing damage, spread, firing/reload rates and magazine sizes.
 - Touch ADS, frags, smoke (including line-of-sight blocking), tactical follow/hold orders, casualty switching, enemy suppression and cached grid waypoint navigation.
-- Adaptive *user-selectable* ECO, Balanced and Sharp internal rendering resolutions; no downloaded JS libraries or paid backend.
+- Three selectable battlefields, Assault and five-wave Last Stand, Recruit/Regular/Veteran bots; perspective-sampled terrain and more mature line-of-sight AI with finite ammo and combat medics.
+- User-selectable ECO, Balanced, Sharp and Ultra tiers with adaptive internal resolution; two-axis camera look, custom aiming sensitivity, hit-zone approximation, synthesized gunshot layers and touch haptics. No downloaded JS libraries or paid backend.
 - PWA network-first caching with offline fallback.
-- `node tools/tests/browser_runtime_smoke.js` tests render initialization, ADS/shoot/reload/grenades/squad control in portrait and landscape. Source contract tests are in `tools/tests/test_browser_field.py`.
+- `node tools/tests/browser_runtime_smoke.js` tests initialization, ADS/shoot/reload/grenades/squad control, vertical aim, map/mode combinations and survival victory in portrait and landscape. Source contract tests are in `tools/tests/test_browser_field.py`.
 
 **Native UE Android prep**
 
@@ -50,3 +51,7 @@ The Field Edition is a smaller single-player 2.5D raycasting game: its goals are
 - Cloudflare Pages hosts the static browser edition; all physics and rendering run on players' devices. No server-side GPU is provisioned.
 - Native Android builds can eventually be distributed through controlled direct APK testing before store submission. App-store publication/signing/fees are separate issues.
 - Browser fidelity/performance and native fidelity/performance need **real device benchmarks** before making comparative claims.
+
+## Quantified parity scorecard
+
+See [MOBILE_PARITY_SCORECARD.md](MOBILE_PARITY_SCORECARD.md) for a truthful feature-by-feature comparison against the advertised commercial game and the first five engineering/QA acceptance gates. The high-fidelity native Android path is distinct from the offline browser edition.
