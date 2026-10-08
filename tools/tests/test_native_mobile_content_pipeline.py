@@ -101,12 +101,21 @@ class NativeMobileSceneTests(unittest.TestCase):
         offsets = [source.index('stage("' + file) for file in files]
         self.assertEqual(offsets, sorted(offsets))
 
+    def test_map_builder_revalidates_source_art(self) -> None:
+        source = (ROOT / "Content/Python/wp_build_mobile_village.py").read_text()
+        self.assertIn('check["validate_root"](project_root)', source)
+        self.assertIn("AssetSlot(\"sandbag\"", source)
+
+    def test_importer_revalidates_source_art(self) -> None:
+        source = (ROOT / "Content/Python/wp_import_external_assets.py").read_text()
+        self.assertIn('validated["validate_root"](PROJECT_ROOT)', source)
+
     def test_wrapper_checks_editor_and_map_output(self) -> None:
         source = (ROOT / "tools/prepare_native_mobile.ps1").read_text()
         for term in (
             "UnrealEditor-Cmd.exe", "-ExecutePythonScript=",
-            "asset-lock.json", "Test-Path $Map",
-            "activate_mobile_map.py",
+            "generate_original_props.py", "validate_asset_provenance.py",
+            "Test-Path $Map", "activate_mobile_map.py",
         ):
             self.assertIn(term, source)
 
