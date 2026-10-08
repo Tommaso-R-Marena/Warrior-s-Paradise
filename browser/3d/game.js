@@ -367,19 +367,40 @@ function shoot(){
  beep(player.weapon==="smg"?165:player.weapon==="lmg"?95:120,.045);
 }
 let audioCtx=null;
+const reportBuffers=new Map();
 function beep(freq,dur){
  try{
   const Constructor=window.AudioContext||window.webkitAudioContext;
   if(!Constructor)return;
   audioCtx=audioCtx||new Constructor();
   if(audioCtx.state==="suspended")audioCtx.resume();
-  const osc=audioCtx.createOscillator(),gain=audioCtx.createGain(),now=audioCtx.currentTime;
-  osc.type="sawtooth";osc.frequency.setValueAtTime(freq,now);
-  osc.frequency.exponentialRampToValueAtTime(freq*.55,now+dur);
-  gain.gain.setValueAtTime(.042,now);
-  gain.gain.exponentialRampToValueAtTime(.001,now+dur);
-  osc.connect(gain);gain.connect(audioCtx.destination);
-  osc.start(now);osc.stop(now+dur);
+  const now=audioCtx.currentTime;
+  const key=freq+"-"+dur;
+  let buffer=reportBuffers.get(key);
+  if(!buffer){
+   const seconds=Math.max(.085,dur*3),rate=audioCtx.sampleRate;
+   buffer=audioCtx.createBuffer(1,Math.ceil(seconds*rate),rate);
+   const data=buffer.getChannelData(0);
+   for(let i=0;i<data.length;i++){
+    const decay=Math.exp(-6*i/data.length);
+    data[i]=(Math.random()*2-1)*decay;
+   }
+   reportBuffers.set(key,buffer);
+  }
+  const report=audioCtx.createBufferSource(),filter=audioCtx.createBiquadFilter();
+  report.buffer=buffer;
+  filter.type="lowpass";filter.frequency.value=freq<90?460:freq<130?1300:1700;
+  const noiseGain=audioCtx.createGain();
+  noiseGain.gain.setValueAtTime(freq<90?.25:.15,now);
+  noiseGain.gain.exponentialRampToValueAtTime(.001,now+buffer.duration);
+  report.connect(filter);filter.connect(noiseGain);noiseGain.connect(audioCtx.destination);
+  const thump=audioCtx.createOscillator(),bass=audioCtx.createGain();
+  thump.type="triangle";thump.frequency.setValueAtTime(freq,now);
+  thump.frequency.exponentialRampToValueAtTime(Math.max(25,freq*.42),now+dur);
+  bass.gain.setValueAtTime(.15,now);
+  bass.gain.exponentialRampToValueAtTime(.001,now+dur);
+  thump.connect(bass);bass.connect(audioCtx.destination);
+  report.start(now);thump.start(now);thump.stop(now+dur);
  }catch{}
 }
 function reload(){
@@ -430,7 +451,7 @@ function updateCombinedArms(dt){
     const da=Math.hypot(ally.x-strike.x,ally.z-strike.z);
     if(da<6)ally.hp-=44*(1-da/6);
    }
-   msg("ARTILLERY IMPACT",.9);
+   beep(50,.32);msg("ARTILLERY IMPACT",.9);
    if(player.hp<=0){end(false);return;}
   }
  }
@@ -503,7 +524,7 @@ function simulate(dt){
     player.hp-=Math.max(0,38*(1-Math.hypot(g.x-player.x,g.z-player.z)/4));
     player.hurt=1;
    }
-   msg("EXPLOSION",.7);
+   beep(62,.25);msg("EXPLOSION",.7);
   }
  }
  game.grenades=game.grenades.filter(g=>g.life>-.3);
