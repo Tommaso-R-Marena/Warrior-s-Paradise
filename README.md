@@ -8,11 +8,11 @@ The repository now contains a substantial code-side combined-arms battle rather 
 
 **Playable browser edition:** [warriors-paradise-field.pages.dev](https://warriors-paradise-field.pages.dev/) (separate free-hosted static skirmish; no Unreal download or dedicated GPU).
 
-A smaller, fully client-side browser adaptation is in `browser/`. It uses CPU-first Canvas 2D software raycasting with a three-objective single-player battlefield, enemy AI, squadmates, rifle combat, medkits, reloads, switchable soldiers, minimap, desktop mouse/keyboard controls and phone touch controls. It is **not** the complete Unreal Engine combined-arms build and has not been tested on every device.
+A smaller, fully client-side browser adaptation is in `browser/`. It now features procedural stone/timber/terrain textures, atmospheric sky and vegetation, improved infantry/weapon sprites, role-specific **Lee-Enfield, Sten and Bren** weapon handling, ADS, frag/smoke grenades (including smoke LOS), squad follow/hold orders, cached grid navigation, capture objectives, and dedicated phone touch controls. It remains a CPU-first **2.5D** game, **not** the complete Unreal Engine combined-arms build or a feature-parity alternative to a mature 3D multiplayer mobile shooter. It has not yet been performance-tested across physical phones.
 
 Play locally from the repository by opening `browser/index.html`; or with Python 3 run `python tools/serve_field_edition.py` and visit `http://127.0.0.1:8000/`. Use `--lan` to play on a phone on the same trusted Wi-Fi. Full instructions: [browser/README.md](browser/README.md).
 
-The UE5.8 game remains the higher-fidelity native project below; it requires an actual UE build and suitable rendering hardware (integrated graphics may work at Minimal, but has not yet been benchmarked).
+The UE5.8 game remains the higher-fidelity native project below; it requires an actual UE build and suitable rendering hardware (integrated graphics may work at Minimal, but has not yet been benchmarked). Android Mobile Forward overrides and Android Low/Mid/High device profiles are now staged under `Config/`; native packaging, mobile touch HUD and device profiling remain open (see [mobile release plan](docs/MOBILE_RELEASE_PLAN.md)).
 
 ## Implemented gameplay
 
