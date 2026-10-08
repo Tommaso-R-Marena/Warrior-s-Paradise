@@ -488,7 +488,11 @@
   function renderWorld() {
     const p=game.player; if(!p)return;
     const w=canvas.width,h=canvas.height,horizon=Math.floor(h*.53);
-    if(visuals){visuals.setup();visuals.background(ctx,w,h,p.angle,game.time);}
+    if(visuals){
+      visuals.setup();
+      visuals.background(ctx,w,h,p.angle,game.time);
+      visuals.floor(ctx,w,h,p.x,p.y,p.angle,!!p.ads,game.quality);
+    }
     else{
       const sky=ctx.createLinearGradient(0,0,0,horizon);
       sky.addColorStop(0,"#51686b");sky.addColorStop(1,"#c0ad80");
