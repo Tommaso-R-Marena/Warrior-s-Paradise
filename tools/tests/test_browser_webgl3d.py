@@ -57,7 +57,8 @@ class WebGL3DTests(unittest.TestCase):
             self.skipTest("Node is required to execute the WebGL2 runtime mock")
         for file in (GAME3D / "game.js", GAME3D / "asset-loader.js",
                      ROOT / "tools/tests/browser_webgl3d_smoke.js",
-                     ROOT / "tools/tests/browser_cc0_glb_smoke.js"):
+                     ROOT / "tools/tests/browser_cc0_glb_smoke.js",
+                     ROOT / "tools/tests/browser_cc0_scene_smoke.js"):
             p = subprocess.run([node, "--check", str(file)], capture_output=True,
                                text=True, timeout=15, check=False)
             self.assertEqual(p.returncode, 0, p.stdout+p.stderr)
@@ -69,6 +70,10 @@ class WebGL3DTests(unittest.TestCase):
                              capture_output=True, text=True, timeout=30, check=False)
         self.assertEqual(art.returncode, 0, art.stdout + art.stderr)
         self.assertIn("PASS CC0 GLB source and geometry:", art.stdout)
+        scene = subprocess.run([node, str(ROOT / "tools/tests/browser_cc0_scene_smoke.js")],
+                               capture_output=True, text=True, timeout=50, check=False)
+        self.assertEqual(scene.returncode, 0, scene.stdout + scene.stderr)
+        self.assertIn("PASS CC0 integrated WebGL2 scenes:", scene.stdout)
 
 
 if __name__ == "__main__":
