@@ -368,6 +368,7 @@ function reset(){
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
   name,{ammo:w.capacity,reserve:w.reserve}
  ]));
+ if(window.WPBattleSound)window.WPBattleSound.boot();
  $("menu").hidden=true;input.fire=false;
  msg("CAPTURE THE FORWARD FARM",2);hud();resize();
 }
@@ -444,7 +445,8 @@ function shoot(){
   game.hitmarker=.12;
   if(target.hp<=0){game.kills++;msg("TARGET DOWN",.85);}
  }
- beep(player.weapon==="smg"?165:player.weapon==="lmg"?95:120,.045);
+ if(window.WPBattleSound)window.WPBattleSound.shot(player.weapon,player.x,player.z,player);
+ else beep(player.weapon==="smg"?165:player.weapon==="lmg"?95:120,.045);
 }
 let audioCtx=null;
 const reportBuffers=new Map();
@@ -531,7 +533,9 @@ function updateCombinedArms(dt){
     const da=Math.hypot(ally.x-strike.x,ally.z-strike.z);
     if(da<6)ally.hp-=44*(1-da/6);
    }
-   beep(50,.32);msg("ARTILLERY IMPACT",.9);
+   if(window.WPBattleSound)window.WPBattleSound.explosion(strike.x,strike.z,player);
+ else beep(50,.32);
+ msg("ARTILLERY IMPACT",.9);
    if(player.hp<=0){end(false);return;}
   }
  }
@@ -562,6 +566,7 @@ function updateCombinedArms(dt){
    if(a.ammo<=0){a.reload=1.9;continue;}
    a.ammo--;a.cd=.42+rnd()*.48;
    addTracer(a.x,a.z,victim.x,victim.z,"friendly");
+  if(window.WPBattleSound)window.WPBattleSound.shot("rifle",a.x,a.z,player);
    if(rnd()<(.49-near*.006)){
     victim.hp-=19+rnd()*10;victim.hit=.18;victim.suppression=1.2;
     if(victim.hp<=0){game.kills++;msg("FIRETEAM: TARGET DOWN",.9);}
@@ -588,7 +593,13 @@ function simulate(dt){
  const pace=(input.keys.ShiftLeft&&!player.crouch?6.6:4.5)*(player.aim?.72:1)*(player.crouch?.57:1);
  const x=-Math.sin(player.yaw)*forward-Math.cos(player.yaw)*strafe;
  const z=Math.cos(player.yaw)*forward-Math.sin(player.yaw)*strafe;
+ const oldX=player.x,oldZ=player.z;
  [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
+ if(window.WPBattleSound){
+  const speed=Math.hypot(player.x-oldX,player.z-oldZ)/Math.max(.001,dt);
+  window.WPBattleSound.footsteps(game.elapsed,speed,player.crouch);
+  window.WPBattleSound.distant(game.elapsed);
+ }
  if(input.fire)shoot();
  for(const g of game.grenades){
   if(g.life<=0)continue;
@@ -607,7 +618,9 @@ function simulate(dt){
     player.hp-=Math.max(0,38*(1-Math.hypot(g.x-player.x,g.z-player.z)/4));
     player.hurt=1;
    }
-   beep(62,.25);msg("EXPLOSION",.7);
+   if(window.WPBattleSound)window.WPBattleSound.explosion(g.x,g.z,player);
+ else beep(62,.25);
+ msg("EXPLOSION",.7);
   }
  }
  game.grenades=game.grenades.filter(g=>g.life>-.3);
@@ -640,6 +653,7 @@ function simulate(dt){
    const hit=Math.max(.05,(.51-d*.013)*(victim.crouch?.52:1)*difficulty*
      (e.suppression>.2?.4:1));
    addTracer(e.x,e.z,victim.x,victim.z,"hostile");
+   if(window.WPBattleSound)window.WPBattleSound.shot("rifle",e.x,e.z,player);
    if(rnd()<hit){
     const damage=(6+rnd()*7)*(game.difficulty==="veteran"?1.2:game.difficulty==="recruit"?.7:1);
     victim.hp-=damage;
@@ -882,6 +896,14 @@ if("serviceWorker" in navigator && location.protocol!=="file:"){
   navigator.serviceWorker.register("../sw.js").catch(()=>{});
 }
 $("deploy").addEventListener("click",reset);
+$("sound-toggle").addEventListener("click",()=>{
+ const sound=window.WPBattleSound;
+ if(!sound)return;
+ const next=!sound.state().muted;
+ sound.setMuted(next);
+ $("sound-toggle").textContent=next?"SOUND: OFF":"SOUND: ON";
+ $("sound-toggle").setAttribute("aria-pressed",String(next));
+});
 $("quality").value=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent||"")?"low":"medium";
 game.quality=$("quality").value;
 spawnEnemies();resize();hud();loadLicensedScenery();
