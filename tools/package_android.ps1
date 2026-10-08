@@ -37,6 +37,19 @@ if ($LASTEXITCODE -ne 0) {
     throw "Production 3D art readiness gate failed. Import/verify assets before Shipping."
 }
 
+if ($Configuration -eq "Shipping") {
+    # Prevent a seemingly successful package containing only the engine Entry
+    # map, even if imported art is present elsewhere on disk.
+    $AuthoredMap = Join-Path $RepoRoot "Content\WarriorParadise\Maps\WP_NormandyMobile.umap"
+    $DefaultEngine = Get-Content (Join-Path $RepoRoot "Config\DefaultEngine.ini") -Raw
+    if (-not (Test-Path $AuthoredMap)) {
+        throw "Shipping blocked: no authored Normandy .umap. Run tools/prepare_native_mobile.ps1."
+    }
+    if (-not $DefaultEngine.Contains("GameDefaultMap=/Game/WarriorParadise/Maps/WP_NormandyMobile")) {
+        throw "Shipping blocked: game still starts in Entry, not the authored Normandy map."
+    }
+}
+
 if ($ValidateOnly) {
     Write-Host "[WP ANDROID] Source preflight passed; NO Unreal build or APK was produced."
     exit 0
