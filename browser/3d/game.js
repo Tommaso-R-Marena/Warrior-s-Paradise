@@ -787,12 +787,20 @@ function simulate(dt){
 }
 function dynamicGeometry(){
  const m=new Geometry();
- const art=window.WPBattleArt,skinner=window.WPSkinning,viewDist=25;
+ const art=window.WPBattleArt,skinner=window.WPSkinning;
  let skinnedActors=0,skinnedTriangles=0;
- const maxActors=game.quality==="high"?10:game.quality==="medium"?6:2;
+ // Save low-end phones: limit both shading work and CPU-skinned scene actors.
+ const limit=game.quality==="high"?8:game.quality==="medium"?5:2;
+ const maxActors=game.fps<24?1:game.fps<35?Math.min(limit,3):limit;
+ const viewDist=game.quality==="low"?14:game.quality==="medium"?23:28;
+ const candidates=[
+  ...game.allies.filter(a=>a.hp>0),
+  ...game.enemies.filter(e=>e.hp>0)
+ ].sort((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)-Math.hypot(b.x-player.x,b.z-player.z));
+ const selected=new Set(candidates.slice(0,maxActors));
  const present=(actor,team)=>{
   const distance=Math.hypot(actor.x-player.x,actor.z-player.z);
-  if(rig.ready&&skinner&&distance<viewDist&&skinnedActors<maxActors){
+  if(rig.ready&&skinner&&distance<viewDist&&selected.has(actor)){
    const drawn=skinner.append(m,rig.model,actor,team,game.elapsed);
    if(art?.fieldEquipment)art.fieldEquipment(m,actor,team);
    skinnedActors++;skinnedTriangles+=drawn.triangles;
