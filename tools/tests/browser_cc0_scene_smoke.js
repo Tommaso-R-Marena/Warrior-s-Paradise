@@ -9,11 +9,14 @@ const vm=require("node:vm");
 const root=path.resolve(__dirname,"../../browser/3d");
 const loader=fs.readFileSync(path.join(root,"asset-loader.js"),"utf8");
 const gameplay=fs.readFileSync(path.join(root,"game.js"),"utf8");
-const names=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
-const models=Object.fromEntries(names.map(name=>[name,
- fs.readFileSync(path.join(root,"assets/kenney",name+".glb.b64"),"utf8")]));
+const kenney=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
+const quaternius=["barn","chicken_coop","windmill","well"];
+const models=Object.fromEntries([
+ ...kenney.map(name=>["kenney/"+name,fs.readFileSync(path.join(root,"assets/kenney",name+".glb.b64"),"utf8")]),
+ ...quaternius.map(name=>["quaternius/"+name,fs.readFileSync(path.join(root,"assets/quaternius",name+".glb.b64"),"utf8")])
+]);
 
-async function scenario(shouldLoad){
+async function scenario(shouldLoad,farms=true){
  const raf=[],els={},stats={draws:0,uploads:0},events={};
  const gl={VERTEX_SHADER:1,FRAGMENT_SHADER:2,COMPILE_STATUS:3,LINK_STATUS:4,
   DEPTH_TEST:5,ARRAY_BUFFER:6,STATIC_DRAW:7,DYNAMIC_DRAW:8,FLOAT:9,
@@ -43,9 +46,10 @@ async function scenario(shouldLoad){
  const sources=[];
  const fetchMock=async url=>{
   sources.push(url);
-  const match=/^\.\/assets\/kenney\/([a-z0-9-]+)\.glb\.b64$/.exec(url);
-  if(!shouldLoad||!match||!models[match[1]])return {ok:false,status:404};
-  return {ok:true,text:async()=>models[match[1]]};
+  const match=/^\.\/assets\/(kenney|quaternius)\/([a-z0-9-]+)\.glb\.b64$/.exec(url);
+  if(!shouldLoad||!match||(match[1]==="quaternius"&&!farms)||
+    !models[match[1]+"/"+match[2]])return {ok:false,status:404};
+  return {ok:true,text:async()=>models[match[1]+"/"+match[2]]};
  };
  const sandbox={window:win,document:doc,navigator:{userAgent:"Desktop Chrome"},
   location:{protocol:"https:"},requestAnimationFrame:fn=>raf.push(fn),fetch:fetchMock,
@@ -58,16 +62,20 @@ async function scenario(shouldLoad){
  for(let i=0;i<120;i++){
   await Promise.resolve();
   const state=win.WP3DDiagnostics();
-  if(state.assetsLoaded||state.assetError)break;
+  if(shouldLoad?(state.assetsLoaded&&(state.buildingsLoaded===4||state.farmError)):state.assetError)break;
  }
  const before=win.WP3DDiagnostics();
  assert.equal(before.assetsLoaded,shouldLoad,JSON.stringify(before));
- assert.equal(sources.length,names.length);
- assert(sources.every(url=>url.startsWith("./assets/kenney/")));
+ assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length:kenney.length);
+ assert(sources.every(url=>/^\.\/assets\/(kenney|quaternius)\//.test(url)));
  if(shouldLoad){
-  assert(before.assetInstances>=140&&before.assetTriangles>10000);
-  assert(before.geometryTriangles>18000);
-  assert.match(el("assetstatus").textContent,/CC0 SCENERY READY/);
+  assert(before.assetInstances>=157&&before.assetTriangles>15000);
+  assert(before.geometryTriangles>24000);
+  assert.equal(before.buildingsLoaded,farms?4:0);
+  if(farms){
+   assert.equal(before.assetInstances,161);
+   assert.match(el("assetstatus").textContent,/IMPORTED MODELS/);
+  }else assert.match(before.farmError,/404/);
  }else{
   assert(before.assetError.includes("404"));
   assert.equal(before.assetInstances,0);
@@ -85,6 +93,7 @@ async function scenario(shouldLoad){
   props:before.assetInstances,draws:stats.draws};
 }
 (async()=>{
- const loaded=await scenario(true),fallback=await scenario(false);
- console.log("PASS CC0 integrated WebGL2 scenes:",JSON.stringify({loaded,fallback}));
+ const loaded=await scenario(true),farmFallback=await scenario(true,false),
+  fallback=await scenario(false);
+ console.log("PASS CC0 integrated WebGL2 scenes:",JSON.stringify({loaded,farmFallback,fallback}));
 })().catch(error=>{console.error(error);process.exitCode=1});
