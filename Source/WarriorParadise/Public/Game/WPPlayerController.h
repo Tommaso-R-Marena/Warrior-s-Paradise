@@ -6,6 +6,7 @@
 #include "WPPlayerController.generated.h"
 
 class AWPSoldierCharacter;
+class APawn;
 
 enum class EWPMobileGesture : uint8
 {
@@ -65,13 +66,15 @@ private:
     FWPMobileFingerState Fingers[MobileFingerCount];
     FVector2D MobileMoveStick = FVector2D::ZeroVector;
     FVector2D MobileMoveAnchor = FVector2D(.17f, .74f); // Pixels after Tick
-    TWeakObjectPtr<AWPSoldierCharacter> TrackedSoldier;
+    TWeakObjectPtr<APawn> TrackedMobilePawn;
 
     void CycleGraphicsPreset();
     void RunGraphicsAutoBenchmark();
     void ProcessMobileTouch(float DeltaSeconds);
-    void ReleaseAllMobileActions(AWPSoldierCharacter* PreviousSoldier);
+    void ReleaseAllMobileActions(APawn* PreviousPawn);
     void HandleTouchBegin(FWPMobileFingerState& State, const FVector2D& Position,
-                          const FVector2D& ViewSize, AWPSoldierCharacter* Soldier);
-    void HandleTouchEnd(FWPMobileFingerState& State, AWPSoldierCharacter* Soldier);
+                          const FVector2D& ViewSize, APawn* ControlledPawn);
+    void HandleTouchEnd(FWPMobileFingerState& State, APawn* ControlledPawn);
+    void DispatchMobileAction(APawn* Pawn, EWPMobileButton Button, bool bPressed);
+    EWPMobileMode GetMobileMode(const APawn* Pawn) const;
 };
