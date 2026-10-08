@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "creator": "Kenney",
+  "pack": "Animated Characters Survivors",
+  "source": "https://kenney.nl/assets/animated-characters-survivors",
+  "license": "CC0-1.0",
+  "upstream_repository": "Papyszoo/CC0-Public-Domain-Models",
+  "upstream_glb": "packs/kenney-animated-characters-survivors/models/character_medium/character_medium.glb",
+  "upstream_git_blob_sha1": "d1dda9c5161bed0cf875b63126cec83cac11c6a6",
+  "upstream_sha256": "4a70fa73db518eb7430d65966fcf0622b021de3113b7f146ef995c08a6b6d607",
+  "source_bytes": 95592,
+  "mesh": "1 skinned humanoid",
+  "joints": 58,
+  "embedded_animations": 0,
+  "notes": "Stylized contemporary survivor, not historically accurate WWII uniform. Skeleton gait/crouch is authored at runtime. Fallback original game meshes remain."
+}
