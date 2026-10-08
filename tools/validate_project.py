@@ -16,6 +16,9 @@ REQUIRED = [
     "tools/tests/test_native_mobile_content_pipeline.py",
     "tools/tests/test_asset_provenance.py",
     "tools/tests/test_original_3d_props.py",
+    "tools/tests/test_original_mobile_materials.py",
+    "tools/assets/generate_original_materials.py",
+    "tools/android_device_smoke.ps1",
     "tools/assets/validate_asset_provenance.py",
     "tools/assets/generate_original_props.py",
     "tools/assets/activate_mobile_map.py",
@@ -374,6 +377,12 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("tools/assets/generate_original_materials.py", "def maps_for("),
+        ("tools/assets/generate_original_materials.py", "def create("),
+        ("Content/Python/wp_build_cc0_materials.py", "/Game/External/wp_original/materials"),
+        ("tools/prepare_native_mobile.ps1", "generate_original_materials.py"),
+        ("tools/android_device_smoke.ps1", "ProcessSurvived"),
+        ("Config/Android/AndroidEngine.ini", "TargetSDKVersion=35"),
         ("tools/assets/validate_asset_provenance.py", "def validate_root("),
         ("tools/assets/validate_asset_provenance.py", "Untracked importable source"),
         ("tools/assets/generate_original_props.py", "def generate("),
