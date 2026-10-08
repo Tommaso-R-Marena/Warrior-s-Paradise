@@ -1,5 +1,18 @@
 # Third-Party / Free Asset Register
 
+## Tactical presentation and CC0 Quaternius farm update (October 2026)
+
+The Cloudflare game now includes a period-informed **3D infantry and weapon presentation layer** (`browser/3d/battle-art.js`) and a new **spatial WebAudio sound engine** (`browser/3d/battle-audio.js`). Infantry visual poses vary with movement, direction, suppression and crouching, and three separately shaped first-person weapons distinguish the Lee-Enfield, Sten and Bren. Sounds are *original procedural synthesis* (weapon report, battlefield wind, distant fire, footsteps and nearby artillery); they are **not professionally recorded sound samples**. Audio starts only after deployment and has a mute control. Procedural terrain shading adds grass, masonry and brick variation plus atmospheric fog; it is **not a full PBR texture pipeline**.
+
+**Genuine additional CC0 art:** 4 Quaternius Farm Buildings models (barn, chicken coop, windmill, well) are bundled alongside the existing 5 Kenney Nature models. The Quaternius GLBs are placed in the actual Normandy map, have simplified physical collision and line-of-sight occlusion, and are not fetched from a third party at runtime. Farm asset failure preserves the Kenney world; total asset failure preserves the original procedural level. The `browser/3d/assets/quaternius/MANIFEST.json` file pins license, creator, source SHA-256 and Git blob identities.
+
+**Licensing:** Kenney and Quaternius source assets are CC0; all new authored game geometry and procedural sound code are original. No restricted Fab, Sonniss or questionable Sketchfab media is distributed. Inspect all attribution/provenance entries before public distribution.
+
+**Still not shipped:** skinned and retargeted imported WWII character meshes and motion-captured clips; authentic licensed weapon meshes; photo-based terrain PBR normal/roughness/albedo maps; recorded cinematic explosions and Foley. These require a texture-capable glTF/skinning loader, source-file clearance, size optimization, and real-device QA. These should not be described as complete.
+
+Tests: `node tools/tests/browser_visual_audio_smoke.js`, `node tools/tests/browser_quaternius_glb_smoke.js`, and `node tools/tests/browser_cc0_scene_smoke.js`.
+
+
 This document is a human-readable companion to `tools/assets/free_asset_catalog.json`.
 
 ## Self-hosted Cloudflare browser scenery — Kenney CC0
