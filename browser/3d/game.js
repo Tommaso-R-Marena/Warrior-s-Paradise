@@ -131,6 +131,7 @@ const boxes=[
 ];
 const flags=[{x:-12,z:-5,title:"FARM APPROACH"},{x:11,z:11,title:"CROSSROADS"},{x:31,z:29,title:"RADIO POST"}];
 const treeTrunks=[];
+const artStructures=[];
 const covers=flags.flatMap(f=>[
  [f.x-6,f.z-7,4,.85],[f.x+6,f.z+6,4,.85],
  [f.x-6,f.z+5,.85,4],[f.x+5,f.z-6,.85,4]
@@ -138,13 +139,14 @@ const covers=flags.flatMap(f=>[
 const within=(x,z,b,pad=0)=>Math.abs(x-b[0])<(b[2]/2+pad)&&Math.abs(z-b[1])<(b[3]/2+pad);
 function blocked(x,z,r=.42){
  if(x<-47+r||x>47-r||z<-47+r||z>47-r)return true;
- return boxes.some(b=>within(x,z,b,r))||covers.some(b=>within(x,z,b,r))||treeTrunks.some(t=>Math.hypot(x-t.x,z-t.z)<t.radius+r);
+ return boxes.some(b=>within(x,z,b,r))||covers.some(b=>within(x,z,b,r))||artStructures.some(b=>within(x,z,b,r))||treeTrunks.some(t=>Math.hypot(x-t.x,z-t.z)<t.radius+r);
 }
 function openLOS(ax,az,bx,bz){
  const d=Math.hypot(bx-ax,bz-az),segments=Math.ceil(d/.55);
  for(let i=1;i<segments;i++){
   const t=i/segments;if(boxes.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.12))||
       covers.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
+      artStructures.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
       treeTrunks.some(tr=>Math.hypot(ax+(bx-ax)*t-tr.x,az+(bz-az)*t-tr.z)<tr.radius))return false;
  }
  return true;
@@ -295,6 +297,41 @@ function loadLicensedScenery(){
   }
   upload(staticMesh,world.data);
   scenery.loaded=true;scenery.instances=copies;scenery.triangles=added;
+  // Independent CC0 farm import: if a model is missing, keep the Kenney scene.
+  const farm=["barn","chicken_coop","windmill","well"];
+  kit.loadModels(farm.map(name=>({name,url:"./assets/quaternius/"+name+".glb.b64"}))).then(buildings=>{
+   const extras=new Geometry();
+   extras.data=world.data.slice();
+   const sites=[
+    {name:"barn",x:-37,z:30,scale:.96},
+    {name:"chicken_coop",x:-35,z:-5,scale:1.25},
+    {name:"windmill",x:41,z:40,scale:.84},
+    {name:"well",x:13,z:-38,scale:1.2}
+   ];
+   const colliders=[];
+   let ntri=0;
+   for(const site of sites){
+    const model=buildings[site.name];
+    ntri+=kit.appendInstances(extras,model,[[site.x,0,site.z,site.scale,0]]);
+    const min=model.min,max=model.max;
+    colliders.push([
+     site.x+(max[0]+min[0])*site.scale*.5,
+     site.z+(max[2]+min[2])*site.scale*.5,
+     (max[0]-min[0])*site.scale,(max[2]-min[2])*site.scale
+    ]);
+   }
+   upload(staticMesh,extras.data);
+   artStructures.push(...colliders);
+   scenery.instances+=sites.length;scenery.triangles+=ntri;
+   scenery.buildings=sites.length;
+   if($("assetstatus"))$("assetstatus").textContent=
+     "KENNEY + QUATERNIUS CC0 · "+scenery.instances+" IMPORTED MODELS";
+  }).catch(err=>{
+   scenery.farmError=String(err);
+   if($("assetstatus"))$("assetstatus").textContent=
+     "KENNEY CC0 SCENERY READY · FARM PACK OPTIONAL";
+  });
+  
   if($("assetstatus"))$("assetstatus").textContent="KENNEY CC0 SCENERY READY · "+copies+" PLACED ASSETS";
  }).catch(err=>{
   scenery.error=String(err);
@@ -913,7 +950,8 @@ window.WP3DDiagnostics=()=>({
  playerHp:player.hp,weapon:player.weapon,renderSize:[canvas.width,canvas.height],
  renderer:"WebGL2",geometryTriangles:staticMesh.count/3,
   assetInstances:scenery.instances,assetTriangles:scenery.triangles,assetsLoaded:scenery.loaded,
-  assetError:scenery.error,
+  assetError:scenery.error,buildingsLoaded:scenery.buildings||0,
+  farmError:scenery.farmError||"",
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length
