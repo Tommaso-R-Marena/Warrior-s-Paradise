@@ -14,6 +14,21 @@ Play locally from the repository by opening `browser/index.html`; or with Python
 
 The UE5.8 game remains the higher-fidelity native project below; it requires an actual UE build and suitable rendering hardware (integrated graphics may work at Minimal, but has not yet been benchmarked). Android Mobile Forward overrides and Android Low/Mid/High device profiles are now staged under `Config/`; native packaging, mobile touch HUD and device profiling remain open (see [mobile release plan](docs/MOBILE_RELEASE_PLAN.md)).
 
+## Native 3D Android development — commercial-quality target
+
+The real Unreal Engine 5.8 project now includes a **native multitouch HUD and input controller** for infantry, tanks, light vehicles and gun emplacements. It has 13 context-sensitive infantry actions, twin-thumb movement/look, tank turret and cannon/MG controls, an Android ARM64 landscape setup, mobile-specific rendering profile handling and a dedicated Android packaging/preflight script.
+
+From a configured UE5.8 Windows machine:
+
+```powershell
+.\tools\package_android.ps1 -ValidateOnly
+.\tools\package_android.ps1 -TextureFormat ETC2 -Configuration Development
+```
+
+**Current hard limitation:** the GitHub repository still has **zero checked-in Unreal maps/assets** (`.umap`/`.uasset`), 3D models, audio or textures. Its visuals remain generated primitive stand-ins until the existing licensed-asset import system is populated. This source has **not** yet been compiled, cooked or tested on a phone. A native APK or commercial-grade presentation is *not* ready.
+
+See [native Android production and build guide](docs/NATIVE_ANDROID_PRODUCTION.md), [art inventory audit](tools/assets/audit_mobile_content.py), and [mobile parity scorecard](docs/MOBILE_PARITY_SCORECARD.md) for the exact graphics, animation, gameplay and quality gates required before parity can be claimed. The separately hosted browser Field Edition is a deliberately smaller 2.5D game, not this native mobile build.
+
 ## Implemented gameplay
 
 ### Infantry and weapon feel
