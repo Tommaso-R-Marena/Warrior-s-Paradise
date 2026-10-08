@@ -31,7 +31,7 @@ for(const [name,expected] of specs){
  const record=manifest.assets.find(m=>m.name===name);
  assert(record,"Missing provenance for "+name);
  assert.equal(buf.length,record.original_bytes);
- const blobHash=crypto.createHash("sha1").update("blob "+buf.length+"\\0").update(buf).digest("hex");
+ const blobHash=crypto.createHash("sha1").update("blob "+buf.length+"\0").update(buf).digest("hex");
  assert.equal(blobHash,record.source_git_blob_sha1,"Vendored upstream asset changed: "+name);
  totalBytes+=buf.length;
  const ab=buf.buffer.slice(buf.byteOffset,buf.byteOffset+buf.byteLength);
