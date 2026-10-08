@@ -22,7 +22,7 @@ const VS=[
 const FS=[
  "#version 300 es","precision highp float;",
  "in vec3 vColor;in vec3 vPos;in vec3 vNorm;",
- "uniform vec3 uEye;out vec4 outColor;",
+ "uniform vec3 uEye;uniform float uDetailLevel;out vec4 outColor;",
  "float hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
  "float valnoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);",
  "return mix(mix(hash21(i),hash21(i+vec2(1.,0.)),f.x),",
@@ -34,22 +34,25 @@ const FS=[
  "float distanceToEye=distance(vPos,uEye);",
  "float nearby=1.-smoothstep(25.,85.,distanceToEye);",
  "vec2 surface=abs(n.y)>.61?vPos.xz:(abs(n.x)>abs(n.z)?vPos.zy:vPos.xy);",
- "float large=valnoise(surface*1.3),fine=valnoise(surface*13.);",
+ "float large=.5,fine=.5;",
+ "if(uDetailLevel>.02){large=valnoise(surface*1.3);fine=valnoise(surface*13.);}",
  "float mottled=(large-.5)*.23+(fine-.5)*.13;",
  "float grass=step(vColor.r+.035,vColor.g)*step(vColor.b,vColor.g+.08);",
  "float earth=1.-grass;",
  "vec3 rgb=vColor*exposure;",
- "rgb*=1.+mottled*nearby;",
- "float grassFibers=hash21(floor(surface*19.));",
- "rgb*=1.+grass*nearby*(grassFibers-.5)*.16;",
+ "rgb*=1.+mottled*nearby*uDetailLevel;",
+ "float grassFibers=.5;",
+ "if(uDetailLevel>.02)grassFibers=hash21(floor(surface*19.));",
+ "rgb*=1.+grass*nearby*(grassFibers-.5)*.16*uDetailLevel;",
  "float vertical=1.-step(.65,abs(n.y));",
  "float bricky=vertical*step(.075,vColor.r-vColor.g)*(1.-grass);",
  "vec2 brickCoord=vec2(surface.x+floor(surface.y*1.4)*.31,surface.y)*vec2(2.7,3.3);",
  "vec2 joint=fract(brickCoord);",
  "float mortar=1.-step(.075,min(min(joint.x,1.-joint.x),min(joint.y,1.-joint.y)));",
  "rgb*=1.-.23*bricky*mortar*nearby;",
- "float rough=earth*vertical*hash21(floor(surface*23.));",
- "rgb*=1.+.07*(rough-.5)*nearby;",
+ "float rough=.5;",
+ "if(uDetailLevel>.02)rough=earth*vertical*hash21(floor(surface*23.));",
+ "rgb*=1.+.07*(rough-.5)*nearby*uDetailLevel;",
  "float fog=1.-exp(-pow(max(0.,distanceToEye-18.)/78.,1.45));",
  "rgb=mix(rgb,vec3(.58,.66,.64),min(.81,fog));",
  "rgb=(rgb*(2.51*rgb+.03))/(rgb*(2.43*rgb+.59)+.14);",
@@ -73,6 +76,7 @@ try{
 gl.useProgram(program);
 const vpLocation=gl.getUniformLocation(program,"uVP");
 const eyeLocation=gl.getUniformLocation(program,"uEye");
+const detailLocation=gl.getUniformLocation(program,"uDetailLevel");
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(.58,.68,.73,1);
 function mesh(dynamic=false){
@@ -841,6 +845,8 @@ function render(){
  const view=lookAt(eye,[eye[0]+forward[0],eye[1]+forward[1],eye[2]+forward[2]]);
  gl.uniformMatrix4fv(vpLocation,false,mul(proj,view));
  gl.uniform3fv(eyeLocation,new Float32Array(eye));
+ // Uniform detail tier keeps shader variants consistent; mobile low skips noise.
+ if(gl.uniform1f)gl.uniform1f(detailLocation,game.quality==="low"?0:game.quality==="medium"?.58:1);
  draw(staticMesh);
  upload(liveMesh,dynamicGeometry());
  draw(liveMesh);
