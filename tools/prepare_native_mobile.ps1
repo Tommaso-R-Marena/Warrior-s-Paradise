@@ -24,8 +24,13 @@ if (Test-Path $Map) {
 if (-not (Test-Path (Join-Path $Root "ExternalAssets\asset-lock.json"))) {
     throw "ExternalAssets/asset-lock.json is missing: acquire and record licensed art first."
 }
+$Validator = Join-Path $Root "tools\assets\validate_asset_provenance.py"
+& python $Validator --root $Root
+if ($LASTEXITCODE -ne 0) {
+    throw "Art integrity failed; refusing Unreal import."
+}
 
-Write-Host "[WP MOBILE ART] Import assets, build materials and generate map"
+Write-Host "[WP MOBILE ART] Import verified assets, build materials and generate map"
 & $Executable $Project "-ExecutePythonScript=$Script" "-unattended" "-nop4" "-stdout" "-FullStdOutLogOutput"
 if ($LASTEXITCODE -ne 0) { throw "Unreal Editor art pipeline failed. Inspect editor logs." }
 if (-not (Test-Path $Map)) {
