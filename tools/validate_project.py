@@ -17,6 +17,7 @@ REQUIRED = [
     "Config/Android/AndroidEngine.ini",
     "Config/DefaultDeviceProfiles.ini",
     "docs/MOBILE_RELEASE_PLAN.md",
+    "docs/MOBILE_PARITY_SCORECARD.md",
     "tools/serve_field_edition.py",
     "browser/index.html",
     "browser/game.js",
@@ -358,6 +359,16 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("browser/index.html", "id=\"battlefield\""),
+        ("browser/index.html", "id=\"mode\""),
+        ("browser/index.html", "id=\"sensitivity\""),
+        ("browser/game.js", "function spawnDefenseWave("),
+        ("browser/game.js", "function resupplyBetweenWaves("),
+        ("browser/game.js", "function adjustRendering("),
+        ("browser/game.js", "function playGunshot("),
+        ("browser/game.js", "function friendlyLaneClear("),
+        ("browser/visuals.js", "function floor("),
+        ("browser/sw.js", "wp-field-edition-v3"),
         ("browser/game.js", "function moveSmart("),
         ("browser/game.js", "function throwGrenade("),
         ("browser/game.js", "function setADS("),
