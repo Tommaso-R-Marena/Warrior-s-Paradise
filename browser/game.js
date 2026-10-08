@@ -162,7 +162,8 @@
     battlefield: "farm", difficulty: "regular", mode: "assault",
     wave: 0, waveCooldown: 0, defenderSpawns: [], defensePosition:{x:3.5,y:3.4},
     shake: 0, flash: 0, hitTime: 0, message: "", messageTimer: 0,
-    quality: dom.quality.value, fps: 30, fpsTime: 0, lastFrame: 0, raf: 0
+    quality: dom.quality.value, fps: 30, fpsTime: 0, lastFrame: 0, raf: 0,
+    adaptiveScale: 1, adaptTimer: 0
   };
   const input = { keys: Object.create(null), fire: false, joyX: 0, joyY: 0, lookX: 0 };
   let audio = null;
@@ -259,6 +260,7 @@
     setBattlefield(dom.battlefield.value);
     game.phase="playing"; game.objective=0;game.cap=0;
     game.kills=0;game.time=0;game.shake=0;game.hitTime=0;game.flash=0;
+    game.adaptiveScale=1;game.adaptTimer=0;
     game.objects=[];game.thrown=[];game.particles=[];game.ord="FOLLOW";
     makeSoldiers();
     notify(MAPS[game.battlefield].label+
@@ -276,7 +278,8 @@
     dom.modal.classList.add("shown");
     dom.title.innerHTML = win ? "MISSION<br><em>COMPLETE</em>" : "SQUAD<br><em>LOST</em>";
     dom.copy.textContent = win
-      ? "All three sectors secure. " + game.kills + " enemies neutralized. Your team held the line."
+      ? (game.mode==="defense"?"Five waves survived. ":"All three sectors secure. ")+
+        game.kills+" enemies neutralized. Your team held the line."
       : "The squad has been eliminated. Redeploy and try a different approach.";
     dom.start.innerHTML = "REDEPLOY <span>→</span>";
     beep(win ? 640 : 95, .42, .07, win ? "triangle" : "sawtooth");
@@ -693,17 +696,40 @@
         (dist2(p,o)<2.05?(game.cap*100|0)+"% CAPTURED":o.description):"MISSION COMPLETE";
     }
     dom.squad.textContent="SQUAD · "+game.friends.filter(f=>f.alive).length+" ALIVE · "+game.kills+" KILLS";
-    dom.qualityLabel.textContent=game.quality.toUpperCase()+" · "+Math.round(game.fps)+" FPS";
+    dom.qualityLabel.textContent=game.quality.toUpperCase()+" "+
+      Math.round(game.adaptiveScale*100)+"% · "+Math.round(game.fps)+" FPS";
     dom.hit.style.opacity=game.hitTime>0?".95":"0";
     dom.damage.style.opacity=String(game.flash*.8);
   }
   function resizeRender(){
-    const width=window.innerWidth, height=window.innerHeight;
-    const cap=game.quality==="sharp"?440:game.quality==="balanced"?330:225;
-    const ratio=clamp(height/Math.max(1,width),.43,1.8);
-    game.screenW=cap;game.screenH=clamp(Math.round(cap*ratio),100,475);
+    const ratio=clamp(window.innerHeight/Math.max(1,window.innerWidth),.35,2.5);
+    const widths={eco:225,balanced:330,sharp:440,ultra:640};
+    const pixelBudgets={eco:112000,balanced:225000,sharp:420000,ultra:650000};
+    const widthGoal=(widths[game.quality]||225)*game.adaptiveScale;
+    const pixelBudget=(pixelBudgets[game.quality]||112000)*game.adaptiveScale*game.adaptiveScale;
+    const actualWidth=Math.min(widthGoal,Math.sqrt(pixelBudget/ratio));
+    game.screenW=Math.max(144,Math.round(actualWidth));
+    game.screenH=Math.max(90,Math.round(game.screenW*ratio));
     canvas.width=game.screenW;canvas.height=game.screenH;
     ctx.imageSmoothingEnabled=false;
+  }
+  function adjustRendering(dt){
+    // A capped adaptive scaler avoids runaway heat on weak devices and
+    // preserves the selected quality tier. Runs at most every ~3 seconds.
+    if(game.phase!=="playing")return;
+    game.adaptTimer+=dt;
+    if(game.adaptTimer<3)return;
+    game.adaptTimer=0;
+    const target={eco:28,balanced:35,sharp:45,ultra:58}[game.quality]||28;
+    const next=game.fps<target*.72
+      ? Math.max(.65,game.adaptiveScale-.10)
+      : game.fps>target*.95
+        ? Math.min(1,game.adaptiveScale+.06)
+        : game.adaptiveScale;
+    if(Math.abs(next-game.adaptiveScale)>.015){
+      game.adaptiveScale=next;
+      resizeRender();
+    }
   }
   let zBuffer=[];
   const shade=(rgb,f)=>"rgb("+rgb.map(v=>Math.round(clamp(v*f,0,255))).join(",")+")";
@@ -874,16 +900,19 @@
   function tick(now){
     requestAnimationFrame(tick);
     if(!game.lastFrame)game.lastFrame=now;
-    const interval=1000/(game.quality==="eco"?28:game.quality==="balanced"?35:45);
+    const targetFps={eco:28,balanced:35,sharp:45,ultra:58}[game.quality]||28;
+    const interval=1000/targetFps;
     if(now-game.lastFrame<interval)return;
     const elapsed=now-game.lastFrame;game.lastFrame=now;
     const dt=Math.min(.055,elapsed/1000);
     game.fps=game.fps*.94+(1000/elapsed)*.06;
+    adjustRendering(dt);
     if(game.phase==="playing")update(dt);
     if(game.player&&game.phase!=="menu")renderWorld();
   }
   function setQuality(value){
-    game.quality=["eco","balanced","sharp"].includes(value)?value:"eco";
+    game.quality=["eco","balanced","sharp","ultra"].includes(value)?value:"eco";
+    game.adaptiveScale=1;game.adaptTimer=0;
     resizeRender();updateHud();
   }
   dom.quality.addEventListener("change",()=>setQuality(dom.quality.value));
