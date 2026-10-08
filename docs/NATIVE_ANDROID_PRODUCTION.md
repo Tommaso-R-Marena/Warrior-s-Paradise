@@ -29,18 +29,31 @@ python tools/assets/audit_mobile_content.py --strict
 
 The `--strict` check is intentionally expected to fail until the art inventory is populated, and cannot independently judge the quality or licenses of imported models. The source assets should be introduced through `tools/setup_free_content.ps1`, `Content/Python/wp_import_external_assets.py` and the existing presentation binding profile workflow. Follow `docs/THIRD_PARTY_ASSETS.md` and keep the source/license lock.
 
+## Original mobile starter scenery (new)
+
+`tools/assets/generate_original_props.py` creates **eight actual, deterministic OBJ meshes**, each with a basic material palette: trees, bushes/hedges, rubble, wooden crates, fences, barrels, stumps and stacked sandbags. These are authored by code in this repository, without any purchased packs or third-party mesh licenses. They are **low-poly blockout/starter art**, not photorealistic soldiers, vehicles or commercial parity.
+
+```powershell
+python tools/assets/generate_original_props.py
+python tools/assets/validate_asset_provenance.py
+```
+
+The generator populates `ExternalAssets/wp_original/` and merges provenance records and file checksums into `ExternalAssets/asset-lock.json`. Existing unrelated records are kept. Re-running is deterministic; previously hand-edited generated meshes are **not silently overwritten**. The art integrity check rejects changes, symlinks, escaping paths and untracked importable files.
+
+`tools/prepare_native_mobile.ps1` now runs original-art generation and validation automatically before launching Unreal. Newly obtained manual art also needs explicit lock entries containing license information, an HTTPS source URL, a relative file path, file size and a SHA-256 or MD5 digest. This **technical** validation cannot independently determine whether a third-party license actually permits use, so licenses must still be reviewed.
+
 ## End-to-end licensed 3D level assembly (new)
 
 The editor pipeline now prepares a real Unreal **Normandy mobile map** from locally obtained, license-tracked environmental meshes. The generator is non-destructive: it refuses to replace an existing map, leaves the actual battlefield's collision, spawn points, objectives and lighting in the runtime `AWPBattlefieldDirector`, and places decorative imported meshes around the playable combat routes.
 
-1. Obtain usable CC0/free models, textures and environmental sounds under their actual licenses. The existing tool supports `python tools/assets/bootstrap_free_assets.py --polyhaven --resolution 2k` and `--direct-cc0` as appropriate, and writes `ExternalAssets/asset-lock.json`. Poly Haven's CC0 license permits commercial use; other Fab/Epic content may have different redistribution conditions.
+1. Start with the generated original meshes, or add higher-quality CC0/free models, textures and environmental sounds under their actual licenses. The existing tool supports `python tools/assets/bootstrap_free_assets.py --polyhaven --resolution 2k` and `--direct-cc0` as appropriate, and writes `ExternalAssets/asset-lock.json`. Poly Haven's CC0 license permits commercial use; other Fab/Epic content may have different redistribution conditions.
 2. On a Windows machine with **Unreal 5.8 compiled successfully**, run:
 
    ```powershell
    .\tools\prepare_native_mobile.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.8"
    ```
 
-   This starts the Unreal Editor Python workflow: imported source files → PBR CC0 materials → existing presentation bindings → saved `/Game/WarriorParadise/Maps/WP_NormandyMobile`. Because the repository currently has **zero** imported assets, this stage is not yet runnable to completion.
+   This creates the project-original meshes, verifies every source file, and runs the Unreal Editor Python workflow: imported source files → PBR CC0 materials → existing presentation bindings → saved `/Game/WarriorParadise/Maps/WP_NormandyMobile`. It is designed to operate without third-party model downloads for a low-poly test map. **It has not been executed in a real Unreal 5.8 editor here**, and still lacks production soldiers, vehicle art, animations and professional materials.
 
 3. Open the generated level in Unreal Editor and correct mesh scale, pivot placement, material assignments, animation references, mobile shader/collision bugs and lighting as necessary. `WP_ALLOW_BLOCKOUT=1` is **only** for a deliberately incomplete no-art experiment.
 4. Preview the level activation:
