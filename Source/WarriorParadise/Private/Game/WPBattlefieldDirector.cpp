@@ -1040,6 +1040,9 @@ void AWPBattlefieldDirector::BuildAtmosphere()
                 "m_SimpleVolumetricCloud_Inst"));
     }
 
+#if !(PLATFORM_ANDROID || PLATFORM_IOS)
+    // Mobile Forward does not benefit from expensive volumetric cloud
+    // simulation on mid-range devices. Preserve desktop atmosphere.
     if (CloudMaterial)
     {
         if (AVolumetricCloud* Cloud =
@@ -1059,6 +1062,8 @@ void AWPBattlefieldDirector::BuildAtmosphere()
             }
         }
     }
+
+#endif
 
     ASkyLight* Sky = GetWorld()->SpawnActor<ASkyLight>();
 
@@ -1081,8 +1086,13 @@ void AWPBattlefieldDirector::BuildAtmosphere()
         }
         else
         {
+#if PLATFORM_ANDROID || PLATFORM_IOS
+            // Avoid a continuous sky capture in the mobile render path.
+            SkyComponent->SetRealTimeCapture(false);
+#else
             SkyComponent->SetRealTimeCapture(true);
             SkyComponent->RecaptureSky();
+#endif
         }
     }
 
@@ -1095,7 +1105,11 @@ void AWPBattlefieldDirector::BuildAtmosphere()
         Fog->GetComponent()->SetFogHeightFalloff(0.22f);
         Fog->GetComponent()->SetFogInscatteringColor(
             FLinearColor::Black);
+#if PLATFORM_ANDROID || PLATFORM_IOS
+        Fog->GetComponent()->SetVolumetricFog(false);
+#else
         Fog->GetComponent()->SetVolumetricFog(true);
+#endif
     }
 }
 
