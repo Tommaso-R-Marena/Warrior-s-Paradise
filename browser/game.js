@@ -134,12 +134,14 @@
     game.objects=[];game.thrown=[];game.particles=[];game.ord="FOLLOW";
     makeSoldiers();notify("FOLLOW THE MARKER • SECURE SECTOR ONE",4);
     dom.modal.classList.remove("shown");
+    dom.aimRing.classList.remove("aimed");dom.crosshair.classList.remove("aimed");
     resizeRender();
     updateHud();
     try { if (!coarse && canvas.requestPointerLock) canvas.requestPointerLock(); } catch {}
   }
   function gameEnd(win) {
     game.phase = win ? "won" : "lost"; input.fire = false;
+    dom.aimRing.classList.remove("aimed");dom.crosshair.classList.remove("aimed");
     document.exitPointerLock?.();
     dom.modal.classList.add("shown");
     dom.title.innerHTML = win ? "MISSION<br><em>COMPLETE</em>" : "SQUAD<br><em>LOST</em>";
@@ -285,7 +287,7 @@
   }
   function setADS(active) {
     const p=game.player;
-    if(!p||game.phase!=="playing")return;
+    if(!p||(!active&&game.phase!=="playing"&&game.phase!=="paused"))return;
     p.ads=!!active;
     dom.aimRing.classList[p.ads?"add":"remove"]("aimed");
     dom.crosshair.classList[p.ads?"add":"remove"]("aimed");
@@ -677,21 +679,27 @@
     if(e.code==="KeyR")reload();
     if(e.code==="KeyV"||e.code==="KeyH")heal();
     if(e.code==="KeyQ")switchSoldier();
-    if(e.code==="Escape"){game.phase="paused";dom.modal.classList.add("shown");dom.title.innerHTML="FIELD<br><em>PAUSED</em>";dom.copy.textContent="Resume the battle or redeploy. Progress is kept until you restart.";dom.start.innerHTML="RESUME <span>→</span>";document.exitPointerLock?.();}
+    if(e.code==="KeyF")throwGrenade("frag");
+    if(e.code==="KeyT")throwGrenade("smoke");
+    if(e.code==="KeyX")toggleOrders();
+    if(e.code==="KeyC")toggleCrouch();
+    if(e.code==="Escape"){setADS(false);game.phase="paused";dom.modal.classList.add("shown");dom.title.innerHTML="FIELD<br><em>PAUSED</em>";dom.copy.textContent="Resume the battle or redeploy. Progress is kept until you restart.";dom.start.innerHTML="RESUME <span>→</span>";document.exitPointerLock?.();}
     if(e.code==="Space")fire();
   });
   document.addEventListener("keyup",(e)=>{input.keys[e.code]=false;});
   document.addEventListener("visibilitychange",()=>{
-    if(document.hidden){input.fire=false;input.joyX=0;input.joyY=0;}
+    if(document.hidden){input.fire=false;input.joyX=0;input.joyY=0;setADS(false);}
   });
   document.addEventListener("mousemove",(e)=>{
-    if(document.pointerLockElement===canvas&&game.phase==="playing")game.player.angle+=e.movementX*.0028;
+    if(document.pointerLockElement===canvas&&game.phase==="playing")game.player.angle+=e.movementX*(game.player.ads?.00145:.0028);
   });
   canvas.addEventListener("pointerdown",(e)=>{
     if(coarse||game.phase!=="playing")return;
     if(e.button===0){input.fire=true;try{canvas.requestPointerLock?.();}catch{}}
+    if(e.button===2)setADS(true);
   });
-  document.addEventListener("pointerup",()=>{input.fire=false;});
+  document.addEventListener("pointerup",(e)=>{if(e.button===0)input.fire=false;if(e.button===2)setADS(false);});
+  canvas.addEventListener("contextmenu",(e)=>e.preventDefault());
   document.addEventListener("pointerlockchange",()=>{if(document.pointerLockElement!==canvas)input.fire=false;});
   const movePad=$("move-pad"),knob=$("move-knob"),lookZone=$("look-zone");
   const touches={move:null,look:null,lastLookX:0};
@@ -708,7 +716,7 @@
   const clearMove=(e)=>{if(e.pointerId!==touches.move)return;touches.move=null;input.joyX=0;input.joyY=0;knob.style.left="";knob.style.top="";};
   movePad.addEventListener("pointerup",clearMove);movePad.addEventListener("pointercancel",clearMove);
   lookZone.addEventListener("pointerdown",(e)=>{if(touches.look!==null)return;touches.look=e.pointerId;touches.lastLookX=e.clientX;lookZone.setPointerCapture(e.pointerId);});
-  lookZone.addEventListener("pointermove",(e)=>{if(touches.look!==e.pointerId||!game.player||game.phase!=="playing")return;const delta=clamp(e.clientX-touches.lastLookX,-55,55);touches.lastLookX=e.clientX;game.player.angle+=delta*.008;});
+  lookZone.addEventListener("pointermove",(e)=>{if(touches.look!==e.pointerId||!game.player||game.phase!=="playing")return;const delta=clamp(e.clientX-touches.lastLookX,-55,55);touches.lastLookX=e.clientX;game.player.angle+=delta*(game.player.ads?.0044:.008);});
   const clearLook=(e)=>{if(e.pointerId===touches.look)touches.look=null;};
   lookZone.addEventListener("pointerup",clearLook);lookZone.addEventListener("pointercancel",clearLook);
   function button(id,down,up){
@@ -721,6 +729,10 @@
   button("reload-btn",reload);
   button("heal-btn",heal);
   button("switch-btn",switchSoldier);
+  button("ads-btn",()=>setADS(true),()=>setADS(false));
+  button("frag-btn",()=>throwGrenade("frag"));
+  button("smoke-btn",()=>throwGrenade("smoke"));
+  button("order-btn",toggleOrders);
   setQuality(dom.quality.value);
   requestAnimationFrame(tick);
   if("serviceWorker" in navigator&&location.protocol!=="file:"){
