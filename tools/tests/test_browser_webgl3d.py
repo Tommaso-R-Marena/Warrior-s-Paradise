@@ -64,7 +64,8 @@ class WebGL3DTests(unittest.TestCase):
                      GAME3D / "battle-art.js", GAME3D / "battle-audio.js",
                      GAME3D / "skinning.js", GAME3D / "material-atlas.js",
                      ROOT / "tools/tests/browser_skinning_smoke.js",
-                     ROOT / "tools/tests/browser_material_atlas_smoke.js"):
+                     ROOT / "tools/tests/browser_material_atlas_smoke.js",
+                     ROOT / "tools/tests/browser_recorded_audio_smoke.js"):
             p = subprocess.run([node, "--check", str(file)], capture_output=True,
                                text=True, timeout=15, check=False)
             self.assertEqual(p.returncode, 0, p.stdout+p.stderr)
@@ -85,6 +86,7 @@ class WebGL3DTests(unittest.TestCase):
             ("browser_visual_audio_smoke.js", "PASS visual and spatial audio systems:"),
             ("browser_skinning_smoke.js", "PASS genuine CC0 58-bone glTF skinning:"),
             ("browser_material_atlas_smoke.js", "PASS tiled PBR material atlas:"),
+            ("browser_recorded_audio_smoke.js", "PASS CC0 recorded battlefield audio:"),
         ]:
             p = subprocess.run([node, str(ROOT / "tools/tests" / path)],
                                capture_output=True, text=True, timeout=50, check=False)
