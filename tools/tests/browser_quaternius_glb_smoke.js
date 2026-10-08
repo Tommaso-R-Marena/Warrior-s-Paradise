@@ -5,7 +5,8 @@ const root=path.resolve(__dirname,"../../browser/3d");
 const manifest=JSON.parse(fs.readFileSync(path.join(root,"assets/quaternius/MANIFEST.json"),"utf8"));
 assert.equal(manifest.license,"CC0-1.0");
 assert.equal(manifest.assets.length,4);
-const env={window:{},TextDecoder,atob:s=>Buffer.from(s,"base64").toString("binary"),fetch};
+const env={window:{},TextDecoder,Uint8Array,ArrayBuffer,DataView,
+ atob:s=>Buffer.from(s,"base64").toString("binary")};
 vm.runInNewContext(fs.readFileSync(path.join(root,"asset-loader.js"),"utf8"),env);
 const kit=env.window.WPAssetKit;
 let size=0,triangles=0;
