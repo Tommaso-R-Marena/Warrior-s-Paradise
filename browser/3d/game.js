@@ -231,9 +231,10 @@ const WEAPONS={
  lmg:{name:"BREN",capacity:30,reserve:100,damage:32,delay:.16,reload:2.7,spread:.038}
 };
 const player={x:-36,z:-33,yaw:-.77,pitch:0,hp:100,maxHp:100,ammo:10,reserve:70,
- weapon:"rifle",cd:0,reload:0,aim:false,frags:2,med:2,hurt:0};
+ weapon:"rifle",cd:0,reload:0,aim:false,crouch:false,frags:2,med:2,hurt:0};
 const game={playing:false,finished:false,sector:0,capture:0,kills:0,elapsed:0,
- enemies:[],grenades:[],flash:0,quality:"medium",fps:45,scaler:1,adapt:0};
+ enemies:[],allies:[],grenades:[],tracers:[],strikes:[],support:1,order:"follow",
+ flash:0,quality:"medium",difficulty:"regular",fps:45,scaler:1,adapt:0};
 const input={keys:{},fire:false,joyX:0,joyY:0,movePointer:null,lookPointer:null,
  lookX:0,lookY:0};
 function spawnEnemies(){
@@ -251,15 +252,39 @@ function spawnEnemies(){
   }
  }
 }
+function spawnAllies(){
+ game.allies=[{x:-37.5,z:-35,hp:85,cd:1.1,ammo:16,reload:0,phase:0},
+             {x:-33.5,z:-35,hp:85,cd:1.5,ammo:16,reload:0,phase:2.1}];
+}
+function addTracer(ax,az,bx,bz,team){
+ game.tracers.push({ax,az,bx,bz,life:.12,team});
+ if(game.tracers.length>30)game.tracers.shift();
+}
+function orderSquad(){
+ if(!game.playing)return;
+ game.order=game.order==="follow"?"hold":"follow";
+ msg("FIRETEAM: "+(game.order==="follow"?"FOLLOW AND COVER":"HOLD POSITION"),1.6);
+}
+function callArtillery(){
+ if(!game.playing||game.support<1)return;
+ game.support--;
+ const f=flags[game.sector];
+ const tx=player.x-Math.sin(player.yaw)*18,tz=player.z+Math.cos(player.yaw)*18;
+ const x=f&&Math.hypot(tx-f.x,tz-f.z)<8?f.x:Math.max(-44,Math.min(44,tx));
+ const z=f&&Math.hypot(tx-f.x,tz-f.z)<8?f.z:Math.max(-44,Math.min(44,tz));
+ game.strikes.push({x,z,life:2.1,detonated:false});
+ msg("ARTILLERY INBOUND · KEEP CLEAR",2);
+}
 function reset(){
  const type=$("weapon").value in WEAPONS?$("weapon").value:"rifle";
  const weapon=WEAPONS[type];
  Object.assign(player,{x:-36,z:-33,yaw:-.78,pitch:0,hp:100,maxHp:100,
   ammo:weapon.capacity,reserve:weapon.reserve,weapon:type,cd:0,reload:0,aim:false,
-  frags:2,med:2,hurt:0});
+  frags:2,med:2,hurt:0,crouch:false});
  Object.assign(game,{playing:true,finished:false,sector:0,capture:0,kills:0,elapsed:0,
-  grenades:[],flash:0,quality:$("quality").value,scaler:1,adapt:0});
- spawnEnemies();$("menu").hidden=true;input.fire=false;
+  grenades:[],tracers:[],strikes:[],support:1,order:"follow",flash:0,
+   difficulty:$("difficulty").value,quality:$("quality").value,scaler:1,adapt:0});
+ spawnEnemies();spawnAllies();$("menu").hidden=true;input.fire=false;
  msg("CAPTURE THE FORWARD FARM",2);hud();resize();
 }
 function msg(s,time=1.4){$("status").textContent=s;game.notice=time;}
@@ -316,8 +341,11 @@ function shoot(){
  }
  player.yaw+=(rnd()-.5)*w.spread*.32;
  player.pitch=Math.max(-.7,Math.min(.7,player.pitch+w.spread*(player.aim?.2:.6)));
+ const range=target?Math.hypot(target.x-player.x,target.z-player.z):38;
+ addTracer(player.x,player.z,player.x+sx*range,player.z+sz*range,"friendly");
  if(target){
   target.hp-=w.damage*(.9+rnd()*.2);target.hit=.25;
+  target.suppression=1.7;
   $("hitmarker").classList.add("visible");
   game.hitmarker=.12;
   if(target.hp<=0){game.kills++;msg("TARGET DOWN",.85);}
@@ -350,7 +378,7 @@ function setAim(v){player.aim=game.playing&&!!v;}
 function grenade(){
  if(!game.playing||player.frags<=0)return;
  player.frags--;
- const reach=7.2,dx=Math.sin(player.yaw),dz=Math.cos(player.yaw);
+ const reach=9.5,dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw);
  const x=player.x+dx*reach,z=player.z+dz*reach;
  game.grenades.push({x,z,life:1.25});msg("FRAG OUT!",1.1);
 }
@@ -381,7 +409,7 @@ function simulate(dt){
  let strafe=(input.keys.KeyD?1:0)-(input.keys.KeyA?1:0)+input.joyX;
  const mag=Math.hypot(forward,strafe);
  if(mag>1){forward/=mag;strafe/=mag;}
- const pace=(input.keys.ShiftLeft?6.6:4.5)*(player.aim?.72:1);
+ const pace=(input.keys.ShiftLeft&&!player.crouch?6.6:4.5)*(player.aim?.72:1)*(player.crouch?.57:1);
  const x=-Math.sin(player.yaw)*forward-Math.cos(player.yaw)*strafe;
  const z=Math.cos(player.yaw)*forward-Math.sin(player.yaw)*strafe;
  [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
@@ -517,7 +545,7 @@ function resize(){
 function render(){
  if(!lastWidth||!lastHeight)return;
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
- const eye=[player.x,1.67,player.z],forward=[
+ const eye=[player.x,player.crouch?1.02:1.67,player.z],forward=[
   -Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),
   Math.cos(player.yaw)*Math.cos(player.pitch)];
  const proj=perspective((player.aim?42:73)*Math.PI/180,lastWidth/lastHeight,.065,120);
@@ -559,6 +587,9 @@ document.addEventListener("keydown",e=>{
  if(e.code==="KeyV")heal();
  if(e.code==="KeyG")grenade();
  if(e.code==="KeyQ")swap();
+ if(e.code==="KeyX")orderSquad();
+ if(e.code==="KeyT")callArtillery();
+ if(e.code==="KeyC")player.crouch=!player.crouch;
  if(e.code==="Escape"){input.fire=false;setAim(false);if(document.pointerLockElement)document.exitPointerLock();}
 });
 document.addEventListener("keyup",e=>{input.keys[e.code]=false;});
@@ -630,6 +661,8 @@ function button(id,on,off){
 button("fire",()=>{input.fire=true;},()=>{input.fire=false;});
 button("aim",()=>setAim(true),()=>setAim(false));
 button("reload",reload);button("grenade",grenade);button("heal",heal);button("swap",swap);
+button("orders",orderSquad);button("support",callArtillery);
+button("crouch",()=>{player.crouch=!player.crouch;});
 // Register the root offline cache from the 3D subdirectory too. The
 // existing PWA service worker will cache these assets after first use.
 if("serviceWorker" in navigator && location.protocol!=="file:"){
@@ -643,7 +676,10 @@ spawnEnemies();resize();hud();
 window.WP3DDiagnostics=()=>({
  sector:game.sector,alive:game.enemies.filter(e=>e.hp>0).length,
  playerHp:player.hp,weapon:player.weapon,renderSize:[canvas.width,canvas.height],
- renderer:"WebGL2",geometryTriangles:staticMesh.count/3
+ renderer:"WebGL2",geometryTriangles:staticMesh.count/3,
+  alliesAlive:game.allies.filter(a=>a.hp>0).length,
+  difficulty:game.difficulty,squadOrder:game.order,support:game.support,
+  activeTracers:game.tracers.length
 });
 requestAnimationFrame(frame);
 })();
