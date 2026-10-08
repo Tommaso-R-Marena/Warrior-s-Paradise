@@ -31,14 +31,15 @@ The `--strict` check is intentionally expected to fail until the art inventory i
 
 ## Original mobile starter scenery (new)
 
-`tools/assets/generate_original_props.py` creates **eight actual, deterministic OBJ meshes**, each with a basic material palette: trees, bushes/hedges, rubble, wooden crates, fences, barrels, stumps and stacked sandbags. These are authored by code in this repository, without any purchased packs or third-party mesh licenses. They are **low-poly blockout/starter art**, not photorealistic soldiers, vehicles or commercial parity.
+`tools/assets/generate_original_props.py` creates **eight actual, deterministic OBJ meshes**, each with a basic material palette: trees, bushes/hedges, rubble, wooden crates, fences, barrels, stumps and stacked sandbags. `tools/assets/generate_original_materials.py` additionally creates **nine tileable RGB/normal/roughness sets** for ground mud, grass, gravel, masonry, brick, plaster, old timber, roof tile and rusted metal. The Unreal material builder now supports the original texture folders alongside Poly Haven. These assets are original code-generated starter art, not photorealistic soldiers, vehicles or commercial parity.
 
 ```powershell
 python tools/assets/generate_original_props.py
+python tools/assets/generate_original_materials.py
 python tools/assets/validate_asset_provenance.py
 ```
 
-The generator populates `ExternalAssets/wp_original/` and merges provenance records and file checksums into `ExternalAssets/asset-lock.json`. Existing unrelated records are kept. Re-running is deterministic; previously hand-edited generated meshes are **not silently overwritten**. The art integrity check rejects changes, symlinks, escaping paths and untracked importable files.
+Both generators populate `ExternalAssets/wp_original/` and merge provenance records and file checksums into `ExternalAssets/asset-lock.json`. Existing unrelated records are kept. Re-running is deterministic; previously hand-edited generated meshes or textures are **not silently overwritten**. The integrity check rejects changes, symlinks, escaping paths and untracked importable files. Normal and roughness source textures are generated as standards-compliant PNGs with edge-matched repeating boundaries.
 
 `tools/prepare_native_mobile.ps1` now runs original-art generation and validation automatically before launching Unreal. Newly obtained manual art also needs explicit lock entries containing license information, an HTTPS source URL, a relative file path, file size and a SHA-256 or MD5 digest. This **technical** validation cannot independently determine whether a third-party license actually permits use, so licenses must still be reviewed.
 
@@ -95,6 +96,18 @@ For a compatible high-end phone, `-TextureFormat ASTC` can provide a different c
 ```
 
 Shipping additionally requires a real package ID you control, signing credentials, Google Play requirements and source/license QA. The checked-in `com.example.warriorsparadise` package name is **development-only** and must be replaced. The strict art inventory gate stops empty-content Shipping builds, but does not certify artistic quality.
+
+## Physical Android launch and early stability verification
+
+After Unreal has compiled/cooked a real Android Development build, connect a phone through USB debugging and use Android SDK platform-tools:
+
+```powershell
+.\tools\android_device_smoke.ps1 -ApkPath "Saved\AndroidBuilds\ETC2\YourActualBuild.apk" -PackageName "com.example.warriorsparadise" -DurationSeconds 90
+```
+
+Provide the **actual** produced APK path and package name. The script installs the app using adb, launches it using Android's launcher intent (without hardcoding an Unreal Java activity name), samples the process for early exits and writes JSON diagnostics plus logcat to `Saved/AndroidDeviceSmoke/`. On a machine with several connected phones, supply `-Serial`. If the game closes unexpectedly, the test fails. Generic unrelated device-wide crash lines are only warnings, not proof that this game crashed.
+
+**This is not an FPS, shader correctness, UI or thermal benchmark.** A successful launch must be followed by human gameplay tests and a sustained profiling session on representative Android hardware.
 
 ## Native mobile control scheme
 
