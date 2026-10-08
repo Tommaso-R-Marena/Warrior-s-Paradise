@@ -51,7 +51,7 @@ def validate_root(root: Path) -> dict:
         raise AssetIntegrityError(f"Invalid provenance JSON: {exc}") from exc
 
     assets = lock.get("assets") if isinstance(lock, dict) else None
-    if lock.get("schema_version") != 1 or not isinstance(assets, dict) or not assets:
+    if not isinstance(lock, dict) or lock.get("schema_version") != 1 or not isinstance(assets, dict) or not assets:
         raise AssetIntegrityError("Provenance lock requires schema_version=1 and nonempty assets object")
 
     errors: list[str] = []
@@ -69,8 +69,13 @@ def validate_root(root: Path) -> dict:
             errors.append(f"{key}: explicit applicable license is required")
         if not isinstance(source_url, str) or not source_url.startswith("https://"):
             errors.append(f"{key}: HTTPS source URL is required")
-        records = asset.get("files", []) + asset.get("extracted_files", [])
-        if not isinstance(records, list) or not records:
+        primary = asset.get("files", [])
+        extracted = asset.get("extracted_files", [])
+        if not isinstance(primary, list) or not isinstance(extracted, list):
+            errors.append(f"{key}: file lists must be arrays")
+            continue
+        records = primary + extracted
+        if not records:
             errors.append(f"{key}: no recorded files")
             continue
 
