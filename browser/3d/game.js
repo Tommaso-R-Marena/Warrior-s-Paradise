@@ -197,7 +197,7 @@ const WEAPONS={
  smg:{name:"STEN",capacity:32,reserve:128,damage:19,delay:.10,reload:1.6,spread:.052},
  lmg:{name:"BREN",capacity:30,reserve:100,damage:32,delay:.16,reload:2.7,spread:.038}
 };
-const player={x:-36,z:-33,yaw:.77,pitch:0,hp:100,maxHp:100,ammo:10,reserve:70,
+const player={x:-36,z:-33,yaw:-.77,pitch:0,hp:100,maxHp:100,ammo:10,reserve:70,
  weapon:"rifle",cd:0,reload:0,aim:false,frags:2,med:2,hurt:0};
 const game={playing:false,finished:false,sector:0,capture:0,kills:0,elapsed:0,
  enemies:[],grenades:[],flash:0,quality:"medium",fps:45,scaler:1,adapt:0};
@@ -221,7 +221,7 @@ function spawnEnemies(){
 function reset(){
  const type=$("weapon").value in WEAPONS?$("weapon").value:"rifle";
  const weapon=WEAPONS[type];
- Object.assign(player,{x:-36,z:-33,yaw:.78,pitch:0,hp:100,maxHp:100,
+ Object.assign(player,{x:-36,z:-33,yaw:-.78,pitch:0,hp:100,maxHp:100,
   ammo:weapon.capacity,reserve:weapon.reserve,weapon:type,cd:0,reload:0,aim:false,
   frags:2,med:2,hurt:0});
  Object.assign(game,{playing:true,finished:false,sector:0,capture:0,kills:0,elapsed:0,
@@ -264,11 +264,12 @@ function shoot(){
  const w=WEAPONS[player.weapon];
  if(player.ammo<=0){reload();return;}
  player.cd=w.delay;player.ammo--;game.flash=.13;
- const dx=Math.sin(player.yaw),dz=Math.cos(player.yaw);
+ const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw);
  const accuracy=player.aim?.32:1;
- const shift=(rnd()-.5)*w.spread*accuracy + (input.joyX||input.joyY?.015:0);
+ const moving=Math.hypot(input.joyX,input.joyY)>.1;
+ const shift=(rnd()-.5)*(w.spread*accuracy+(moving?.012:0));
  const shootYaw=player.yaw+shift;
- const sx=Math.sin(shootYaw),sz=Math.cos(shootYaw);
+ const sx=-Math.sin(shootYaw),sz=Math.cos(shootYaw);
  let target=null,nearest=70;
  for(const e of game.enemies){
   if(e.hp<=0)continue;
@@ -348,7 +349,7 @@ function simulate(dt){
  const mag=Math.hypot(forward,strafe);
  if(mag>1){forward/=mag;strafe/=mag;}
  const pace=(input.keys.ShiftLeft?6.6:4.5)*(player.aim?.72:1);
- const x=Math.sin(player.yaw)*forward+Math.cos(player.yaw)*strafe;
+ const x=-Math.sin(player.yaw)*forward-Math.cos(player.yaw)*strafe;
  const z=Math.cos(player.yaw)*forward-Math.sin(player.yaw)*strafe;
  [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
  if(input.fire)shoot();
@@ -413,7 +414,7 @@ function dynamicGeometry(){
  const m=new Geometry();
  for(const e of game.enemies){
   if(e.hp<=0)continue;
-  const angle=Math.atan2(player.x-e.x,player.z-e.z);
+  const angle=Math.atan2(e.x-player.x,player.z-e.z);
   const color=e.hit>0?COLORS.red:COLORS.dark;
   m.box(e.x,1.34,e.z,.74,1.16,.44,color,angle);
   m.box(e.x,2.10,e.z,.49,.45,.45,COLORS.skin,angle);
@@ -430,8 +431,8 @@ function dynamicGeometry(){
   }else m.box(g.x,.22,g.z,.25,.4,.25,COLORS.metal);
  }
  // Real weapon geometry attached to the perspective camera (no sprite sheet).
- const forward=[Math.sin(player.yaw),Math.cos(player.yaw)];
- const right=[Math.cos(player.yaw),-Math.sin(player.yaw)];
+ const forward=[-Math.sin(player.yaw),Math.cos(player.yaw)];
+ const right=[-Math.cos(player.yaw),-Math.sin(player.yaw)];
  const shift=player.aim?.12:.38;
  const px=player.x+forward[0]*.65+right[0]*shift;
  const pz=player.z+forward[1]*.65+right[1]*shift;
@@ -484,7 +485,7 @@ function render(){
  if(!lastWidth||!lastHeight)return;
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  const eye=[player.x,1.67,player.z],forward=[
-  Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),
+  -Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),
   Math.cos(player.yaw)*Math.cos(player.pitch)];
  const proj=perspective((player.aim?42:73)*Math.PI/180,lastWidth/lastHeight,.065,120);
  const view=lookAt(eye,[eye[0]+forward[0],eye[1]+forward[1],eye[2]+forward[2]]);
