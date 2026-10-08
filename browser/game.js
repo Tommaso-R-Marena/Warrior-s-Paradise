@@ -8,7 +8,7 @@
   const visuals = window.WPVisuals || null;
   const dom = {
     modal: $("modal"), start: $("start-btn"), title: $("modal-title"),
-    battlefield: $("battlefield"), difficulty: $("difficulty"),
+    battlefield: $("battlefield"), difficulty: $("difficulty"), mode: $("mode"),
     copy: $("modal-copy"), quality: $("quality"), qualityLabel: $("quality-label"),
     health: $("health"), ammo: $("ammo"), medkits: $("medkits"),
     grenades: $("grenades"), loadout: $("loadout"), aimRing: $("aim-ring"), crosshair: $("crosshair"),
@@ -159,7 +159,8 @@
     phase: "menu", player: null, friends: [], enemies: [], objects: [],
     objective: 0, cap: 0, kills: 0, time: 0, screenW: 288, screenH: 170,
     ord: "FOLLOW", thrown: [], particles: [],
-    battlefield: "farm", difficulty: "regular", defenderSpawns: [],
+    battlefield: "farm", difficulty: "regular", mode: "assault",
+    wave: 0, waveCooldown: 0, defenderSpawns: [], defensePosition:{x:3.5,y:3.4},
     shake: 0, flash: 0, hitTime: 0, message: "", messageTimer: 0,
     quality: dom.quality.value, fps: 30, fpsTime: 0, lastFrame: 0, raf: 0
   };
@@ -191,7 +192,8 @@
     game.friends = squad;
     game.player = squad[0];
     game.enemies = [];
-    for (let i = 0; i < 3; i++) spawnDefenders(i);
+    if(game.mode==="assault")for (let i = 0; i < 3; i++) spawnDefenders(i);
+    else spawnDefenseWave(1);
   }
   function spawnDefenders(stage) {
     for (const [x,y] of game.defenderSpawns[stage]||[]) {
@@ -203,14 +205,64 @@
       }
     }
   }
+  function spawnDefenseWave(wave) {
+    game.wave=wave;
+    game.waveCooldown=0;
+    const p=game.player||{x:3.5,y:3.4};
+    const amount=3+wave;
+    let spawned=0;
+    for(let i=0;i<amount;i++){
+      let location=null;
+      for(let attempt=0;attempt<70;attempt++){
+        const angle=random(-Math.PI,Math.PI),radius=random(5.7,10.8);
+        const x=p.x+Math.cos(angle)*radius;
+        const y=p.y+Math.sin(angle)*radius;
+        if(x<1.1||y<1.1||x>MAP_W-1.1||y>MAP_H-1.1||wall(x,y)||
+          game.friends.some(f=>f.alive&&Math.hypot(f.x-x,f.y-y)<4))continue;
+        location={x,y};break;
+      }
+      if(!location)continue;
+      const e=spawnAt(location.x,location.y,"enemy",
+        wave>=4&&i%3===0?"DEFENDER":"INFANTRY");
+      const tier=game.difficulty==="veteran"?1.23:
+        game.difficulty==="recruit"?.76:1;
+      e.hp=(e.hp+wave*5)*tier;e.maxHp=e.hp;
+      game.enemies.push(e);spawned++;
+    }
+    // A deterministic valid fallback prevents a soft-lock on cramped maps.
+    if(spawned===0){
+      const candidates=[[7.5,7.5],[10.5,5.5],[5.5,10.5],[12.5,12.5]];
+      for(const [x,y] of candidates){
+        if(!wall(x,y)&&Math.hypot(p.x-x,p.y-y)>3){
+          game.enemies.push(spawnAt(x,y,"enemy","INFANTRY"));
+          spawned++;break;
+        }
+      }
+    }
+    notify("WAVE "+wave+" / 5 • DEFEND THE POSITION",3.5);
+  }
+  function resupplyBetweenWaves() {
+    for(const f of game.friends){
+      if(!f.alive)continue;
+      f.reserve=Math.min(f.reserve+WEAPONS[f.weapon].capacity*2,180);
+      f.hp=Math.min(f.maxHp,f.hp+23);
+      f.frags=Math.min(f.frags+1,3);
+      f.smokes=Math.min(f.smokes+1,2);
+      if(f.role==="MEDIC")f.medkits=Math.min(f.medkits+1,3);
+    }
+    notify("WAVE CLEAR • AMMUNITION AND BANDAGES RESUPPLIED",3);
+  }
   function reset() {
     game.difficulty=dom.difficulty.value;
+    game.mode=dom.mode.value==="defense"?"defense":"assault";
+    game.wave=0;game.waveCooldown=0;
     setBattlefield(dom.battlefield.value);
     game.phase="playing"; game.objective=0;game.cap=0;
     game.kills=0;game.time=0;game.shake=0;game.hitTime=0;game.flash=0;
     game.objects=[];game.thrown=[];game.particles=[];game.ord="FOLLOW";
     makeSoldiers();
-    notify(MAPS[game.battlefield].label+" • SECURE SECTOR ONE",4);
+    notify(MAPS[game.battlefield].label+
+      (game.mode==="defense"?" • HOLD THE LINE":" • SECURE SECTOR ONE"),4);
     dom.modal.classList.remove("shown");
     dom.aimRing.classList.remove("aimed");dom.crosshair.classList.remove("aimed");
     resizeRender();
@@ -578,7 +630,9 @@
       }else{
         e.crouch=false;
         e.memory=Math.max(0,e.memory-dt);
-        if(e.memory>0&&e.lastSeen&&dist2(e,e.lastSeen)>.55){
+        if(game.mode==="defense"&&dist2(e,game.defensePosition)>1.8){
+          moveSmart(e,game.defensePosition,.70,dt);
+        }else if(e.memory>0&&e.lastSeen&&dist2(e,e.lastSeen)>.55){
           // Investigate a *snapshot* of the last observed location,
           // not the current unseen player's position.
           moveSmart(e,e.lastSeen,.62,dt);
@@ -588,6 +642,20 @@
       }
     }
 
+    // Mode-specific victory conditions; survival has escalating waves
+    // and finite resupply intervals rather than artificial capture flags.
+    if(game.mode==="defense"){
+      if(!game.enemies.some(e=>e.alive)){
+        if(game.wave>=5){gameEnd(true);return;}
+        if(game.waveCooldown<=0){
+          resupplyBetweenWaves();
+          game.waveCooldown=3.8;
+        }else{
+          game.waveCooldown-=dt;
+          if(game.waveCooldown<=0)spawnDefenseWave(game.wave+1);
+        }
+      }
+    }else{
     // Capture sectors in order; enemies contest at very short range.
     const o=objectives[game.objective];
     if(o){
@@ -602,6 +670,7 @@
         if(game.objective>=objectives.length){gameEnd(true);return;}
       }
     }
+    }
     if(game.messageTimer<=0)game.message="";
     updateHud();
   }
@@ -614,8 +683,15 @@
     dom.grenades.textContent="◉ "+p.frags+" / ▤ "+p.smokes;
     dom.loadout.textContent=WEAPONS[p.weapon].name+" · "+(p.crouch?"CROUCH":"STAND")+" · "+game.ord;
     const o=objectives[game.objective];
-    dom.mission.textContent=o?(game.message||"SECURE "+o.name):(game.message||"VICTORY");
-    dom.progress.textContent=o?"SECTOR "+(game.objective+1)+" / 3 · "+(dist2(p,o)<2.05?(game.cap*100|0)+"% CAPTURED":o.description):"MISSION COMPLETE";
+    if(game.mode==="defense"){
+      dom.mission.textContent=game.message||"DEFEND THE POSITION";
+      dom.progress.textContent="WAVE "+game.wave+" / 5 · "+
+        game.enemies.filter(e=>e.alive).length+" HOSTILES REMAIN";
+    }else{
+      dom.mission.textContent=o?(game.message||"SECURE "+o.name):(game.message||"VICTORY");
+      dom.progress.textContent=o?"SECTOR "+(game.objective+1)+" / 3 · "+
+        (dist2(p,o)<2.05?(game.cap*100|0)+"% CAPTURED":o.description):"MISSION COMPLETE";
+    }
     dom.squad.textContent="SQUAD · "+game.friends.filter(f=>f.alive).length+" ALIVE · "+game.kills+" KILLS";
     dom.qualityLabel.textContent=game.quality.toUpperCase()+" · "+Math.round(game.fps)+" FPS";
     dom.hit.style.opacity=game.hitTime>0?".95":"0";
@@ -686,7 +762,7 @@
     const sprites=scenery.slice();
     for(const g of game.thrown)if(g.fuse<=0&&g.life>0)
       sprites.push({x:g.x,y:g.y,kind:g.kind,size:g.kind==="smoke"?3.1:1.1,life:g.life});
-    const o=objectives[game.objective];
+    const o=game.mode==="defense"?game.defensePosition:objectives[game.objective];
     if(o)sprites.push({x:o.x,y:o.y,kind:"objective",size:1.55});
     for(const e of game.enemies)if(e.alive)sprites.push({...e,kind:"enemy",size:.92});
     for(const f of game.friends)if(f.alive&&f!==p)sprites.push({...f,kind:"friend",size:.92});
@@ -787,7 +863,7 @@
     };
     for(const enemy of game.enemies)if(enemy.alive&&dist2(enemy,p)<11)dot(enemy,"#d77967",2);
     for(const friend of game.friends)if(friend.alive&&friend!==p)dot(friend,"#b0d0a8",2.4);
-    const o=objectives[game.objective];
+    const o=game.mode==="defense"?game.defensePosition:objectives[game.objective];
     if(o){r.strokeStyle="#edcc7d";r.lineWidth=2;r.beginPath();r.arc(ox+o.x*scale,oy+o.y*scale,4.4,0,Math.PI*2);r.stroke();}
     dot(p,"#ffffff",3.5);
     r.strokeStyle="#fff9df";r.lineWidth=1.5;r.beginPath();
