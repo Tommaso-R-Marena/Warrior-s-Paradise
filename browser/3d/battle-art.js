@@ -70,6 +70,27 @@ function soldier(g,actor,team,t,distMoved=0){
  part(.04,1.28+bob-duck,.52,.12,.25,.20,STEEL);
  return {pose:crouched?"crouch":stride>.08?"walk":"aim"};
 }
+function fieldEquipment(g,actor,team){
+ // Overlay period-inspired kit on the real deforming character, never another full body.
+ const colors=TEAM[team]||TEAM.axis;
+ const yaw=actor.facing||0,c=Math.cos(yaw),s=Math.sin(yaw);
+ const part=(px,py,pz,w,h,d,col)=>{
+  g.box(actor.x+px*c+pz*s,py,actor.z-px*s+pz*c,w,h,d,col,yaw);
+ };
+ const duck=actor.crouch?.12:0;
+ part(0,2.15-duck,.02,.64,.19,.60,colors.helmet);
+ part(0,2.22-duck,.16,.69,.09,.41,colors.helmet);
+ part(0,1.28-duck,-.25,.55,.59,.18,CANVAS);
+ for(const side of [-1,1]){
+  part(side*.25,1.05-duck,.24,.19,.28,.16,colors.webbing);
+  part(side*.28,1.40-duck,-.28,.15,.23,.16,colors.webbing);
+ }
+ part(0,1.52-duck,.22,.66,.08,.08,colors.webbing);
+ part(-.30,1.15-duck,-.37,.10,.61,.11,STEEL);
+ part(.33,1.06-duck,-.26,.18,.25,.16,CANVAS);
+ part(.05,1.39-duck,.65,.16,.13,.85,OAK);
+ part(.05,1.42-duck,1.05,.10,.10,.48,STEEL);
+}
 function weapon(g,player,game){
  const F=[-Math.sin(player.yaw),Math.cos(player.yaw)],R=[-Math.cos(player.yaw),-Math.sin(player.yaw)];
  const recoil=(game.flash||0)>0?Math.min(.11,game.flash*.6):0;
@@ -125,5 +146,5 @@ function weapon(g,player,game){
   .18+Math.sin(game.elapsed*92)*.05,.48,[.95,.74,.22],9);
 }
 function colorsSleeve(){return [.30,.33,.26];}
-root.WPBattleArt=Object.freeze({soldier,weapon});
+root.WPBattleArt=Object.freeze({soldier,weapon,fieldEquipment});
 })(window);
