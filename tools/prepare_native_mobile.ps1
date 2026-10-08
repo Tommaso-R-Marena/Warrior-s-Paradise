@@ -21,8 +21,12 @@ if (-not (Test-Path $Script)) { throw "Mobile Python pipeline is missing" }
 if (Test-Path $Map) {
     throw "Refusing to overwrite existing map $Map. Back it up or manage it in UE Editor."
 }
-if (-not (Test-Path (Join-Path $Root "ExternalAssets\asset-lock.json"))) {
-    throw "ExternalAssets/asset-lock.json is missing: acquire and record licensed art first."
+# Always generate and hash the eight project-original environment meshes.
+# This is an offline starter art pipeline; it does not create professional
+# rigged soldiers, weapon meshes or final commercial-quality materials.
+& python (Join-Path $Root "tools\assets\generate_original_props.py") --root $Root
+if ($LASTEXITCODE -ne 0) {
+    throw "Original starter geometry generation failed; check for edited/generated file conflicts."
 }
 $Validator = Join-Path $Root "tools\assets\validate_asset_provenance.py"
 & python $Validator --root $Root
