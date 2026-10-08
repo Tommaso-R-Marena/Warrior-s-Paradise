@@ -12,6 +12,11 @@ REQUIRED = [
     "tools/tests/test_smoke_maneuver_contracts.py",
     "tools/tests/test_headless_smoke_contracts.py",
     "tools/tests/test_browser_field.py",
+    "tools/tests/browser_runtime_smoke.js",
+    "browser/visuals.js",
+    "Config/Android/AndroidEngine.ini",
+    "Config/DefaultDeviceProfiles.ini",
+    "docs/MOBILE_RELEASE_PLAN.md",
     "tools/serve_field_edition.py",
     "browser/index.html",
     "browser/game.js",
@@ -353,6 +358,16 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("browser/game.js", "function moveSmart("),
+        ("browser/game.js", "function throwGrenade("),
+        ("browser/game.js", "function setADS("),
+        ("browser/game.js", "function toggleOrders("),
+        ("browser/game.js", "visuals.setup()"),
+        ("browser/visuals.js", "function buildTexture("),
+        ("browser/visuals.js", "function drawSoldier("),
+        ("browser/sw.js", "wp-field-edition-v2"),
+        ("Config/Android/AndroidEngine.ini", "r.Mobile.ShadingPath=0"),
+        ("Config/DefaultDeviceProfiles.ini", "[Android_Low DeviceProfile]"),
         ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "ExpectedFriendlies"),
         ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "TActorIterator<AWPSoldierCharacter>"),
         ("Source/WarriorParadise/Private/Game/WPCombatGameMode.cpp", "subject=%s"),
