@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#101b1a">
+  <meta name="description" content="Warrior's Paradise: a lightweight offline WWII-inspired first-person browser skirmish.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <title>Warrior's Paradise · Field Edition</title>
+</head>
+<body>
+  <main id="app" aria-label="Warrior's Paradise Field Edition">
+    <canvas id="world" aria-label="First-person battlefield view"></canvas>
+    <div id="vignette"></div>
+    <div id="damage-flash"></div>
+    <header id="hud">
+      <div class="brand">WARRIOR'S <strong>PARADISE</strong> <small>FIELD EDITION</small></div>
+      <div class="stats"><span id="health">HP 100</span><span id="ammo">08 / 48</span><span id="medkits">✚ 2</span></div>
+      <div class="status" id="mission">SECURE THE FORWARD FARM</div>
+      <div class="status small" id="progress">SECTOR 1 / 3 · REACH THE MARKER</div>
+    </header>
+    <canvas id="radar" width="136" height="136" aria-label="Tactical minimap"></canvas>
+    <div id="crosshair" aria-hidden="true"><i></i><i></i></div>
+    <div id="hitmarker" aria-hidden="true">×</div>
+    <div id="bottom-bar">
+      <div><span id="squad">SQUAD · 3 ALIVE</span><span id="quality-label">ECO</span></div>
+      <div id="tip">WASD MOVE · MOUSE AIM · CLICK FIRE · R RELOAD · V HEAL · Q SWITCH</div>
+    </div>
+    <div id="touch" aria-label="Touch game controls">
+      <div id="move-pad" aria-label="Move joystick"><div class="pad-ring"></div><div class="pad-knob" id="move-knob"></div></div>
+      <div id="look-zone" aria-label="Drag to aim"></div>
+      <div id="touch-actions">
+        <button id="fire-btn" class="action danger" aria-label="Fire weapon">FIRE</button>
+        <button id="reload-btn" class="action" aria-label="Reload">↻</button>
+        <button id="heal-btn" class="action" aria-label="Use medkit">✚</button>
+        <button id="switch-btn" class="action" aria-label="Switch squadmate">⇄</button>
+      </div>
+    </div>
+    <section id="modal" class="shown" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-card">
+        <p class="eyebrow">OPERATION · DAWN WATCH</p>
+        <h1 id="modal-title">WARRIOR'S<br><em>PARADISE</em></h1>
+        <p class="subtitle">FIELD EDITION</p>
+        <p id="modal-copy">A compact, locally playable first-person skirmish. Lead a three-person squad, defeat defenders, and secure three objectives. No downloads or sign-in.</p>
+        <div class="modal-details"><span>3 SECTORS</span><span>3 SQUADMATES</span><span>OFFLINE-READY*</span></div>
+        <div class="modal-actions">
+          <button id="start-btn" class="primary">DEPLOY <span>→</span></button>
+          <label>RENDERING
+            <select id="quality"><option value="eco">ECO · CPU FIRST</option><option value="balanced">BALANCED</option><option value="sharp">SHARP</option></select>
+          </label>
+        </div>
+        <p class="fine-print">Desktop: WASD + mouse, click to fire, R reload, V heal, Q switch squadmate. Mobile: left joystick + drag right to aim; tap FIRE. *Offline replay requires installing/caching from HTTPS or localhost first.</p>
+      </div>
+    </section>
+  </main>
+  <script src="./game.js" defer></script>
+</body>
+</html>
