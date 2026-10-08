@@ -114,9 +114,9 @@ function parseGLB(buffer){
 }
 async function loadModels(specs){
  const entries=await Promise.all(specs.map(async spec=>{
-  assert(/^[a-z0-9-]+$/.test(spec.name),"unsafe asset name");
+  assert(/^[a-z0-9_-]+$/.test(spec.name),"unsafe asset name");
   const url=spec.url||"./assets/kenney/"+spec.name+".glb.b64";
-  assert(/^\.\/assets\/(kenney|quaternius)\/[a-z0-9-]+\.glb\.b64$/.test(url),"unsafe asset URL");
+  assert(/^\.\/assets\/(kenney|quaternius)\/[a-z0-9_-]+\.glb\.b64$/.test(url),"unsafe asset URL");
   const response=await fetch(url,{cache:"force-cache"});
   if(!response.ok)throw Error("asset HTTP "+response.status+": "+spec.name);
   const encoded=(await response.text()).replace(/\s/g,"");
