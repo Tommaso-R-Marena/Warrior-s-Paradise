@@ -291,6 +291,19 @@ const staticMesh=mesh(false),liveMesh=mesh(true);
 const fallbackWorld=buildWorld();
 upload(staticMesh,fallbackWorld);
 const scenery={loaded:false,instances:0,triangles:0,error:""};
+const rig={model:null,ready:false,error:"",skinnedLastFrame:0,skinnedTriangles:0};
+function loadSkinnedCharacters(){
+ const runtime=window.WPSkinning;
+ if(!runtime)return;
+ runtime.load("character_medium").then(model=>{
+  rig.model=model;rig.ready=true;
+  if($("rigstatus"))$("rigstatus").textContent="58-JOINT CC0 CHARACTER RIG READY";
+ }).catch(error=>{
+  rig.error=String(error);
+  if($("rigstatus"))$("rigstatus").textContent="FALLBACK SOLDIERS READY";
+ });
+}
+
 function loadLicensedScenery(){
  const kit=window.WPAssetKit;
  if(!kit||typeof fetch!=="function"){scenery.error="GLB loader or fetch unavailable";return;}
@@ -749,29 +762,25 @@ function simulate(dt){
 }
 function dynamicGeometry(){
  const m=new Geometry();
- const art=window.WPBattleArt;
- if(art){
-  for(const e of game.enemies){
-   if(e.hp<=0)continue;
-   art.soldier(m,e,"axis",game.elapsed,e.moveSpeed||0);
+ const art=window.WPBattleArt,skinner=window.WPSkinning,viewDist=25;
+ let skinnedActors=0,skinnedTriangles=0;
+ const maxActors=game.quality==="high"?10:game.quality==="medium"?6:2;
+ const present=(actor,team)=>{
+  const distance=Math.hypot(actor.x-player.x,actor.z-player.z);
+  if(rig.ready&&skinner&&distance<viewDist&&skinnedActors<maxActors){
+   const drawn=skinner.append(m,rig.model,actor,team,game.elapsed);
+   skinnedActors++;skinnedTriangles+=drawn.triangles;
+  }else if(art)art.soldier(m,actor,team,game.elapsed,actor.moveSpeed||0);
+  else{
+   const color=team==="ally"?COLORS.blue:COLORS.dark;
+   m.box(actor.x,1.4,actor.z,.7,1.5,.5,color);
+   m.box(actor.x,2.2,actor.z,.5,.48,.5,COLORS.helmet);
   }
-  for(const a of game.allies){
-   if(a.hp<=0)continue;
-   art.soldier(m,a,"ally",game.elapsed,a.moveSpeed||0);
-  }
- }else{
-  // Original player-visible fallbacks survive missing optional presentation script.
-  for(const e of game.enemies){
-   if(e.hp<=0)continue;
-   m.box(e.x,1.4,e.z,.7,1.5,.5,COLORS.dark);
-   m.box(e.x,2.2,e.z,.5,.48,.5,COLORS.helmet);
-  }
-  for(const a of game.allies){
-   if(a.hp<=0)continue;
-   m.box(a.x,1.4,a.z,.7,1.5,.5,COLORS.blue);
-   m.box(a.x,2.2,a.z,.5,.48,.5,COLORS.helmet);
-  }
- }
+ };
+ for(const e of game.enemies)if(e.hp>0)present(e,"axis");
+ for(const a of game.allies)if(a.hp>0)present(a,"ally");
+ rig.skinnedLastFrame=skinnedActors;
+ rig.skinnedTriangles=skinnedTriangles;
  for(const t of game.tracers){
   const dx=t.bx-t.ax,dz=t.bz-t.az,len=Math.hypot(dx,dz);
   if(len<.1)continue;
@@ -974,14 +983,15 @@ $("sound-toggle").addEventListener("click",()=>{
 });
 $("quality").value=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent||"")?"low":"medium";
 game.quality=$("quality").value;
-spawnEnemies();resize();hud();loadLicensedScenery();
+spawnEnemies();resize();hud();loadLicensedScenery();loadSkinnedCharacters();
 // Lightweight read-only testability hooks (not used for normal gameplay).
 window.WP3DDiagnostics=()=>({
  sector:game.sector,alive:game.enemies.filter(e=>e.hp>0).length,
  playerHp:player.hp,weapon:player.weapon,renderSize:[canvas.width,canvas.height],
  renderer:"WebGL2",geometryTriangles:staticMesh.count/3,
   assetInstances:scenery.instances,assetTriangles:scenery.triangles,assetsLoaded:scenery.loaded,
-  assetError:scenery.error,buildingsLoaded:scenery.buildings||0,
+  assetError:scenery.error,rigLoaded:rig.ready,rigError:rig.error,
+  skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,buildingsLoaded:scenery.buildings||0,
   farmError:scenery.farmError||"",
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
