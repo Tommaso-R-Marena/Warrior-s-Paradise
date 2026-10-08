@@ -44,3 +44,8 @@
  #nav{margin-top:2px}
  #capture-track{margin-top:3px}
 }
+
+#sound-toggle{display:block;width:100%;min-height:36px;margin-top:9px;background:#283b35;border:1px solid #847a5c;border-radius:8px;color:#e8dcc0;font-size:12px;font-weight:750}
+#sound-toggle[aria-pressed="true"]{background:#44352b;color:#ecdac4}
+#assetstatus{min-height:14px;color:#d5e0ce;font-size:11px;letter-spacing:.04em;margin-bottom:9px}
+#menu .disclaimer a{display:inline;color:#e0cc97;font-weight:600;margin:0}

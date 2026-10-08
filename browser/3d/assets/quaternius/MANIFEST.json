@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "creator": "Quaternius",
+  "title": "Farm Buildings Pack",
+  "license": "CC0-1.0",
+  "source_url": "https://quaternius.com/packs/farmbuildings.html",
+  "mirror": "https://github.com/Papyszoo/CC0-Public-Domain-Models",
+  "integration": "Static geometry; no textures/skeleton animation required for these four meshes; collision approximated by bbox",
+  "assets": [
+    {
+      "name": "barn",
+      "original_path": "packs/quaternius-farm-buildings/models/barn/barn.glb",
+      "target": "browser/3d/assets/quaternius/barn.glb.b64",
+      "bytes": 124640,
+      "git_sha1": "b8d3b5d401a9a1a74c9276a87021083baff9ccd1",
+      "upstream_sha256": "9170451c4207ef368efb814071c49308110b9b09cf0a394f467f371a08483d5c"
+    },
+    {
+      "name": "chicken_coop",
+      "original_path": "packs/quaternius-farm-buildings/models/chicken_coop/chicken_coop.glb",
+      "target": "browser/3d/assets/quaternius/chicken_coop.glb.b64",
+      "bytes": 46360,
+      "git_sha1": "793adff2157e2a82712c9077c291face87374156",
+      "upstream_sha256": "883895d84952652869648a1086aefcb7c8e11b2c142aac0347a7a743d5d94616"
+    },
+    {
+      "name": "windmill",
+      "original_path": "packs/quaternius-farm-buildings/models/windmill/windmill.glb",
+      "target": "browser/3d/assets/quaternius/windmill.glb.b64",
+      "bytes": 69312,
+      "git_sha1": "596d2f4d77731861edd781ca1c3db9a534f9b10a",
+      "upstream_sha256": "5fe199cd362a1fc6623be560c800664645cae2dcbe215b84cf15132bf5cbddfe"
+    },
+    {
+      "name": "well",
+      "original_path": "packs/quaternius-farm-buildings/models/well/well.glb",
+      "target": "browser/3d/assets/quaternius/well.glb.b64",
+      "bytes": 150232,
+      "git_sha1": "9ffa4af2ec692eb512ef3ac83857146bdf80b71e",
+      "upstream_sha256": "ac9298bbc2c2a2ee182749b97ae3e902c69ea6524057436f8a23d7814bd4d9c6"
+    }
+  ]
+}
