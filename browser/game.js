@@ -152,7 +152,8 @@
       reload: 0, ads: false, crouch: false, medkits: team === "enemy" ? 0 : 2,
       frags: team === "enemy" ? 0 : 2, smokes: team === "enemy" ? 0 : 1,
       strafedir: Math.random() < .5 ? 1 : -1,
-      suppression: 0, memory: 0, target: null, pathTimer: 0, pathNode: null };
+      suppression: 0, memory: 0, target: null, pathTimer: 0, pathNode: null,
+      aiStrafeTimer: random(.6,2), aiBurst: 0, medicCooldown: 0, lastSeen: null };
   }
   const game = {
     phase: "menu", player: null, friends: [], enemies: [], objects: [],
@@ -295,6 +296,19 @@
     return {distance:maxDist,type:0,side:0,cx,cy,texture:0};
   }
   const seen=(a,b)=>!wall(b.x,b.y)&&!smokeBlocks(a,b)&&trace(a.x,a.y,(b.x-a.x)/Math.max(.001,dist2(a,b)),(b.y-a.y)/Math.max(.001,dist2(a,b)),dist2(a,b)).distance>=dist2(a,b)-.15;
+  function friendlyLaneClear(shooter,target) {
+    const dx=target.x-shooter.x,dy=target.y-shooter.y;
+    const len2=dx*dx+dy*dy;
+    if(len2<.01)return true;
+    for(const f of game.friends){
+      if(!f.alive||f===shooter)continue;
+      const t=((f.x-shooter.x)*dx+(f.y-shooter.y)*dy)/len2;
+      if(t<=0||t>=1)continue;
+      const cross=Math.abs((f.x-shooter.x)*dy-(f.y-shooter.y)*dx);
+      if(cross/Math.sqrt(len2)<.30)return false;
+    }
+    return true;
+  }
   function smokeBlocks(a,b) {
     const dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;
     if(len2<.01)return false;
@@ -465,57 +479,112 @@
     p.angle=(p.angle+Math.PI*2)%(Math.PI*2);
     if(input.fire)fire();
 
-    // Followers share the same lightweight simulation. No network/server.
+    // Friendly AI: magazine-limited covering fire, avoidance and medic support.
     for(const f of game.friends){
       if(!f.alive||f===p)continue;
       const index=game.friends.indexOf(f),side=index%2?1:-1;
       const wanted={x:p.x-Math.cos(p.angle)*1.15-Math.sin(p.angle)*side*.85,
         y:p.y-Math.sin(p.angle)*1.15+Math.cos(p.angle)*side*.85};
       const d=dist2(f,wanted);
-      if(d>.45&&game.ord==="FOLLOW") {
+      if(d>.45&&game.ord==="FOLLOW"){
         moveSmart(f,wall(wanted.x,wanted.y)?p:wanted,(d>4?3.7:2.8),dt);
+      }
+      if(f.role==="MEDIC"){
+        f.medicCooldown=Math.max(0,f.medicCooldown-dt);
+        const ally=game.friends.filter(a=>a.alive&&a.hp<a.maxHp*.63&&dist2(a,f)<2.1)
+          .sort((a,b)=>a.hp-b.hp)[0];
+        if(ally&&f.medicCooldown<=0&&f.medkits>0){
+          ally.hp=Math.min(ally.maxHp,ally.hp+32);
+          f.medkits--;f.medicCooldown=10;
+          if(ally===p)notify("MEDIC TREATED YOUR WOUNDS",1.5);
+        }
       }
       let target=null,best=9.5;
       for(const e of game.enemies){
         if(!e.alive)continue;
         const dis=dist2(f,e);
-        if(dis<best&&seen(f,e)){best=dis;target=e;}
+        if(dis<best&&seen(f,e)&&friendlyLaneClear(f,e)){best=dis;target=e;}
       }
-      if(target){f.angle=Math.atan2(target.y-f.y,target.x-f.x);if(f.cooldown<=0&&f.reload===0){
-        f.cooldown=random(.65,1.0);f.flash=.09;
-        if(Math.random()<.56){target.hp-=random(10,20);target.hit=.1;target.suppression=.3;
-          if(target.hp<=0){target.alive=false;game.kills++;}}
-      }} else f.angle=p.angle;
+      if(target){
+        f.angle=Math.atan2(target.y-f.y,target.x-f.x);
+        if(f.ammo<=0&&f.reserve>0&&f.reload<=0)f.reload=WEAPONS[f.weapon].reload;
+        if(f.cooldown<=0&&f.reload<=0&&f.ammo>0){
+          const w=WEAPONS[f.weapon];
+          f.cooldown=w.interval*random(1.7,3.2);f.flash=.09;f.ammo--;
+          const accuracy=clamp(.73-best*.033-f.suppression*.31,.13,.77);
+          if(Math.random()<accuracy){
+            target.hp-=w.damage*random(.29,.53);
+            target.hit=.13;target.suppression=Math.max(target.suppression,.38);
+            if(target.hp<=0){target.alive=false;game.kills++;}
+          }else target.suppression=Math.max(target.suppression,.18);
+        }
+      }else f.angle=p.angle;
     }
 
-    // Enemies search, advance, hold and fire. Suppression alters accuracy.
+    // Hostile AI: limited magazines, suppression, target memory,
+    // cover-seeking/strafe movement, and difficulty-scaled accuracy.
     for(const e of game.enemies){
       if(!e.alive)continue;
       let target=null,best=14;
-      for(const f of game.friends){if(!f.alive)continue;const d=dist2(e,f);if(d<best&&seen(e,f)){best=d;target=f;}}
+      for(const f of game.friends){
+        if(!f.alive)continue;
+        const d=dist2(e,f);
+        if(d<best&&seen(e,f)){best=d;target=f;}
+      }
+      e.aiStrafeTimer-=dt;
+      if(e.aiStrafeTimer<=0){
+        e.strafedir*=-1;
+        e.aiStrafeTimer=random(.9,2.4);
+      }
       if(target){
-        e.target=target;e.memory=2;
-        const a=Math.atan2(target.y-e.y,target.x-e.x);e.angle=a;
-        if(best>4.5&&best<14){
-          const speed=e.suppression>.5?0.24:.50;
+        e.target=target;e.memory=2.2;
+        e.lastSeen={x:target.x,y:target.y};
+        const a=Math.atan2(target.y-e.y,target.x-e.x);
+        e.angle=a;
+        e.crouch=e.suppression>.48;
+        if(e.reload<=0&&e.ammo<=0&&e.reserve>0)e.reload=WEAPONS[e.weapon].reload;
+        if(best>6.0&&best<14){
+          const speed=e.suppression>.55?.20:.66;
           moveSmart(e,target,speed,dt);
+        }else if(best<6.0&&best>2.8){
+          // Suppressed soldiers disengage, steady soldiers sidestep.
+          const retreat=e.suppression>.62?-1:.12;
+          const lateral=e.strafedir*(e.suppression>.65?.13:.47);
+          slide(e,(Math.cos(a)*retreat-Math.sin(a)*lateral)*dt,
+            (Math.sin(a)*retreat+Math.cos(a)*lateral)*dt);
         }
-        if(e.cooldown<=0&&best<11){
-          e.cooldown=random(1.05,2.1)*(e.suppression>.6?1.5:1);
-          e.flash=.12;
-          const accuracy=clamp(.64-best*.028-e.suppression*.35,.08,.57);
+        if(e.cooldown<=0&&e.reload<=0&&e.ammo>0&&best<11){
+          const difficultyMult=game.difficulty==="veteran"?1.20:
+            game.difficulty==="recruit"?.71:1;
+          e.cooldown=random(1.05,1.95)*(e.suppression>.6?1.38:1)/
+            (game.difficulty==="veteran"?1.12:1);
+          e.ammo--;e.flash=.12;
+          const accuracy=clamp(
+            (.60-best*.028-e.suppression*.35)*difficultyMult*(target.crouch?.73:1),
+            .045,.76
+          );
           if(Math.random()<accuracy){
-            const damage=random(8,16);
-            target.hp-=damage;target.hit=.16;
-            if(target===p){game.flash=.2;game.shake=.22;beep(72,.12,.035,"triangle");notify("UNDER FIRE!",.65);}
+            const damage=random(7.5,15.5)*(game.difficulty==="veteran"?1.2:1);
+            target.hp-=damage;target.hit=.16;target.suppression=Math.max(target.suppression,.19);
+            if(target===p){
+              game.flash=.2;game.shake=.22;beep(72,.12,.035,"triangle");
+              notify("UNDER FIRE!",.65);
+            }
             if(target.hp<=0)knockDown(target);
+          }else{
+            target.suppression=Math.max(target.suppression,.12);
           }
         }
-      } else {
+      }else{
+        e.crouch=false;
         e.memory=Math.max(0,e.memory-dt);
-        const heard=game.friends.filter(f=>f.alive&&dist2(e,f)<8)
-          .sort((a,b)=>dist2(e,a)-dist2(e,b))[0];
-        if(heard&&!seen(e,heard))moveSmart(e,heard,.56,dt);
+        if(e.memory>0&&e.lastSeen&&dist2(e,e.lastSeen)>.55){
+          // Investigate a *snapshot* of the last observed location,
+          // not the current unseen player's position.
+          moveSmart(e,e.lastSeen,.62,dt);
+        }else if(e.reload<=0&&e.ammo<WEAPONS[e.weapon].capacity*.5&&e.reserve>0){
+          e.reload=WEAPONS[e.weapon].reload;
+        }
       }
     }
 
