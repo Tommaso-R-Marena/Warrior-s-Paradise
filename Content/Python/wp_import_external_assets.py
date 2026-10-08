@@ -10,6 +10,7 @@ downloads marketplace/Epic/Sonniss content and never makes licensing decisions.
 from __future__ import annotations
 
 import json
+import runpy
 from pathlib import Path
 import re
 
@@ -84,6 +85,15 @@ def collect_files() -> list[Path]:
 
 
 def main() -> None:
+    # A lock-file existing is not sufficient: reject checksum mismatches,
+    # untracked assets, symlinks and paths escaping ExternalAssets.
+    # This code executes inside Unreal's Python runtime.
+    validator = PROJECT_ROOT / "tools" / "assets" / "validate_asset_provenance.py"
+    validated = runpy.run_path(str(validator), run_name="__asset_validation__")
+    report = validated["validate_root"](PROJECT_ROOT)
+    log(f"Asset integrity verified: {report['validated_files']} source files, "
+        f"{report['importable_files']} importable files.")
+
     files = collect_files()
     if not files:
         log(
