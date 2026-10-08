@@ -9,10 +9,13 @@
 <canvas id="viewport" aria-label="Three-dimensional battlefield rendered with WebGL2"></canvas>
 <div id="shade"></div><div id="hurt"></div>
 <header id="top">
-  <div class="logo">WARRIOR'S <strong>PARADISE</strong><small>3D FRONTLINE PREVIEW</small></div>
+  <div class="logo">WARRIOR'S <strong>PARADISE</strong><small>3D FRONTLINE · TACTICAL ASSAULT</small></div>
   <div class="stats"><span id="hp">HP 100</span><span id="mag">10 / 70</span><span id="frags">FRAG × 2</span></div>
   <div id="mission">OPERATION DAWN WATCH</div><div id="objective">SECURE THE FORWARD POSITION</div>
+  <div id="nav" aria-live="off">↑ FOLLOW THE OBJECTIVE</div>
+  <div id="capture-track" aria-label="Current objective capture progress"><div id="capture-fill"></div></div>
   <div id="info">LEE-ENFIELD · RIFLEMAN</div>
+  <div class="team-status"><span id="squadstate">FIRETEAM 2/2 · FOLLOW</span><span id="supportstate">ARTILLERY × 1</span></div>
 </header>
 <div id="crosshair" aria-hidden="true"></div>
 <div id="hitmarker" aria-hidden="true">×</div>
@@ -25,16 +28,21 @@
 <button id="grenade" aria-label="Throw fragmentation grenade">FRAG</button>
 <button id="heal" aria-label="Use field dressing">MED</button>
 <button id="swap" aria-label="Change weapon">GUN</button>
+<button id="orders" aria-label="Toggle fireteam follow and hold orders">ORDER</button>
+<button id="support" aria-label="Request artillery at the aimed location">ARTY</button>
+<button id="crouch" aria-label="Toggle crouch">DUCK</button>
 </div>
 <footer><span id="status">THREE SECTORS TO SECURE</span><span id="fps">WEBGL2 · AUTO</span></footer>
 <section id="menu" role="dialog" aria-modal="true" aria-labelledby="menu-title">
 <div class="panel">
 <p class="eyebrow">NORMANDY · JUNE 1944</p>
 <h1 id="menu-title">WARRIOR'S<br><em>PARADISE</em></h1>
-<p class="edition">3D FRONTLINE · BROWSER PREVIEW</p>
-<p id="menu-copy">A real 3D skirmish rendered directly on your device. Lead an infantry assault, defeat defenders and capture three positions. No sign-in, no dedicated GPU, no paid game server.</p>
+<p class="edition">3D FRONTLINE · TACTICAL ASSAULT</p>
+<p id="menu-copy">Lead a three-soldier fireteam through a Normandy assault. Use sandbags and buildings for cover, suppress defenders, direct limited artillery and capture three positions. Free, offline-capable single-player 3D combat rendered on your own device.</p>
+<p class="key-help"><strong>DESKTOP:</strong> WASD move · Mouse aim/fire · Right-click ADS · C crouch · X squad order · T artillery · R reload · G frag · V medic · Q weapon. <strong>PHONE:</strong> Twin-stick controls and tactical buttons.</p>
 <div class="options"><label>RENDERING <select id="quality"><option value="low">LOW · PHONE</option><option value="medium" selected>BALANCED</option><option value="high">HIGH · LAPTOP</option></select></label>
-<label>WEAPON <select id="weapon"><option value="rifle">LEE-ENFIELD</option><option value="smg">STEN SMG</option><option value="lmg">BREN LMG</option></select></label></div>
+<label>WEAPON <select id="weapon"><option value="rifle">LEE-ENFIELD</option><option value="smg">STEN SMG</option><option value="lmg">BREN LMG</option></select></label>
+<label>ENEMY SKILL <select id="difficulty"><option value="recruit">RECRUIT</option><option value="regular" selected>REGULAR</option><option value="veteran">VETERAN</option></select></label></div>
 <button id="deploy" class="primary">DEPLOY IN 3D →</button>
 <a href="../index.html">Use lightweight 2.5D Field Edition instead</a>
 <p class="disclaimer">Requires WebGL2 and browser graphics acceleration (integrated GPUs are supported). This is a playable technology preview—not the finished Unreal game or Enlisted-quality assets/multiplayer.</p>
