@@ -295,7 +295,17 @@ function hud(){
  const flag=flags[game.sector];
  $("mission").textContent=flag?"SECURE "+flag.title:"MISSION COMPLETE";
  $("objective").textContent=flag?"SECTOR "+(game.sector+1)+" / 3 · "+Math.floor(game.capture*100)+"% SECURED":"ALL SECTORS CAPTURED";
- $("info").textContent=WEAPONS[player.weapon].name+" · "+(player.aim?"ADS":"HIP FIRE")+" · "+game.kills+" KILLS";
+ $("info").textContent=WEAPONS[player.weapon].name+" · "+(player.crouch?"CROUCHED":player.aim?"ADS":"HIP FIRE")+" · "+game.kills+" KILLS";
+ $("squadstate").textContent="FIRETEAM "+game.allies.filter(a=>a.hp>0).length+"/2 · "+game.order.toUpperCase();
+ $("supportstate").textContent="ARTILLERY × "+game.support;
+ $("capture-fill").style.width=Math.floor(game.capture*100)+"%";
+ if(flag){
+  const distance=Math.round(Math.hypot(player.x-flag.x,player.z-flag.z));
+  const bearing=-Math.atan2(flag.x-player.x,flag.z-player.z)-player.yaw;
+  const angle=Math.atan2(Math.sin(bearing),Math.cos(bearing));
+  const pointer=Math.abs(angle)<.4?"↑":Math.abs(angle)>2.7?"↓":angle>0?"↗":"↖";
+  $("nav").textContent=pointer+" "+distance+"m TO "+flag.title;
+ }else $("nav").textContent="ALL OBJECTIVES SECURED";
  $("fps").textContent="3D · "+game.quality.toUpperCase()+" · "+Math.round(game.fps)+" FPS";
  $("hurt").style.opacity=player.hurt>.02?String(Math.min(.42,player.hurt*.22)):"0";
  $("crosshair").classList.toggle("aiming",player.aim);
@@ -305,7 +315,7 @@ function end(victory){
  $("menu").hidden=false;
  $("menu-title").innerHTML=victory?"OPERATION<br><em>COMPLETE</em>":"SQUAD<br><em>ELIMINATED</em>";
  $("menu-copy").textContent=victory?
- "All three objectives secured. "+game.kills+" defenders neutralized. Replay with another weapon or graphics tier.":
+ "All three objectives secured in "+Math.floor(game.elapsed/60)+"m "+Math.floor(game.elapsed%60)+"s. "+game.kills+" defenders neutralized. Try a higher difficulty.":
  "Your soldier was eliminated. Re-deploy with another weapon or use cover and field dressings.";
  $("deploy").textContent="REDEPLOY →";
 }
@@ -558,6 +568,39 @@ function dynamicGeometry(){
   m.box(e.x-.22,.46,e.z,.24,.91,.31,COLORS.dark,angle);
   m.box(e.x+.22,.46,e.z,.24,.91,.31,COLORS.dark,angle);
   m.box(e.x+.38,1.39,e.z+.43,.18,.16,.96,COLORS.metal,angle);
+  m.box(e.x,1.57,e.z+.25,.48,.5,.14,COLORS.wood,angle);
+  m.box(e.x,1.9,e.z-.27,.45,.14,.12,COLORS.timber,angle);
+ }
+ // Allied squadmates have their own silhouettes, field packs and weapons.
+ for(const a of game.allies){
+  if(a.hp<=0)continue;
+  const angle=Math.atan2(player.x-a.x,player.z-a.z);
+  const bob=Math.sin(game.elapsed*8+a.phase)*.04;
+  m.box(a.x,1.33,a.z,.7,1.12,.44,COLORS.blue,angle);
+  m.box(a.x,2.09,a.z,.47,.44,.43,COLORS.skin,angle);
+  m.box(a.x,2.37,a.z,.63,.22,.57,COLORS.helmet,angle);
+  m.box(a.x-.45,1.33,a.z,.21,.96,.27,COLORS.blue,angle);
+  m.box(a.x+.45,1.33,a.z,.21,.96,.27,COLORS.blue,angle);
+  m.box(a.x-.22,.47+bob,a.z,.24,.92,.31,COLORS.dark,angle);
+  m.box(a.x+.22,.47-bob,a.z,.24,.92,.31,COLORS.dark,angle);
+  m.box(a.x+.36,1.4,a.z+.4,.14,.15,.94,COLORS.metal,angle);
+  m.box(a.x,1.58,a.z-.28,.52,.6,.14,COLORS.sand,angle);
+ }
+ for(const t of game.tracers){
+  const dx=t.bx-t.ax,dz=t.bz-t.az,len=Math.hypot(dx,dz);
+  if(len<.1)continue;
+  const x=(t.ax+t.bx)/2,z=(t.az+t.bz)/2;
+  m.box(x,1.46,z,.025,.023,Math.min(len,12),
+   t.team==="hostile"?COLORS.red:COLORS.gold,Math.atan2(dx,dz));
+ }
+ for(const strike of game.strikes){
+  if(!strike.detonated){
+   m.box(strike.x,.35,strike.z,.08,.7,.08,COLORS.red);
+  }else{
+   const radius=Math.max(.1,3.2*(1+strike.life));
+   m.cone(strike.x,0,strike.z,radius,4.5,COLORS.gold,12);
+   m.cone(strike.x,0,strike.z,radius*1.3,2.5,COLORS.mud,10);
+  }
  }
  for(const g of game.grenades){
   if(g.life<=0){
