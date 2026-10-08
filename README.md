@@ -2,7 +2,17 @@
 
 **Warrior's Paradise** is an Unreal Engine 5.8 WWII first-person squad-combat project targeting one **Enlisted-quality vertical slice** before expanding content.
 
-The repository now contains a substantial code-side combined-arms battle rather than a browser prototype or simple wave shooter.
+The repository now contains a substantial code-side combined-arms battle rather than a simple wave shooter.
+
+## Play on a phone or low-power laptop — Field Edition
+
+**Playable browser edition:** [warriors-paradise-field.pages.dev](https://warriors-paradise-field.pages.dev/) (separate free-hosted static skirmish; no Unreal download or dedicated GPU).
+
+A smaller, fully client-side browser adaptation is in `browser/`. It uses CPU-first Canvas 2D software raycasting with a three-objective single-player battlefield, enemy AI, squadmates, rifle combat, medkits, reloads, switchable soldiers, minimap, desktop mouse/keyboard controls and phone touch controls. It is **not** the complete Unreal Engine combined-arms build and has not been tested on every device.
+
+Play locally from the repository by opening `browser/index.html`; or with Python 3 run `python tools/serve_field_edition.py` and visit `http://127.0.0.1:8000/`. Use `--lan` to play on a phone on the same trusted Wi-Fi. Full instructions: [browser/README.md](browser/README.md).
+
+The UE5.8 game remains the higher-fidelity native project below; it requires an actual UE build and suitable rendering hardware (integrated graphics may work at Minimal, but has not yet been benchmarked).
 
 ## Implemented gameplay
 
