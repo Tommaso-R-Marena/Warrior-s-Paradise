@@ -14,6 +14,16 @@ Play locally from the repository by opening `browser/index.html`; or with Python
 
 The UE5.8 game remains the higher-fidelity native project below; it requires an actual UE build and suitable rendering hardware (integrated graphics may work at Minimal, but has not yet been benchmarked). Android Mobile Forward overrides and Android Low/Mid/High device profiles are now staged under `Config/`; native packaging, mobile touch HUD and device profiling remain open (see [mobile release plan](docs/MOBILE_RELEASE_PLAN.md)).
 
+## New: playable 3D browser preview on Cloudflare
+
+**Play now:** [Warrior's Paradise — 3D Frontline](https://warriors-paradise-field.pages.dev/3d/)
+
+This is an actual **WebGL2-rendered 3D** WWII skirmish (not raycasting): perspective camera, depth testing, sunlit/fogged 3D geometry, a Normandy farm environment, enemies, ballistics, three loadout choices, reloading, grenades, healing, three capture points and phone two-thumb controls. It is dependency-free and hosted as static files under `browser/3d/`; the player's browser/integrated GPU renders it. The existing [2.5D Field Edition](https://warriors-paradise-field.pages.dev/) remains the low-end fallback.
+
+Cloudflare has confirmed deployment and browser initialization/deployment of the 3D game; the deterministic mocked-WebGL2 combat smoke test covers startup, drawing and touch combat. **This is a low-poly gameplay preview, not Enlisted or World War Heroes graphical parity or the fully authored UE5.8 game.** WebGL2 or browser graphics acceleration is required for the 3D edition; devices with no WebGL2 can use Field Edition.
+
+See [Cloudflare 3D deployment architecture](docs/CLOUDFLARE_3D_DEPLOYMENT.md) for why Pages can host the web game completely but **Unreal Pixel Streaming requires a separately GPU-equipped server**.
+
 ## Native 3D Android development — commercial-quality target
 
 The real Unreal Engine 5.8 project now includes a **native multitouch HUD and input controller** for infantry, tanks, light vehicles and gun emplacements. It has 13 context-sensitive infantry actions, twin-thumb movement/look, tank turret and cannon/MG controls, an Android ARM64 landscape setup, mobile-specific rendering profile handling and a dedicated Android packaging/preflight script.
