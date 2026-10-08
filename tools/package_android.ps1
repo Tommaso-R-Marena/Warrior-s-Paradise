@@ -6,7 +6,8 @@ param(
     [ValidateSet("ETC2", "ASTC")][string]$TextureFormat = "ETC2",
     [ValidateSet("Development", "Shipping")][string]$Configuration = "Development",
     [string]$ArchiveDirectory = "",
-    [switch]$ValidateOnly
+    [switch]$ValidateOnly,
+    [switch]$RequireProductionArt
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,6 +25,17 @@ if ($LASTEXITCODE -ne 0) { throw "Repository contract validation failed." }
 if ($LASTEXITCODE -ne 0) { throw "Compile-readiness source audit failed." }
 & $PythonCommand.Source -m unittest discover -s (Join-Path $RepoRoot "tools\tests") -p "test_*.py" -v
 if ($LASTEXITCODE -ne 0) { throw "Source regression tests failed." }
+
+# Development packages may intentionally use code-generated stand-ins.
+# Shipping requires a minimally populated, reviewed art inventory.
+$ArtAuditArgs = @((Join-Path $RepoRoot "tools\assets\audit_mobile_content.py"))
+if ($RequireProductionArt -or $Configuration -eq "Shipping") {
+    $ArtAuditArgs += "--strict"
+}
+& $PythonCommand.Source @ArtAuditArgs
+if ($LASTEXITCODE -ne 0) {
+    throw "Production 3D art readiness gate failed. Import/verify assets before Shipping."
+}
 
 if ($ValidateOnly) {
     Write-Host "[WP ANDROID] Source preflight passed; NO Unreal build or APK was produced."
