@@ -1,5 +1,14 @@
 # Warrior's Paradise — Field Edition
 
+The Cloudflare-hosted browser build now offers **two distinct experiences**:
+
+- **[3D Frontline](https://warriors-paradise-field.pages.dev/3d/):** a genuine WebGL2 3D client with rendered meshes, mobile controls, three weapons and capture objectives.
+- **[Field Edition](https://warriors-paradise-field.pages.dev/):** the original lower-powered CPU/Canvas raycasting alternative.
+
+Cloudflare Pages serves both, and all 3D rendering/game simulation runs on the player's device. Neither is remotely GPU-rendered Unreal; see the [Cloudflare 3D architecture guide](../docs/CLOUDFLARE_3D_DEPLOYMENT.md).
+
+
+
 **A playable, lightweight browser skirmish for phones and low-power computers.**
 
 This is deliberately a **separate implementation**, NOT the full Unreal Engine 5.8 game and not a streamed desktop build. It uses textured Canvas 2D raycasting and procedural art (still not full mesh-based 3D), with no WebGL dependency, Unreal Engine download, external JavaScript framework, paid backend, signup or account. Visuals, map, squad size and weapon fidelity are simpler than the UE project.
