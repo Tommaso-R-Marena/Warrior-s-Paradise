@@ -115,6 +115,10 @@ void AWPCombatHUD::DrawHUD()
             Width * 0.5f,
             Height * 0.5f);
         DrawTankReadout(Width, Height);
+        if (bTouchMode)
+        {
+            DrawMobileTouchOverlay(Width, Height);
+        }
         return;
     }
 
@@ -130,6 +134,10 @@ void AWPCombatHUD::DrawHUD()
         }
 
         DrawVehicleReadout(Width, Height);
+        if (bTouchMode)
+        {
+            DrawMobileTouchOverlay(Width, Height);
+        }
         return;
     }
 
@@ -139,6 +147,10 @@ void AWPCombatHUD::DrawHUD()
             Width * 0.5f,
             Height * 0.5f);
         DrawEmplacementReadout(Width, Height);
+        if (bTouchMode)
+        {
+            DrawMobileTouchOverlay(Width, Height);
+        }
     }
 }
 
@@ -186,6 +198,12 @@ void AWPCombatHUD::DrawMobileTouchOverlay(
     }
 
     const FVector2D ViewSize(Width, Height);
+    const APawn* Pawn = GetOwningPawn();
+    const EWPMobileMode Mode =
+        Cast<AWPArmoredVehicle>(Pawn) ? EWPMobileMode::Tank :
+        Cast<AWPLightVehicle>(Pawn) ? EWPMobileMode::LightVehicle :
+        Cast<AWPGunEmplacement>(Pawn) ? EWPMobileMode::Emplacement :
+        EWPMobileMode::Infantry;
     const float UIScale = FMath::Clamp(Height / 800.0f, .70f, 1.30f);
 
     // HUD positions and touch hit boxes are defined by the same table.
@@ -195,6 +213,12 @@ void AWPCombatHUD::DrawMobileTouchOverlay(
     for (int32 Index = 0; Index < Count; ++Index)
     {
         const FWPMobileButtonSpec& Button = Buttons[Index];
+        if (!WPMobileControls::IsAvailable(Button.Action, Mode))
+        {
+            continue;
+        }
+        const TCHAR* ActionLabel =
+            WPMobileControls::GetLabel(Button.Action, Mode, Button.Label);
         const float X = (Button.Center.X - Button.HalfSize.X) * Width;
         const float Y = (Button.Center.Y - Button.HalfSize.Y) * Height;
         const float W = Button.HalfSize.X * 2.0f * Width;
@@ -216,10 +240,10 @@ void AWPCombatHUD::DrawMobileTouchOverlay(
 
         const float TextScale = .83f * UIScale;
         const float TextX = X + FMath::Max(3.0f,
-            (W - FCString::Strlen(Button.Label) * 7.5f * TextScale) * .5f);
+            (W - FCString::Strlen(ActionLabel) * 7.5f * TextScale) * .5f);
         const float TextY = Y + (H - 14.0f * TextScale) * .5f;
         DrawText(
-            FString(Button.Label),
+            FString(ActionLabel),
             bHeld ? FLinearColor(.11f, .14f, .12f, 1.0f)
                   : FLinearColor(.94f, .94f, .87f, 1.0f),
             TextX, TextY,
