@@ -411,7 +411,7 @@
       }
     }
     // Weapon silhouette and muzzle flash at the foreground.
-    const sway=Math.sin(game.time*7)*(input.keys.KeyW||input.joyY?.6:0);
+    const sway=Math.sin(game.time*7)*((input.keys.KeyW||Math.abs(input.joyY)>.12)?.6:0);
     const wx=w*.59,wy=h*.81+sway;
     ctx.fillStyle="#28332c";ctx.fillRect(wx,wy,w*.18,h*.20);
     ctx.fillStyle="#596050";ctx.fillRect(wx+w*.07,wy-h*.06,w*.1,h*.13);
@@ -465,7 +465,16 @@
     resizeRender();updateHud();
   }
   dom.quality.addEventListener("change",()=>setQuality(dom.quality.value));
-  dom.start.addEventListener("click",reset);
+  dom.start.addEventListener("click",()=>{
+    if(game.phase==="paused"){
+      game.phase="playing";
+      dom.modal.classList.remove("shown");
+      dom.start.innerHTML="DEPLOY <span>→</span>";
+      try { if(!coarse)canvas.requestPointerLock?.(); } catch {}
+    }else{
+      reset();
+    }
+  });
   window.addEventListener("resize",resizeRender,{passive:true});
   document.addEventListener("keydown",(e)=>{
     if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code))e.preventDefault();
@@ -518,14 +527,6 @@
   button("reload-btn",reload);
   button("heal-btn",heal);
   button("switch-btn",switchSoldier);
-  // Clicking the initial modal after pausing resumes without resetting.
-  dom.start.addEventListener("click",()=>{dom.start.innerHTML="DEPLOY <span>→</span>";});
-  const launch=dom.start.onclick;
-  dom.start.onclick=()=>{};
-  dom.start.addEventListener("click",(e)=>{
-    // The first click listener deployed already. Handle the paused variant
-    // in the original listener by checking the state before click.
-  });
   setQuality(dom.quality.value);
   requestAnimationFrame(tick);
   if("serviceWorker" in navigator&&location.protocol!=="file:"){
