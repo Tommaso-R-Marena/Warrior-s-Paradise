@@ -245,6 +245,36 @@ void AWPArmoredVehicle::InteractInput()
     ExitVehicle();
 }
 
+void AWPArmoredVehicle::ApplyMobileMovement(float Forward, float Steering)
+{
+    MoveForwardInput(Forward);
+    TurnHullInput(Steering);
+}
+
+void AWPArmoredVehicle::ApplyMobileLook(float Yaw, float Pitch)
+{
+    TurnTurretInput(Yaw);
+    PitchGunInput(Pitch);
+}
+
+void AWPArmoredVehicle::ExecuteMobileAction(EWPMobileButton Action, bool bPressed)
+{
+    if (Action == EWPMobileButton::Aim)
+    {
+        if (bPressed) StartPlayerMachineGun();
+        else StopPlayerMachineGun();
+        return;
+    }
+    if (!bPressed) return;
+    switch (Action)
+    {
+        case EWPMobileButton::Fire: PlayerFireCannon(); break;
+        case EWPMobileButton::Reload: ToggleShellType(); break;
+        case EWPMobileButton::Interact: InteractInput(); break;
+        default: break;
+    }
+}
+
 void AWPArmoredVehicle::MoveForwardInput(float Value)
 {
     if (bDestroyed ||
