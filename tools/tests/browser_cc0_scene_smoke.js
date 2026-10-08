@@ -9,6 +9,8 @@ const vm=require("node:vm");
 const root=path.resolve(__dirname,"../../browser/3d");
 const loader=fs.readFileSync(path.join(root,"asset-loader.js"),"utf8");
 const gameplay=fs.readFileSync(path.join(root,"game.js"),"utf8");
+const infantry=fs.readFileSync(path.join(root,"battle-art.js"),"utf8");
+const spatialAudio=fs.readFileSync(path.join(root,"battle-audio.js"),"utf8");
 const kenney=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
 const quaternius=["barn","chicken_coop","windmill","well"];
 const models=Object.fromEntries([
@@ -57,6 +59,9 @@ async function scenario(shouldLoad,farms=true){
   Uint8Array,ArrayBuffer,DataView,Float32Array,Math,Error};
  vm.createContext(sandbox);
  vm.runInContext(loader,sandbox,{filename:"asset-loader.js",timeout:15000});
+ vm.runInContext(infantry,sandbox,{filename:"battle-art.js",timeout:15000});
+ vm.runInContext(spatialAudio,sandbox,{filename:"battle-audio.js",timeout:15000});
+ assert(win.WPBattleArt&&win.WPBattleSound,"Full presentation modules failed to initialize");
  vm.runInContext(gameplay,sandbox,{filename:"game.js",timeout:15000});
  // Microtask drain for asynchronous fetch, text decoding and static mesh upload.
  for(let i=0;i<120;i++){
