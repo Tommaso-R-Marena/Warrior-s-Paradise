@@ -1022,6 +1022,9 @@ void AWPBattlefieldDirector::BuildAtmosphere()
         }
     }
 
+#if !(PLATFORM_ANDROID || PLATFORM_IOS)
+    // Avoid loading the desktop volumetric-cloud shader/material at all
+    // on mobile; not merely skipping its Actor spawn after loading.
     UMaterialInterface* CloudMaterial = nullptr;
 
     if (EnvironmentVisualProfile)
@@ -1040,9 +1043,6 @@ void AWPBattlefieldDirector::BuildAtmosphere()
                 "m_SimpleVolumetricCloud_Inst"));
     }
 
-#if !(PLATFORM_ANDROID || PLATFORM_IOS)
-    // Mobile Forward does not benefit from expensive volumetric cloud
-    // simulation on mid-range devices. Preserve desktop atmosphere.
     if (CloudMaterial)
     {
         if (AVolumetricCloud* Cloud =
