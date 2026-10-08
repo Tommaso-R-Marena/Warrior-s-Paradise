@@ -1,0 +1,23 @@
+{
+  "title": "Documented CC0 shotgun blast, used as generic optional gunshot layer",
+  "target": "cc0-gunshot.wav.b64",
+  "license": "CC0-1.0",
+  "source_repo": "transitive-bullshit/ai-safety-doom",
+  "source_path": "public/game/audio/rlhf-shotgun.wav",
+  "source_blob_sha1": "66e33e367e3006a2c978a5d42cbf99f8dfd60a8b",
+  "audio_bytes": 76812,
+  "creator_sources": [
+    {
+      "name": "michorvath",
+      "origin": "Freesound",
+      "description": "20 gauge shotgun CC0"
+    },
+    {
+      "name": "SpringySpringo",
+      "origin": "OpenGameArt",
+      "description": "gun pumping sound, CC0"
+    }
+  ],
+  "provenance": "https://github.com/transitive-bullshit/ai-safety-doom/blob/main/public/game/audio/README.md",
+  "notice": "Not an authentic Lee-Enfield, Sten or Bren recording. The original synthesized audio remains fallback."
+}
