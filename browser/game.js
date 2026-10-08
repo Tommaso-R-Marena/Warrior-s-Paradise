@@ -10,6 +10,7 @@
     modal: $("modal"), start: $("start-btn"), title: $("modal-title"),
     copy: $("modal-copy"), quality: $("quality"), qualityLabel: $("quality-label"),
     health: $("health"), ammo: $("ammo"), medkits: $("medkits"),
+    grenades: $("grenades"), loadout: $("loadout"), aimRing: $("aim-ring"), crosshair: $("crosshair"),
     mission: $("mission"), progress: $("progress"), squad: $("squad"),
     hit: $("hitmarker"), damage: $("damage-flash"), tip: $("tip")
   };
@@ -18,6 +19,11 @@
   else if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) dom.quality.value = "eco";
   else dom.quality.value = "balanced";
 
+  const WEAPONS = Object.freeze({
+    rifle: { name: "LEE-ENFIELD", capacity: 10, interval: .63, reload: 2.05, damage: 59, range: 16, spread: .015, sound: 145 },
+    smg: { name: "STEN MK II", capacity: 32, interval: .095, reload: 1.7, damage: 18, range: 9.5, spread: .052, sound: 195 },
+    lmg: { name: "BREN", capacity: 30, interval: .14, reload: 2.85, damage: 32, range: 14, spread: .036, sound: 118 }
+  });
   const MAP_W = 28, MAP_H = 28;
   const tiles = new Uint8Array(MAP_W * MAP_H);
   const objectives = [
@@ -64,13 +70,18 @@
   function spawnAt(x, y, team, role) {
     return { x, y, team, role, hp: team === "enemy" ? 74 : 100, maxHp: team === "enemy" ? 74 : 100,
       angle: .6, alive: true, cooldown: random(.2, 1.2), flash: 0, hit: 0,
-      ammo: team === "enemy" ? 8 : 8, reserve: team === "enemy" ? 32 : 48,
-      reload: 0, medkits: team === "enemy" ? 0 : 2, strafedir: Math.random() < .5 ? 1 : -1,
-      suppression: 0, memory: 0, target: null };
+      weapon: role === "ASSAULT" ? "smg" : role === "MEDIC" ? "lmg" : "rifle",
+      ammo: role === "ASSAULT" ? 32 : role === "MEDIC" ? 30 : 10,
+      reserve: team === "enemy" ? 36 : role === "ASSAULT" ? 128 : role === "MEDIC" ? 90 : 70,
+      reload: 0, ads: false, crouch: false, medkits: team === "enemy" ? 0 : 2,
+      frags: team === "enemy" ? 0 : 2, smokes: team === "enemy" ? 0 : 1,
+      strafedir: Math.random() < .5 ? 1 : -1,
+      suppression: 0, memory: 0, target: null, pathTimer: 0, pathNode: null };
   }
   const game = {
     phase: "menu", player: null, friends: [], enemies: [], objects: [],
     objective: 0, cap: 0, kills: 0, time: 0, screenW: 288, screenH: 170,
+    ord: "FOLLOW", thrown: [], particles: [],
     shake: 0, flash: 0, hitTime: 0, message: "", messageTimer: 0,
     quality: dom.quality.value, fps: 30, fpsTime: 0, lastFrame: 0, raf: 0
   };
@@ -120,7 +131,8 @@
   function reset() {
     populateMap(); game.phase="playing"; game.objective=0;game.cap=0;
     game.kills=0;game.time=0;game.shake=0;game.hitTime=0;game.flash=0;
-    game.objects=[];makeSoldiers();notify("FOLLOW THE MARKER • SECURE SECTOR ONE",4);
+    game.objects=[];game.thrown=[];game.particles=[];game.ord="FOLLOW";
+    makeSoldiers();notify("FOLLOW THE MARKER • SECURE SECTOR ONE",4);
     dom.modal.classList.remove("shown");
     resizeRender();
     updateHud();
