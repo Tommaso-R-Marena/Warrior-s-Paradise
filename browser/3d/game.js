@@ -393,6 +393,62 @@ function swap(){
  const w=WEAPONS[player.weapon];player.ammo=w.capacity;player.reserve=w.reserve;
  player.reload=0;msg("EQUIPPED "+w.name,1.3);
 }
+function updateCombinedArms(dt){
+ for(const t of game.tracers)t.life-=dt;
+ game.tracers=game.tracers.filter(t=>t.life>0);
+ for(const strike of game.strikes){
+  strike.life-=dt;
+  if(strike.life<=0&&!strike.detonated){
+   strike.detonated=true;
+   for(const e of game.enemies){
+    if(e.hp<=0)continue;
+    const d=Math.hypot(e.x-strike.x,e.z-strike.z);
+    if(d<8&&lineHit(strike.x,strike.z,e.x,e.z)){
+     e.hp-=135*(1-d/11);e.hit=.4;e.suppression=2.2;
+     if(e.hp<=0)game.kills++;
+    }
+   }
+   const d=Math.hypot(player.x-strike.x,player.z-strike.z);
+   if(d<6){player.hp-=48*(1-d/6);player.hurt=1;}
+   for(const ally of game.allies){
+    const da=Math.hypot(ally.x-strike.x,ally.z-strike.z);
+    if(da<6)ally.hp-=44*(1-da/6);
+   }
+   msg("ARTILLERY IMPACT",.9);
+   if(player.hp<=0){end(false);return;}
+  }
+ }
+ game.strikes=game.strikes.filter(t=>t.life>-.42);
+ for(let i=0;i<game.allies.length;i++){
+  const a=game.allies[i];if(a.hp<=0)continue;
+  a.cd-=dt;
+  if(a.reload>0){a.reload-=dt;if(a.reload<=0)a.ammo=16;}
+  const side=i?1:-1,behind=3+i*.8;
+  const fx=player.x+Math.sin(player.yaw)*behind+Math.cos(player.yaw)*side*2.1;
+  const fz=player.z-Math.cos(player.yaw)*behind+Math.sin(player.yaw)*side*2.1;
+  const to=Math.hypot(fx-a.x,fz-a.z);
+  if(game.order==="follow"&&to>2.1){
+   [a.x,a.z]=move(a.x,a.z,(fx-a.x)/to*Math.min(4.7,to)*dt,
+    (fz-a.z)/to*Math.min(4.7,to)*dt);
+  }
+  let victim=null,near=26;
+  for(const enemy of game.enemies){
+   const dist=Math.hypot(enemy.x-a.x,enemy.z-a.z);
+   if(enemy.hp>0&&dist<near&&lineHit(a.x,a.z,enemy.x,enemy.z)){
+    near=dist;victim=enemy;
+   }
+  }
+  if(victim&&a.cd<=0&&a.reload<=0){
+   if(a.ammo<=0){a.reload=1.9;continue;}
+   a.ammo--;a.cd=.42+rnd()*.48;
+   addTracer(a.x,a.z,victim.x,victim.z,"friendly");
+   if(rnd()<(.49-near*.006)){
+    victim.hp-=19+rnd()*10;victim.hit=.18;victim.suppression=1.2;
+    if(victim.hp<=0){game.kills++;msg("FIRETEAM: TARGET DOWN",.9);}
+   }
+  }
+ }
+}
 function simulate(dt){
  if(!game.playing)return;
  game.elapsed+=dt;
@@ -434,25 +490,40 @@ function simulate(dt){
   }
  }
  game.grenades=game.grenades.filter(g=>g.life>-.3);
+ updateCombinedArms(dt);
+ if(!game.playing)return;
  for(const e of game.enemies){
   if(e.hp<=0)continue;
   e.cd-=dt;e.hit=Math.max(0,e.hit-dt);
-  const d=Math.hypot(player.x-e.x,player.z-e.z);
-  const visible=d<25&&lineHit(e.x,e.z,player.x,player.z);
-  if(visible){e.alert=2.1;e.lastX=player.x;e.lastZ=player.z;}
+  e.suppression=Math.max(0,(e.suppression||0)-dt);
+  let victim=null,d=26;
+  for(const candidate of [player,...game.allies]){
+   if(candidate.hp<=0)continue;
+   const range=Math.hypot(candidate.x-e.x,candidate.z-e.z);
+   if(range<d&&lineHit(e.x,e.z,candidate.x,candidate.z)){victim=candidate;d=range;}
+  }
+  const visible=!!victim;
+  if(visible){e.alert=2.1;e.lastX=victim.x;e.lastZ=victim.z;}
   else e.alert=Math.max(0,e.alert-dt);
-  const tx=visible?player.x:e.lastX,tz=visible?player.z:e.lastZ;
+  const tx=visible?victim.x:e.lastX,tz=visible?victim.z:e.lastZ;
   const targetD=Math.hypot(tx-e.x,tz-e.z);
   if(e.alert>0&&targetD>7){
-   const speed=visible?1.24:.84;
+   const speed=e.suppression>.2?.38:visible?1.24:.84;
    [e.x,e.z]=move(e.x,e.z,(tx-e.x)/targetD*speed*dt,(tz-e.z)/targetD*speed*dt);
   }
-  if(visible&&d<18&&e.cd<=0){
-   e.cd=1.25+rnd()*.95;
-   const hit=.52-d*.013;
+  if(visible&&d<21&&e.cd<=0){
+   e.cd=(e.suppression>.2?2.2:1.3)+rnd()*.95;
+   const difficulty=game.difficulty==="veteran"?1.18:game.difficulty==="recruit"?.55:1;
+   const hit=Math.max(.05,(.51-d*.013)*(victim.crouch?.52:1)*difficulty*
+     (e.suppression>.2?.4:1));
+   addTracer(e.x,e.z,victim.x,victim.z,"hostile");
    if(rnd()<hit){
-    player.hp-=6+rnd()*7;player.hurt=.9;msg("UNDER FIRE",.8);
-    if(player.hp<=0){end(false);return;}
+    const damage=(6+rnd()*7)*(game.difficulty==="veteran"?1.2:game.difficulty==="recruit"?.7:1);
+    victim.hp-=damage;
+    if(victim===player){
+     player.hurt=.9;msg("UNDER FIRE · FIND COVER",.8);
+     if(player.hp<=0){end(false);return;}
+    }else if(victim.hp<=0)msg("FIRETEAM CASUALTY",1.8);
    }
   }
  }
@@ -464,8 +535,10 @@ function simulate(dt){
    game.capture=Math.min(1,game.capture+dt/2.5);
    if(game.capture>=1){
     game.sector++;game.capture=0;
+    player.hp=Math.min(100,player.hp+17);player.reserve+=24;
+    player.frags=Math.min(3,player.frags+1);game.support=Math.min(2,game.support+1);
     if(game.sector===flags.length){end(true);return;}
-    msg("SECTOR CAPTURED · ADVANCE",2.5);
+    msg("SECTOR SECURED · RESUPPLIED AND ARTILLERY READY",2.5);
    }
   }else if(distance>=4)game.capture=Math.max(0,game.capture-dt*.16);
  }
