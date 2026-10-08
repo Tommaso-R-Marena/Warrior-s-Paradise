@@ -130,6 +130,7 @@ const boxes=[
  [35,-27,10,12],[-8,38,10,11]
 ];
 const flags=[{x:-12,z:-5,title:"FARM APPROACH"},{x:11,z:11,title:"CROSSROADS"},{x:31,z:29,title:"RADIO POST"}];
+const treeTrunks=[];
 const covers=flags.flatMap(f=>[
  [f.x-6,f.z-7,4,.85],[f.x+6,f.z+6,4,.85],
  [f.x-6,f.z+5,.85,4],[f.x+5,f.z-6,.85,4]
@@ -137,13 +138,14 @@ const covers=flags.flatMap(f=>[
 const within=(x,z,b,pad=0)=>Math.abs(x-b[0])<(b[2]/2+pad)&&Math.abs(z-b[1])<(b[3]/2+pad);
 function blocked(x,z,r=.42){
  if(x<-47+r||x>47-r||z<-47+r||z>47-r)return true;
- return boxes.some(b=>within(x,z,b,r))||covers.some(b=>within(x,z,b,r));
+ return boxes.some(b=>within(x,z,b,r))||covers.some(b=>within(x,z,b,r))||treeTrunks.some(t=>Math.hypot(x-t.x,z-t.z)<t.radius+r);
 }
 function openLOS(ax,az,bx,bz){
  const d=Math.hypot(bx-ax,bz-az),segments=Math.ceil(d/.55);
  for(let i=1;i<segments;i++){
   const t=i/segments;if(boxes.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.12))||
-      covers.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05)))return false;
+      covers.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
+      treeTrunks.some(tr=>Math.hypot(ax+(bx-ax)*t-tr.x,az+(bz-az)*t-tr.z)<tr.radius))return false;
  }
  return true;
 }
@@ -196,7 +198,7 @@ function buildWorld(){
   m.box(x+w*.31,5.65,z-d*.15,.68,2.05,.72,COLORS.brick);
   m.box(x+w*.31,6.72,z-d*.15,.87,.20,.90,COLORS.stone);
  }
- for(let i=0;i<80;i++){
+ for(let i=0;i<28;i++){
   const x=-45+rnd()*90,z=-45+rnd()*90;
   if(blocked(x,z,2.2)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<6))continue;
   const h=3.4+rnd()*2.3;
@@ -255,7 +257,53 @@ function buildWorld(){
  return m.data;
 }
 const staticMesh=mesh(false),liveMesh=mesh(true);
-upload(staticMesh,buildWorld());
+const fallbackWorld=buildWorld();
+upload(staticMesh,fallbackWorld);
+const scenery={loaded:false,instances:0,triangles:0,error:""};
+function loadLicensedScenery(){
+ const kit=window.WPAssetKit;
+ if(!kit||typeof fetch!=="function"){scenery.error="GLB loader or fetch unavailable";return;}
+ const models=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
+ kit.loadModels(models.map(name=>({name}))).then(assets=>{
+  // This is an optional visual layer; never replace the validated battle geometry.
+  let state=944628,rand=()=>{state^=state<<13;state^=state>>>17;state^=state<<5;return (state>>>0)/4294967296;};
+  const world=new Geometry();
+  world.data=fallbackWorld.slice();
+  let copies=0,added=0;
+  const specs=[
+   {name:"tree-oak",count:31,scale:[4.5,6.3],palette:[[.21,.34,.18],[.37,.31,.25]]},
+   {name:"tree-pinedefaulta",count:20,scale:[4.5,6.2],palette:[[.19,.30,.20],[.34,.29,.24],[.28,.37,.25]]},
+   {name:"plant-bush",count:60,scale:[3.2,5.6],palette:[[.25,.36,.20],[.32,.40,.23]]},
+   {name:"rock-largea",count:34,scale:[2.7,4.8],palette:[[.41,.42,.39],[.48,.47,.42]]},
+   {name:"fence-simple",count:12,scale:[3.0,3.6],palette:[[.39,.31,.23],[.49,.38,.27]]}
+  ];
+  for(const spec of specs){
+   const positions=[];
+   let tries=0;
+   while(positions.length<spec.count&&tries++<spec.count*32){
+    const x=-44+rand()*88,z=-44+rand()*88;
+    if(blocked(x,z,2.2)||Math.hypot(x+36,z+33)<8||
+      flags.some(f=>Math.hypot(x-f.x,z-f.z)<7))continue;
+    const scale=spec.scale[0]+rand()*(spec.scale[1]-spec.scale[0]);
+    positions.push([x,0,z,scale,rand()*Math.PI*2]);
+    if(spec.name.startsWith("tree-")){
+     treeTrunks.push({x,z,radius:.46});
+    }
+   }
+   added+=kit.appendInstances(world,assets[spec.name],positions,spec.palette);
+   copies+=positions.length;
+  }
+  upload(staticMesh,world.data);
+  scenery.loaded=true;scenery.instances=copies;scenery.triangles=added;
+  if($("assetstatus"))$("assetstatus").textContent="KENNEY CC0 SCENERY READY · "+copies+" PLACED ASSETS";
+ }).catch(err=>{
+  scenery.error=String(err);
+  if($("assetstatus"))$("assetstatus").textContent="LIGHTWEIGHT SCENERY ACTIVE · OPTIONAL ART UNAVAILABLE";
+  // If an import fails, keep the code-built baseline without partial collision.
+  treeTrunks.length=0;
+ });
+}
+
 const WEAPONS={
  rifle:{name:"LEE-ENFIELD",capacity:10,reserve:70,damage:55,delay:.6,reload:1.9,spread:.015},
  smg:{name:"STEN",capacity:32,reserve:128,damage:19,delay:.10,reload:1.6,spread:.052},
@@ -855,12 +903,14 @@ if("serviceWorker" in navigator && location.protocol!=="file:"){
 $("deploy").addEventListener("click",reset);
 $("quality").value=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent||"")?"low":"medium";
 game.quality=$("quality").value;
-spawnEnemies();resize();hud();
+spawnEnemies();resize();hud();loadLicensedScenery();
 // Lightweight read-only testability hooks (not used for normal gameplay).
 window.WP3DDiagnostics=()=>({
  sector:game.sector,alive:game.enemies.filter(e=>e.hp>0).length,
  playerHp:player.hp,weapon:player.weapon,renderSize:[canvas.width,canvas.height],
  renderer:"WebGL2",geometryTriangles:staticMesh.count/3,
+  assetInstances:scenery.instances,assetTriangles:scenery.triangles,assetsLoaded:scenery.loaded,
+  assetError:scenery.error,
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length
