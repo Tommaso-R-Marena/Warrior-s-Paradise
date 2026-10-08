@@ -279,12 +279,16 @@ function reset(){
  const type=$("weapon").value in WEAPONS?$("weapon").value:"rifle";
  const weapon=WEAPONS[type];
  Object.assign(player,{x:-36,z:-33,yaw:-.78,pitch:0,hp:100,maxHp:100,
-  ammo:weapon.capacity,reserve:weapon.reserve,weapon:type,cd:0,reload:0,aim:false,
+   ammo:weapon.capacity,reserve:weapon.reserve,weapon:type,cd:0,reload:0,aim:false,
   frags:2,med:2,hurt:0,crouch:false});
  Object.assign(game,{playing:true,finished:false,sector:0,capture:0,kills:0,elapsed:0,
   grenades:[],tracers:[],strikes:[],support:1,order:"follow",flash:0,
    difficulty:$("difficulty").value,quality:$("quality").value,scaler:1,adapt:0});
- spawnEnemies();spawnAllies();$("menu").hidden=true;input.fire=false;
+ spawnEnemies();spawnAllies();
+ game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
+  name,{ammo:w.capacity,reserve:w.reserve}
+ ]));
+ $("menu").hidden=true;input.fire=false;
  msg("CAPTURE THE FORWARD FARM",2);hud();resize();
 }
 function msg(s,time=1.4){$("status").textContent=s;game.notice=time;}
@@ -400,7 +404,9 @@ function swap(){
  if(!game.playing)return;
  const names=Object.keys(WEAPONS),idx=names.indexOf(player.weapon);
  player.weapon=names[(idx+1)%names.length];
- const w=WEAPONS[player.weapon];player.ammo=w.capacity;player.reserve=w.reserve;
+ game.loadouts[player.weapon]={ammo:player.ammo,reserve:player.reserve};
+ const w=WEAPONS[player.weapon],store=game.loadouts[player.weapon];
+ player.ammo=store.ammo;player.reserve=store.reserve;
  player.reload=0;msg("EQUIPPED "+w.name,1.3);
 }
 function updateCombinedArms(dt){
@@ -483,7 +489,8 @@ function simulate(dt){
  for(const g of game.grenades){
   if(g.life<=0)continue;
   g.life-=dt;
-  if(g.life<=0){
+  if(g.life<=0&&!g.detonated){
+   g.detonated=true;
    for(const e of game.enemies){
     if(e.hp<=0)continue;
     const d=Math.hypot(g.x-e.x,g.z-e.z);
@@ -613,7 +620,7 @@ function dynamicGeometry(){
  const shift=player.aim?.12:.38;
  const px=player.x+forward[0]*.65+right[0]*shift;
  const pz=player.z+forward[1]*.65+right[1]*shift;
- const eyeY=1.67+Math.sin(player.elapsed||game.elapsed*5)*.007;
+ const eyeY=(player.crouch?1.02:1.67)+Math.sin(game.elapsed*5)*.007;
  const py=eyeY-(player.aim?.18:.40)+player.pitch*.17;
  const sway=game.flash?.035:0;
  m.box(px,py,pz,.22,.19,.77,COLORS.wood,player.yaw);
