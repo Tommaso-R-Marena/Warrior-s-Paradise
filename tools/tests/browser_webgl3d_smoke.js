@@ -36,7 +36,7 @@ function run(width,height,webgl=true){
  function el(id){
   return elements[id]??={
    id,width:0,height:0,clientWidth:width,clientHeight:height,disabled:false,
-   hidden:false,innerHTML:"",textContent:"",value:id==="quality"?"low":"rifle",
+   hidden:false,innerHTML:"",textContent:"",value:id==="quality"?"low":id==="difficulty"?"regular":"rifle",
    style:{},classList:{add(){},remove(){},toggle(){}},events:{},
    addEventListener(type,fn){(this.events[type]??=[]).push(fn)},
    send(type,params={}){for(const fn of this.events[type]||[])
@@ -74,6 +74,17 @@ function run(width,height,webgl=true){
  info=win.WP3DDiagnostics();
  assert.equal(info.sector,0);
  assert.equal(info.playerHp,100);
+ assert.equal(info.alliesAlive,2,"Player must deploy with a playable fireteam");
+ assert.equal(info.support,1,"Initial artillery charge missing");
+ assert.equal(info.squadOrder,"follow");
+ el("orders").send("pointerdown");
+ assert.equal(win.WP3DDiagnostics().squadOrder,"hold","HOLD order failed");
+ el("orders").send("pointerdown");
+ assert.equal(win.WP3DDiagnostics().squadOrder,"follow","FOLLOW order failed");
+ el("support").send("pointerdown");
+ assert.equal(win.WP3DDiagnostics().support,0,"Artillery charge should be consumed");
+ el("crouch").send("pointerdown");
+ assert.match(el("info").textContent,/LEE-ENFIELD/);
  const frame=(i)=>{
   const fn=raf.shift();
   assert(fn,"requestAnimationFrame must schedule next frame");
@@ -94,6 +105,10 @@ function run(width,height,webgl=true){
  for(let i=185;i<250;i++)frame(i);
  assert.match(el("frags").textContent,/× 1/);
  assert.equal(win.WP3DDiagnostics().weapon,"smg");
+ assert.match(el("squadstate").textContent,/FIRETEAM/);
+ assert.match(el("supportstate").textContent,/ARTILLERY/);
+ assert.match(el("nav").textContent,/TO FARM APPROACH/);
+ assert.match(el("capture-fill").style.width,/^\d+%$/);
  assert(stats.draws>200,"No sustained GPU draw calls");
  assert(stats.uploads>200,"Dynamic infantry geometry not updated");
  return {frames:250,worldTriangles:info.geometryTriangles,draws:stats.draws,
