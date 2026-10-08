@@ -47,6 +47,25 @@ class NativeMobileControlsTests(unittest.TestCase):
             self.assertGreater(y-hy, 0)
             self.assertLess(y+hy, 1)
 
+    def test_mobile_action_hitboxes_do_not_overlap(self) -> None:
+        entries = re.findall(
+            r'\{EWPMobileButton::(\w+),\s*TEXT\("[^"]+"\),\s*'
+            r'FVector2D\(([.0-9]+)f,\s*([.0-9]+)f\),\s*'
+            r'FVector2D\(([.0-9]+)f,\s*([.0-9]+)f\)\}',
+            self.layout,
+        )
+        rectangles = [
+            (name, float(x)-float(hx), float(y)-float(hy),
+             float(x)+float(hx), float(y)+float(hy))
+            for name, x, y, hx, hy in entries
+        ]
+        self.assertGreaterEqual(len(rectangles), 13)
+        for index, a in enumerate(rectangles):
+            for b in rectangles[index + 1:]:
+                overlap = (a[1] < b[3] and a[3] > b[1] and
+                           a[2] < b[4] and a[4] > b[2])
+                self.assertFalse(overlap, f"{a[0]} overlaps {b[0]}")
+
     def test_visible_hud_uses_input_geometry_and_action_availability(self) -> None:
         self.assertIn("WPMobileControls::GetButtons", self.hud)
         self.assertIn("WPMobileControls::GetLabel", self.hud)
@@ -109,6 +128,13 @@ class NativeMobileControlsTests(unittest.TestCase):
                      "tools\\check_compile_readiness.py",
                      "-m unittest discover"):
             self.assertIn(term, script)
+
+    def test_mobile_settings_dont_force_desktop_renderer(self) -> None:
+        settings = read("Source/WarriorParadise/Private/Game/WPGameUserSettings.cpp")
+        self.assertIn("#if PLATFORM_ANDROID || PLATFORM_IOS", settings)
+        self.assertIn("Respect Android_Low/Mid/High", settings)
+        self.assertIn("Desktop feature CVar defaults must not override Mobile Forward", settings)
+        self.assertIn("SetFrameRateLimit(30.0f)", settings)
 
     def test_stock_touch_interface_disabled_to_avoid_double_joystick(self) -> None:
         cfg = read("Config/DefaultInput.ini")
