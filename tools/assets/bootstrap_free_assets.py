@@ -127,8 +127,8 @@ def stream_download(
     }
 
 
-def file_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
+def file_digest(path: Path, algorithm: str) -> str:
+    digest = hashlib.new(algorithm)
     with path.open("rb") as handle:
         while True:
             chunk = handle.read(1024 * 1024)
@@ -136,6 +136,10 @@ def file_sha256(path: Path) -> str:
                 break
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def file_sha256(path: Path) -> str:
+    return file_digest(path, "sha256")
 
 
 def safe_extract_zip(archive: Path, destination: Path) -> list[dict[str, Any]]:
@@ -498,7 +502,7 @@ def bootstrap_polyhaven(
                     {
                         "path": str(destination.relative_to(ROOT)),
                         "url": record["url"],
-                        "md5": hashlib.md5(destination.read_bytes()).hexdigest(),
+                        "md5": file_digest(destination, "md5"),
                         "sha256": file_sha256(destination),
                         "bytes": destination.stat().st_size,
                         "downloaded": False,
