@@ -59,3 +59,12 @@ button,select{font:inherit}button{cursor:pointer}button:focus-visible,select:foc
  #touch-actions{transform:scale(.78);bottom:calc(5px + env(safe-area-inset-bottom))}
  #move-pad{transform:scale(.78);bottom:calc(7px + env(safe-area-inset-bottom))}
 }
+
+
+/* Optional real WebGL2 route, retaining the low-end canvas fallback. */
+.route-3d{display:flex;align-items:center;justify-content:center;gap:12px;
+  width:100%;min-height:46px;text-align:center;text-decoration:none;
+  border:1px solid #e0c88f;border-radius:12px;padding:10px 14px;
+  background:#bfa66a21;color:#f6dda1!important;font-size:13px;
+  font-weight:900;letter-spacing:.065em;box-sizing:border-box}
+.route-3d:hover,.route-3d:focus-visible{background:#c6ae7055;outline:2px solid #dbc48a}
