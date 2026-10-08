@@ -55,9 +55,13 @@ async function scenario(shouldLoad){
  vm.runInContext(loader,sandbox,{filename:"asset-loader.js",timeout:15000});
  vm.runInContext(gameplay,sandbox,{filename:"game.js",timeout:15000});
  // Microtask drain for asynchronous fetch, text decoding and static mesh upload.
- for(let i=0;i<25;i++)await Promise.resolve();
+ for(let i=0;i<120;i++){
+  await Promise.resolve();
+  const state=win.WP3DDiagnostics();
+  if(state.assetsLoaded||state.assetError)break;
+ }
  const before=win.WP3DDiagnostics();
- assert.equal(before.assetsLoaded,shouldLoad);
+ assert.equal(before.assetsLoaded,shouldLoad,JSON.stringify(before));
  assert.equal(sources.length,names.length);
  assert(sources.every(url=>url.startsWith("./assets/kenney/")));
  if(shouldLoad){
