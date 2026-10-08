@@ -2,6 +2,18 @@
 
 This document is a human-readable companion to `tools/assets/free_asset_catalog.json`.
 
+## Self-hosted Cloudflare browser scenery — Kenney CC0
+
+The browser `/3d/` edition now vendors five original **Kenney Nature Kit v2.1** meshes (oak, pine, rock, bush and fence) as canonical Base64-encoded GLB files under `browser/3d/assets/kenney/`. They are decoded on the device and embedded into existing WebGL2 static geometry. Credit is optional under **CC0 1.0**, but we preserve it:
+
+- Original publisher and license: https://kenney.nl/assets/nature-kit
+- Public redistribution mirror: https://github.com/Hidencod/tge-assets
+- Immutable per-file upstream Git blob hashes, byte lengths and exact paths: `browser/3d/assets/kenney/MANIFEST.json`
+- Integrity test: `node tools/tests/browser_cc0_glb_smoke.js`
+- Integration/fallback test: `node tools/tests/browser_cc0_scene_smoke.js`
+
+This distinct browser source register complements the Unreal `ExternalAssets/asset-lock.json`; nothing from Fab, Sonniss, or unclear-license Sketchfab uploads has been vendored. The current geometry importer supports only static triangle meshes and uniform color materials, not skinned soldiers, weapon animations or photorealistic PBR textures.
+
 ## Redistributable-first sources
 
 ### Poly Haven
