@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Combat/WPCombatTypes.h"
 #include "GameFramework/Character.h"
+#include "UI/WPMobileControls.h"
 #include "WPSoldierCharacter.generated.h"
 
 class AWPBattlefieldDirector;
@@ -32,6 +33,10 @@ public:
 
     virtual void Tick(float DeltaSeconds) override;
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
+    // Reuse the actual desktop combat actions for mobile presses/releases.
+    // Touch controllers never bypass stamina, ammo, cooldowns, or medkits.
+    void ExecuteMobileAction(EWPMobileButton Action, bool bPressed);
 
     UFUNCTION(BlueprintPure, Category="Combat")
     UWPHealthComponent* GetHealthComponent() const { return HealthComponent; }
