@@ -498,7 +498,8 @@ def bootstrap_polyhaven(
                     {
                         "path": str(destination.relative_to(ROOT)),
                         "url": record["url"],
-                        "md5": record.get("md5"),
+                        "md5": hashlib.md5(destination.read_bytes()).hexdigest(),
+                        "sha256": file_sha256(destination),
                         "bytes": destination.stat().st_size,
                         "downloaded": False,
                         "reason": "already_exists",
