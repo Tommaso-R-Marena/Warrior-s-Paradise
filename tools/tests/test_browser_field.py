@@ -18,7 +18,7 @@ BROWSER = ROOT / "browser"
 
 class BrowserEditionTests(unittest.TestCase):
     def test_static_site_is_self_contained(self) -> None:
-        for name in ("index.html", "style.css", "game.js", "sw.js", "manifest.webmanifest", "icon.svg"):
+        for name in ("index.html", "style.css", "game.js", "visuals.js", "sw.js", "manifest.webmanifest", "icon.svg"):
             self.assertTrue((BROWSER / name).is_file(), name)
         html = (BROWSER / "index.html").read_text(encoding="utf-8")
         self.assertNotIn("https://cdn", html)
@@ -40,7 +40,7 @@ class BrowserEditionTests(unittest.TestCase):
         self.assertEqual(manifest["display"], "standalone")
         self.assertEqual(manifest["start_url"], "./")
         service = (BROWSER / "sw.js").read_text(encoding="utf-8")
-        for asset in ("index.html", "style.css", "game.js", "manifest.webmanifest", "icon.svg"):
+        for asset in ("index.html", "style.css", "game.js", "visuals.js", "manifest.webmanifest", "icon.svg"):
             self.assertIn("./" + asset, service)
 
     def test_software_renderer_needs_no_webgl(self) -> None:
@@ -65,6 +65,41 @@ class BrowserEditionTests(unittest.TestCase):
                 capture_output=True, text=True, check=False, timeout=10,
             )
             self.assertEqual(proc.returncode, 0, proc.stderr)
+
+
+    def test_enhanced_mobile_controls_and_renderer(self) -> None:
+        html = (BROWSER / "index.html").read_text(encoding="utf-8")
+        js = (BROWSER / "game.js").read_text(encoding="utf-8")
+        for control in ("ads-btn", "frag-btn", "smoke-btn", "order-btn", "aim-ring", "loadout", "grenades"):
+            self.assertIn(f'id="{control}"', html)
+        for feature in ("function smokeBlocks(", "function throwGrenade(", "function toggleOrders(", "function moveSmart(", "function setADS("):
+            self.assertIn(feature, js)
+        self.assertIn('src="./visuals.js"', html)
+        self.assertTrue((BROWSER / "visuals.js").is_file())
+        self.assertIn("visuals.setup()", js)
+
+    def test_mobile_device_profiles_are_render_only(self) -> None:
+        profiles = (ROOT / "Config/DefaultDeviceProfiles.ini").read_text(encoding="utf-8")
+        android = (ROOT / "Config/Android/AndroidEngine.ini").read_text(encoding="utf-8")
+        for level in ("Android_Low", "Android_Mid", "Android_High"):
+            self.assertIn(f"[{level} DeviceProfile]", profiles)
+        self.assertIn("r.Mobile.ShadingPath=0", android)
+        self.assertIn("r.Shadow.Virtual.Enable=0", android)
+
+    def test_node_browser_runtime_smoke_if_available(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js unavailable; runtime test requires Node")
+        smoke = ROOT / "tools/tests/browser_runtime_smoke.js"
+        self.assertTrue(smoke.is_file())
+        proc = subprocess.run(
+            [node, str(smoke)], capture_output=True, text=True,
+            check=False, timeout=40,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        self.assertIn("PASS 390x844", proc.stdout)
+        self.assertIn("PASS 844x390", proc.stdout)
+
 
 
 if __name__ == "__main__":
