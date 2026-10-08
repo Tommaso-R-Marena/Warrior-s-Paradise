@@ -5,6 +5,7 @@
   const $ = (id) => document.getElementById(id);
   const canvas = $("world"), ctx = canvas.getContext("2d", { alpha: false });
   const radar = $("radar"), radarCtx = radar.getContext("2d");
+  const visuals = window.WPVisuals || null;
   const dom = {
     modal: $("modal"), start: $("start-btn"), title: $("modal-title"),
     copy: $("modal-copy"), quality: $("quality"), qualityLabel: $("quality-label"),
@@ -49,6 +50,17 @@
     }
   }
   populateMap();
+  // Decorative billboards: rendered locally and excluded from collision logic.
+  const scenery = [
+    [2.5,7.6,"tree",1.9],[4.1,13.5,"tree",1.8],
+    [16.1,3.0,"tree",2.1],[23.4,3.6,"tree",2.0],
+    [2.6,22.5,"tree",1.9],[6.1,25.0,"tree",1.6],
+    [25.1,17.6,"tree",1.7],[17.5,18.1,"tree",2.1],
+    [11.8,16.8,"tree",1.8],[25.0,25.6,"tree",2.0],
+    [7.7,8.1,"crate",.70],[17.8,13.5,"crate",.70],
+    [21.5,21.2,"crate",.78],[11.0,6.5,"crate",.62]
+  ].filter(([x,y])=>!wall(x,y))
+   .map(([x,y,kind,size])=>({x,y,kind,size}));
   function spawnAt(x, y, team, role) {
     return { x, y, team, role, hp: team === "enemy" ? 74 : 100, maxHp: team === "enemy" ? 74 : 100,
       angle: .6, alive: true, cooldown: random(.2, 1.2), flash: 0, hit: 0,
@@ -324,15 +336,16 @@
   function renderWorld() {
     const p=game.player; if(!p)return;
     const w=canvas.width,h=canvas.height,horizon=Math.floor(h*.53);
-    const sky=ctx.createLinearGradient(0,0,0,horizon);
-    sky.addColorStop(0,"#51686b");sky.addColorStop(1,"#c0ad80");
-    ctx.fillStyle=sky;ctx.fillRect(0,0,w,horizon);
-    const ground=ctx.createLinearGradient(0,horizon,0,h);
-    ground.addColorStop(0,"#77745b");ground.addColorStop(1,"#29382c");
-    ctx.fillStyle=ground;ctx.fillRect(0,horizon,w,h-horizon);
-    // Distance fog and a few understated horizon stripes.
-    ctx.fillStyle="#a8a27a43";
-    ctx.fillRect(0,horizon-2,w,5);
+    if(visuals){visuals.setup();visuals.background(ctx,w,h,p.angle,game.time);}
+    else{
+      const sky=ctx.createLinearGradient(0,0,0,horizon);
+      sky.addColorStop(0,"#51686b");sky.addColorStop(1,"#c0ad80");
+      ctx.fillStyle=sky;ctx.fillRect(0,0,w,horizon);
+      const ground=ctx.createLinearGradient(0,horizon,0,h);
+      ground.addColorStop(0,"#77745b");ground.addColorStop(1,"#29382c");
+      ctx.fillStyle=ground;ctx.fillRect(0,horizon,w,h-horizon);
+      ctx.fillStyle="#a8a27a43";ctx.fillRect(0,horizon-2,w,5);
+    }
     const dirX=Math.cos(p.angle),dirY=Math.sin(p.angle),planeX=-dirY*.69,planeY=dirX*.69;
     const step=game.quality==="eco"?2:1;
     zBuffer.length=w;
@@ -345,6 +358,10 @@
       const base=hit.type===2?[119,98,67]:[120,120,106];
       const fog=clamp(1-depth/28,.24,1);
       const factor=(hit.side===1?.73:1)*(.62+.42*fog);
+      if(visuals) {
+        visuals.wall(ctx,x,top,step,height+1,hit,depth,game.quality);
+        continue;
+      }
       ctx.fillStyle=shade(base,factor);ctx.fillRect(x,top,step,height+1);
       // Brick/board variation without external textures.
       const textureX=Math.abs(hit.texture%1);
@@ -363,7 +380,7 @@
         ctx.fillRect(x,top+height*.92,step,Math.max(1,height*.08));
       }
     }
-    const sprites=[];
+    const sprites=scenery.slice();
     const o=objectives[game.objective];
     if(o)sprites.push({x:o.x,y:o.y,kind:"objective",size:1.55});
     for(const e of game.enemies)if(e.alive)sprites.push({...e,kind:"enemy",size:.92});
@@ -377,7 +394,7 @@
       if(transformY<=.17||transformY>26)continue;
       const mid=Math.round((w/2)*(1+transformX/transformY));
       const spriteH=Math.abs(h/transformY*s.size*.82);
-      const spriteW=s.kind==="objective"?spriteH*.28:spriteH*.43;
+      const spriteW=s.kind==="objective"?spriteH*.28:(s.kind==="tree"?spriteH*.72:(s.kind==="crate"?spriteH:.43*spriteH));
       const left=Math.round(mid-spriteW/2),right=Math.round(mid+spriteW/2);
       if(right<0||left>=w)continue;
       // This is a low-cost billboard approximation: central depth test
@@ -388,6 +405,18 @@
         ctx.fillStyle="#1c2824";ctx.fillRect(mid-1,top,2,spriteH);
         ctx.fillStyle="#d5c17d";ctx.fillRect(mid,top,Math.max(3,spriteW),spriteH*.28);
         ctx.fillStyle="#eee0b9";ctx.fillRect(mid+1,top+spriteH*.09,Math.max(2,spriteW*.40),Math.max(2,spriteH*.035));
+        continue;
+      }
+      if(s.kind==="tree"||s.kind==="crate"){
+        if(visuals)visuals.decoration(ctx,s,mid,top,spriteW,spriteH);
+        continue;
+      }
+      if(visuals){
+        visuals.soldier(ctx,s,mid,top,spriteW,spriteH,transformY);
+        if(s.kind==="enemy"&&transformY<7){
+          ctx.fillStyle="#241d1b";ctx.fillRect(mid-spriteW*.3,top-4,spriteW*.6,2);
+          ctx.fillStyle="#e18265";ctx.fillRect(mid-spriteW*.3,top-4,spriteW*.6*Math.max(0,s.hp/s.maxHp),2);
+        }
         continue;
       }
       const hostile=s.kind==="enemy",hurt=s.hit>0;
@@ -411,6 +440,8 @@
       }
     }
     // Weapon silhouette and muzzle flash at the foreground.
+    if(visuals)visuals.weapon(ctx,w,h,p,game.time,!!p.ads);
+    else{
     const sway=Math.sin(game.time*7)*((input.keys.KeyW||Math.abs(input.joyY)>.12)?.6:0);
     const wx=w*.59,wy=h*.81+sway;
     ctx.fillStyle="#28332c";ctx.fillRect(wx,wy,w*.18,h*.20);
@@ -421,6 +452,7 @@
       ctx.fillStyle="#f5d792";ctx.beginPath();ctx.moveTo(wx+w*.11,wy-h*.09);
       ctx.lineTo(wx+w*.04,wy-h*.25);ctx.lineTo(wx+w*.14,wy-h*.2);
       ctx.lineTo(wx+w*.24,wy-h*.24);ctx.lineTo(wx+w*.18,wy-h*.1);ctx.fill();
+    }
     }
     if(p.reload>0){
       ctx.fillStyle="#e8d7b3";ctx.font=Math.max(9,w*.031)+"px monospace";
