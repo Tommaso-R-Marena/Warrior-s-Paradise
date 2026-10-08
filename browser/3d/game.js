@@ -97,10 +97,20 @@ class Geometry{
   }
  }
  roof(cx,y,cz,w,d,height,col){
-  const p=[cx,y+height,cz];
-  const corners=[[cx-w/2,y,cz-d/2],[cx+w/2,y,cz-d/2],
-   [cx+w/2,y,cz+d/2],[cx-w/2,y,cz+d/2]];
-  for(let i=0;i<4;i++)this.tri(corners[i],corners[(i+1)%4],p,col);
+  // Normandy gable and two pitched planes; avoids fake pyramid rooftops.
+  this.quad([cx-w/2,y,cz-d/2],[cx-w/2,y,cz+d/2],
+   [cx,y+height,cz+d/2],[cx,y+height,cz-d/2],col);
+  this.quad([cx,y+height,cz-d/2],[cx,y+height,cz+d/2],
+   [cx+w/2,y,cz+d/2],[cx+w/2,y,cz-d/2],col);
+  this.tri([cx-w/2,y,cz-d/2],[cx+w/2,y,cz-d/2],
+   [cx,y+height,cz-d/2],COLORS.plaster);
+  this.tri([cx+w/2,y,cz+d/2],[cx-w/2,y,cz+d/2],
+   [cx,y+height,cz+d/2],COLORS.plaster);
+  for(let n=0;n<6;n++){
+   const z=cz-d/2+.2+n*(d-.4)/5;
+   this.box(cx-w*.25,y+height*.5,z,.07,.055,.08,COLORS.wood);
+   this.box(cx+w*.25,y+height*.5,z,.07,.055,.08,COLORS.wood);
+  }
  }
 }
 const COLORS={
@@ -164,6 +174,27 @@ function buildWorld(){
   }
   m.box(x,1.12,z+d/2+.09,1.45,2.23,.12,COLORS.timber);
   m.box(x,1.12,z-d/2-.09,1.45,2.23,.12,COLORS.timber);
+  m.box(x,.2,z,w+.09,.4,d+.09,COLORS.stone);
+  for(const side of [-1,1]){
+   const front=z+side*(d/2+.14);
+   m.box(x,2.18,front,w*.95,.13,.11,COLORS.wood);
+   m.box(x,3.78,front,w*.95,.11,.12,COLORS.timber);
+   for(const k of [-1,1]){
+    const wx=x+k*w*.24;
+    m.box(wx,2.20,front,.10,1.35,.12,COLORS.timber);
+    m.box(wx,3.40,front,1.28,.10,.13,COLORS.wood);
+    m.box(wx+k*.66,2.8,front,.33,1.26,.13,COLORS.wood);
+    m.box(wx,2.8,front,.10,1.15,.14,COLORS.wood);
+   }
+   m.box(x,2.3,front,1.70,.15,.15,COLORS.stone);
+   m.box(x+.45,1.1,front+side*.08,.10,.11,.12,COLORS.gold);
+  }
+  for(const k of [-1,1]){
+   m.box(x+k*(w/2-.10),2.1,z,.15,4.1,.15,COLORS.wood);
+   m.box(x,1.90,z+k*(d/2+.08),w*.95,.11,.13,COLORS.wood);
+  }
+  m.box(x+w*.31,5.65,z-d*.15,.68,2.05,.72,COLORS.brick);
+  m.box(x+w*.31,6.72,z-d*.15,.87,.20,.90,COLORS.stone);
  }
  for(let i=0;i<80;i++){
   const x=-45+rnd()*90,z=-45+rnd()*90;
@@ -638,18 +669,27 @@ function dynamicGeometry(){
  // Real weapon geometry attached to the perspective camera (no sprite sheet).
  const forward=[-Math.sin(player.yaw),Math.cos(player.yaw)];
  const right=[-Math.cos(player.yaw),-Math.sin(player.yaw)];
- const shift=player.aim?.12:.38;
- const px=player.x+forward[0]*.65+right[0]*shift;
- const pz=player.z+forward[1]*.65+right[1]*shift;
- const eyeY=(player.crouch?1.02:1.67)+Math.sin(game.elapsed*5)*.007;
- const py=eyeY-(player.aim?.18:.40)+player.pitch*.17;
+ const shift=player.aim?.05:.29;
+ const px=player.x+forward[0]*.91+right[0]*shift;
+ const pz=player.z+forward[1]*.91+right[1]*shift;
+ const eyeY=(player.crouch?1.02:1.67)+Math.sin(game.elapsed*5)*.009;
+ const py=eyeY-(player.aim?.20:.39)+player.pitch*.17;
+ const yaw=-player.yaw;
+ const sx=step=>px+forward[0]*step,sz=step=>pz+forward[1]*step;
  const sway=game.flash?.035:0;
- m.box(px,py,pz,.22,.19,.77,COLORS.wood,player.yaw);
- m.box(px,py+.04,pz+0.01,.19,.15,.55,COLORS.metal,player.yaw);
- m.box(px+forward[0]*.49,py+.025,pz+forward[1]*.49,.095,.09,.66,COLORS.metal,player.yaw);
- m.box(px,py-.17,pz,.11,.30,.16,COLORS.metal,player.yaw);
+ // Properly oriented stock, receiver, barrel, front sights, magazine and hand.
+ m.box(sx(-.28),py-.09,sz(-.28),.24,.18,.48,COLORS.wood,yaw);
+ m.box(px,py,pz,.17,.14,.58,COLORS.wood,yaw);
+ m.box(px,py+.075,pz,.18,.13,.43,COLORS.metal,yaw);
+ m.box(sx(.34),py+.035,sz(.34),.09,.09,.72,COLORS.metal,yaw);
+ m.box(sx(.43),py-.046,sz(.43),.15,.065,.22,COLORS.timber,yaw);
+ m.box(sx(.67),py+.092,sz(.67),.06,.095,.055,COLORS.dark,yaw);
+ m.box(sx(-.06),py+.14,sz(-.06),.07,.05,.06,COLORS.dark,yaw);
+ m.box(sx(-.04),py-.17,sz(-.04),.12,.24,.17,COLORS.metal,yaw);
+ m.box(px+right[0]*.22,py-.16,pz+right[1]*.22,.19,.21,.29,COLORS.skin,yaw);
+ m.box(px+right[0]*.33,py-.34,pz+right[1]*.33,.25,.36,.29,COLORS.blue,yaw);
  if(game.flash>0){
-  m.cone(px+forward[0]*.87,py+.015,pz+forward[1]*.87,.22+sway,.5,COLORS.gold,7);
+  m.cone(sx(.87),py+.02,sz(.87),.16+sway,.42,COLORS.gold,7);
  }
  return m.data;
 }
