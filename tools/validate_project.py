@@ -12,6 +12,11 @@ REQUIRED = [
     "tools/tests/test_smoke_maneuver_contracts.py",
     "tools/tests/test_headless_smoke_contracts.py",
     "tools/tests/test_browser_field.py",
+    "tools/tests/test_browser_webgl3d.py",
+    "tools/tests/browser_webgl3d_smoke.js",
+    "browser/3d/index.html",
+    "browser/3d/style.css",
+    "browser/3d/game.js",
     "tools/tests/test_native_mobile.py",
     "tools/tests/test_native_mobile_content_pipeline.py",
     "tools/tests/test_asset_provenance.py",
@@ -377,6 +382,15 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("browser/3d/index.html", "3D FRONTLINE"),
+        ("browser/3d/game.js", "getContext(\"webgl2\""),
+        ("browser/3d/game.js", "function buildWorld("),
+        ("browser/3d/game.js", "function simulate("),
+        ("browser/3d/game.js", "function resize("),
+        ("browser/3d/game.js", "WP3DDiagnostics"),
+        ("browser/3d/style.css", "@media(pointer:coarse)"),
+        ("browser/index.html", "href=\"./3d/\""),
+        ("tools/tests/browser_webgl3d_smoke.js", "PASS WebGL2 mobile combat smoke"),
         ("tools/assets/generate_original_materials.py", "def maps_for("),
         ("tools/assets/generate_original_materials.py", "def create("),
         ("Content/Python/wp_build_cc0_materials.py", "/Game/External/wp_original/materials"),
