@@ -143,6 +143,31 @@ void AWPGunEmplacement::SetupPlayerInputComponent(
         &AWPGunEmplacement::InteractInput);
 }
 
+void AWPGunEmplacement::ApplyMobileMovement(float Forward, float Steering)
+{
+    // Mounted gun has no forward motion; a steering gesture slews the mount.
+    Turn(Steering);
+}
+
+void AWPGunEmplacement::ApplyMobileLook(float Yaw, float Pitch)
+{
+    Turn(Yaw);
+    LookUp(Pitch);
+}
+
+void AWPGunEmplacement::ExecuteMobileAction(EWPMobileButton Action, bool bPressed)
+{
+    if (Action == EWPMobileButton::Fire)
+    {
+        if (bPressed) StartFire();
+        else StopFire();
+    }
+    else if (Action == EWPMobileButton::Interact && bPressed)
+    {
+        InteractInput();
+    }
+}
+
 void AWPGunEmplacement::Turn(float Value)
 {
     if (!IsPlayerControlled() || bDestroyed)
