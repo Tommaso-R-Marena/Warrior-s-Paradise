@@ -175,6 +175,57 @@ window.WPVisuals = (() => {
     fog.addColorStop(1,"rgba(205,189,159,0)");
     ctx.fillStyle=fog;ctx.fillRect(0,horizon-h*.08,w,h*.27);
   }
+  // Ground plane casting: perspective-correct world coordinates at each
+  // coarse screen cell. Banded/fogged terrain supplies depth absent from
+  // a flat-color raycaster, at a capped CPU cost for entry-level phones.
+  function floor(ctx,w,h,px,py,angle,ads,quality) {
+    const horizon=Math.floor(h*.53);
+    const cell=quality==="eco"?12:quality==="balanced"?8:5;
+    const rowStep=quality==="eco"?8:quality==="balanced"?6:4;
+    const dx=Math.cos(angle),dy=Math.sin(angle);
+    const fov=ads?.44:.69,planeX=-dy*fov,planeY=dx*fov;
+    const leftX=dx-planeX,leftY=dy-planeY;
+    const rightX=dx+planeX,rightY=dy+planeY;
+    const colors={
+      grass:["#586446","#626b48","#4d5d41","#6a7551","#464e38"],
+      road:["#72644e","#82765d","#6c604d","#8d8062"],
+      mud:["#514b3c","#5e543e","#736248"],
+      track:["#463e33","#534634"]
+    };
+    for(let sy=horizon+3;sy<h;sy+=rowStep){
+      const rowDistance=(h*.47)/Math.max(2,sy-horizon);
+      // Subdivide in perspective; the approximate world footprint is
+      // shared by all pixels of each cell, avoiding an expensive per-pixel pass.
+      const stepX=rowDistance*(rightX-leftX)*cell/w;
+      const stepY=rowDistance*(rightY-leftY)*cell/w;
+      let wx=px+rowDistance*leftX,wy=py+rowDistance*leftY;
+      for(let sx=0;sx<w;sx+=cell,wx+=stepX,wy+=stepY){
+        const ix=Math.floor(wx*3),iy=Math.floor(wy*3);
+        const noise=rnd(Math.imul(ix,73856093)^Math.imul(iy,19349663));
+        const diagonal=Math.abs(wx-wy-.45);
+        const mainRoad=diagonal<1.18&&wx>3.5&&wx<25.8&&wy>3.2&&wy<25.8;
+        const secondaryRoad=(Math.abs(wy-14.1)<.69&&wx>9&&wx<21)||
+          (Math.abs(wx-7.1)<.58&&wy>3&&wy<11);
+        const road=mainRoad||secondaryRoad;
+        const wheelTrack=road&&
+          ((diagonal>.42&&diagonal<.55)||
+           (Math.abs(wy-14.1)>.28&&Math.abs(wy-14.1)<.33&&wx>9&&wx<21));
+        const damp=noise<.035;
+        let palette=road?colors.road:colors.grass;
+        if(wheelTrack)palette=colors.track;
+        else if(damp||(!road&&noise<.12))palette=colors.mud;
+        const idx=Math.floor(noise*palette.length)%palette.length;
+        ctx.fillStyle=palette[idx];
+        ctx.fillRect(sx,sy,cell+1,rowStep+1);
+      }
+      // Air perspective increases with distance toward the horizon.
+      const fog=Math.min(.48,Math.max(0,(rowDistance-4)*.025));
+      if(fog>.03){
+        ctx.fillStyle="rgba(184,170,142,"+fog.toFixed(3)+")";
+        ctx.fillRect(0,sy,w,rowStep);
+      }
+    }
+  }
   function wall(ctx,x,top,width,height,hit,depth,quality) {
     const tex=textures[hit.type]||textures[1];
     if(!tex)return false;
@@ -231,5 +282,5 @@ window.WPVisuals = (() => {
     }
     ctx.restore();
   }
-  return {setup,background,wall,soldier,decoration,weapon};
+  return {setup,background,floor,wall,soldier,decoration,weapon};
 })();
