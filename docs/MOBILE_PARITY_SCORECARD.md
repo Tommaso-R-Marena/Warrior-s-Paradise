@@ -29,6 +29,18 @@ Reference: [World War Heroes — official Google Play listing](https://play.goog
 - Added the optional Ultra graphics tier and capped dynamic-resolution scaling.
 - Expanded Node/VM smoke checks to cover portrait/landscape, maps, modes, input, and a complete five-wave victory cycle.
 
+## Native mobile production work added this pass
+
+The Unreal native track now has a deterministic **licensed-art → imported assets → CC0 PBR materials → presentation data assets → saved Normandy mobile map** pipeline.
+
+- `Content/Python/wp_prepare_native_mobile.py` is the ordered Unreal Editor entry point.
+- `Content/Python/wp_build_mobile_village.py` builds a new saved `.umap` using imported, provenance-tracked meshes, while preserving the existing dynamic battlefield's collision and encounter scripts.
+- `tools/prepare_native_mobile.ps1` invokes the UE5.8 editor on Windows; `tools/assets/activate_mobile_map.py` changes the default level only when the new map exists.
+- `tools/package_android.ps1` now refuses Shipping until production art is present **and** the authored world is the startup map.
+- The mobile atmosphere path omits expensive volumetric clouds and fog and repeated real-time sky capture on phone targets.
+
+**Remaining limitation:** the actual repository still has no imported level/mesh/audio binaries. These scripts have not been executed inside Unreal and are not substitutes for rigged animation, art production, QA or networking.
+
 ## Critical distinction: parity needs a new renderer and content pipeline
 
 Field Edition is a browser-compatible **software 2.5D game**, not a complete commercial-quality 3D engine. Procedural raycast textures and static billboards can make it more pleasant and playable, but they cannot produce World War Heroes–style 3D character animation, complex vertical architecture and live tank gameplay. Further investments in this rendering architecture have diminishing returns.
