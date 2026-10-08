@@ -16,7 +16,7 @@ import re
 import unreal
 
 
-SOURCE_ROOT = "/Game/External/polyhaven"
+SOURCE_ROOTS = ("/Game/External/polyhaven", "/Game/External/wp_original/materials")
 MATERIAL_ROOT = "/Game/External/Materials"
 
 
@@ -60,21 +60,22 @@ def configure_texture(texture: unreal.Texture2D, semantic: str) -> None:
 def group_textures() -> dict[str, dict[str, unreal.Texture2D]]:
     groups: dict[str, dict[str, unreal.Texture2D]] = defaultdict(dict)
 
-    for asset_path in unreal.EditorAssetLibrary.list_assets(
-        SOURCE_ROOT,
-        recursive=True,
-        include_folder=False,
-    ):
-        asset = unreal.EditorAssetLibrary.load_asset(asset_path)
-        if not isinstance(asset, unreal.Texture2D):
+    for root in SOURCE_ROOTS:
+        if not unreal.EditorAssetLibrary.does_directory_exist(root):
             continue
+        for asset_path in unreal.EditorAssetLibrary.list_assets(
+            root, recursive=True, include_folder=False,
+        ):
+            asset = unreal.EditorAssetLibrary.load_asset(asset_path)
+            if not isinstance(asset, unreal.Texture2D):
+                continue
 
-        semantic = classify_texture(asset.get_name())
-        if not semantic:
-            continue
+            semantic = classify_texture(asset.get_name())
+            if not semantic:
+                continue
 
-        folder = asset_path.rsplit("/", 1)[0]
-        groups[folder][semantic] = asset
+            folder = asset_path.rsplit("/", 1)[0]
+            groups[folder][semantic] = asset
 
     return groups
 
@@ -96,7 +97,10 @@ def create_texture_sample(
 
 
 def material_name_for(folder: str) -> str:
-    relative = folder.removeprefix(SOURCE_ROOT).strip("/")
+    matching_root = next((root for root in SOURCE_ROOTS if folder.startswith(root + "/")), None)
+    if matching_root is None:
+        raise ValueError(f"Unexpected external material group: {folder}")
+    relative = folder.removeprefix(matching_root).strip("/")
     parts = [sanitize(part) for part in relative.split("/") if part]
     return "M_WP_" + "_".join(parts[-2:] or ["CC0"])
 
@@ -175,7 +179,7 @@ def main() -> None:
     if not groups:
         log(
             "No imported Poly Haven texture groups found under "
-            f"{SOURCE_ROOT}. Run the downloader/importer first."
+            f"{', '.join(SOURCE_ROOTS)}. Run original art generation or CC0 downloader/importer first."
         )
         return
 
