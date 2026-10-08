@@ -37,6 +37,20 @@ if ($LASTEXITCODE -ne 0) {
     throw "Production 3D art readiness gate failed. Import/verify assets before Shipping."
 }
 
+# Require auditable checksums for every source input whenever any
+# downloadable/artwork sources exist, and unconditionally for Shipping.
+$ExternalAssets = Join-Path $RepoRoot "ExternalAssets"
+$HasSourceArt = (Test-Path $ExternalAssets) -and
+    ($null -ne (Get-ChildItem $ExternalAssets -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -in @(".obj", ".fbx", ".glb", ".gltf", ".png", ".jpg", ".wav") } |
+        Select-Object -First 1))
+if ($HasSourceArt -or $Configuration -eq "Shipping") {
+    & $PythonCommand.Source (Join-Path $RepoRoot "tools\assets\validate_asset_provenance.py") --root $RepoRoot
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unlicensed, untracked or modified local art prevents Android packaging."
+    }
+}
+
 if ($Configuration -eq "Shipping") {
     # Prevent a seemingly successful package containing only the engine Entry
     # map, even if imported art is present elsewhere on disk.
