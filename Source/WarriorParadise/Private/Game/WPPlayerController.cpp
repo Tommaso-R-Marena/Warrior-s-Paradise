@@ -233,9 +233,10 @@ void AWPPlayerController::ProcessMobileTouch(float DeltaSeconds)
             const FVector2D Delta = Position - State.Anchor;
             const FVector2D RawStick = Delta.GetClampedToMaxSize(Radius) / Radius;
             const float Magnitude = RawStick.Size();
-            MobileMoveStick = Magnitude > TouchDeadzone
-                ? RawStick * ((Magnitude - TouchDeadzone) /
-                              (Magnitude * (1.0f - TouchDeadzone)))
+            const float Deadzone = FMath::Clamp(TouchDeadzone, 0.0f, .95f);
+            MobileMoveStick = Magnitude > Deadzone
+                ? RawStick * ((Magnitude - Deadzone) /
+                              (Magnitude * (1.0f - Deadzone)))
                 : FVector2D::ZeroVector;
         }
 
