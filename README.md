@@ -29,6 +29,8 @@ From a configured UE5.8 Windows machine:
 
 See [native Android production and build guide](docs/NATIVE_ANDROID_PRODUCTION.md), [art inventory audit](tools/assets/audit_mobile_content.py), and [mobile parity scorecard](docs/MOBILE_PARITY_SCORECARD.md) for the exact graphics, animation, gameplay and quality gates required before parity can be claimed. The separately hosted browser Field Edition is a deliberately smaller 2.5D game, not this native mobile build.
 
+**New art-to-map workflow:** once the real asset-lock and Unreal-ready imported content are available, run `tools/prepare_native_mobile.ps1` on a UE5.8 machine to import the source assets, build CC0 material graphs, generate presentation profiles, and save `/Game/WarriorParadise/Maps/WP_NormandyMobile` from actual art. Only after inspecting the created map, run `python tools/assets/activate_mobile_map.py --apply` to make it the startup map. This does **not** fabricate a finished AAA/mobile shooter, and has not yet been executed in Unreal here.
+
 ## Implemented gameplay
 
 ### Infantry and weapon feel
