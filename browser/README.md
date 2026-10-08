@@ -28,11 +28,11 @@ Open `http://<COMPUTER-LAN-IP>:8000/` on the phone. If your OS firewall blocks p
 
 | Device | Controls |
 |---|---|
-| Desktop | WASD movement, mouse aim, click/hold fire, **right-click ADS**, Shift sprint, R reload, F frag, T smoke, C crouch, V heal, Q squad-switch, X follow/hold orders, Esc pause |
-| Phone/tablet | Left thumbstick moves; drag on the right to turn/aim; FIRE, **hold ADS**, reload, frag, smoke, field dressing, switch soldier and follow/hold buttons |
-| Any | ECO/BALANCED/SHARP rendering selectable before deployment; the default is ECO on touch devices |
+| Desktop | WASD movement, **mouse horizontal/vertical look**, click/hold fire, **right-click ADS**, Shift sprint, R reload, F frag, T smoke, C crouch, V heal, Q squad-switch, X follow/hold orders, Esc pause |
+| Phone/tablet | Left thumbstick moves; drag on the right to look **left/right/up/down**; FIRE, **hold ADS**, reload, frag, smoke, field dressing, switch soldier and follow/hold buttons |
+| Any | Choose **Normandy Farm / Occupied Town / Forest Outpost**, **Assault / Last Stand**, Recruit / Regular / Veteran enemies, aim sensitivity and ECO / Balanced / Sharp / **Ultra** graphics. ECO remains default on touch devices |
 
-Capture the sector by standing near its flag **after defenders are cleared**. Secure three sectors to win. Your three-person squad uses different loadouts (Lee-Enfield / Sten / Bren), and surviving squadmates can provide covering fire. Enemies and friendlies use lightweight cached grid navigation around obstacles; suppression and smoke affect vision, with timed frag explosives. The Field Edition is still a small single-player skirmish and **not** feature- or graphics-equivalent to World War Heroes.
+In **Assault**, capture three sectors by occupying each flag after defeating defenders. In **Last Stand**, survive five progressively larger waves and obtain ammo, bandages and limited explosives between waves. Choose from three tile-layout battlefields. Your three-person squad uses Lee-Enfield / Sten / Bren roles and can provide finite-ammo covering fire; the medic can treat wounded allies. Enemy AI uses line-of-sight, recent-contact investigation, basic combat movement and reloading. The Field Edition is still a small single-player skirmish and **not** feature- or graphics-equivalent to World War Heroes.
 
 ## Offline install / home screen
 
@@ -62,7 +62,7 @@ UE **Pixel Streaming** also permits phone/browser access to the full desktop edi
 ## Hardware honesty
 
 - The browser edition is **CPU-first**, but the OS/browser may still use an integrated GPU for canvas composition. It does not require a discrete GPU.
-- ECO renders at ~225 internal horizontal pixels and caps near 28 fps; BALANCED at ~330 / 35 fps; SHARP at ~440 / 45 fps. These are targets, not measured FPS. Optional procedural textures, tactical smoke effects and soldier billboards use Canvas 2D.
+- ECO targets ~225 internal horizontal pixels / 28 fps; Balanced ~330 / 35 fps; Sharp ~440 / 45 fps; Ultra ~640 / 58 fps. These are **configuration ceilings, not measured device FPS**. Canvas pixel budgets respect portrait/landscape ratio; a bounded adaptive scale lowers internal resolution when rendering cannot sustain its target. Procedural stone/timber textures, perspective grass/mud/road casting, tactical smoke and soldier billboards use Canvas 2D.
 - Performance varies by device. If the browser or phone cannot run JavaScript Canvas 2D, it cannot play this game. Phones that support modern browsers generally can, but have not been device-tested here.
 - This version is local single-player: no account, global multiplayer, or server synchronization. A static server cannot host the full native UE physics/AI simulation.
 
@@ -74,9 +74,9 @@ The dependency-free Node runtime smoke command is:
 node tools/tests/browser_runtime_smoke.js
 ```
 
-It simulates portrait and landscape sessions through 445 game frames and verifies that ADS/fire/reload/grenade/squad controls execute and visuals generate draw calls. It is **not** a real browser image review or phone performance benchmark.
+It simulates portrait and landscape sessions and verifies ADS/fire/reload/grenade/squad controls, vertical touch look, each battlefield, Ultra rendering and a complete five-wave victory progression. It checks drawing operations, not actual image quality. It is **not** a real browser image review or phone performance benchmark.
 
-The native Android plan and full mobile parity gaps are documented in [`docs/MOBILE_RELEASE_PLAN.md`](../docs/MOBILE_RELEASE_PLAN.md).
+The native Android plan is in [`docs/MOBILE_RELEASE_PLAN.md`](../docs/MOBILE_RELEASE_PLAN.md). The [mobile parity scorecard](../docs/MOBILE_PARITY_SCORECARD.md) compares actual functionality to the commercial reference and names the remaining acceptance tests.
 
 ## What remains
 
