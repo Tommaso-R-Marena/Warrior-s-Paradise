@@ -118,7 +118,8 @@ class NativeMobileControlsTests(unittest.TestCase):
         )
 
     def test_android_source_and_packaging_are_present(self) -> None:
-        cfg = read("Config/Android/AndroidGame.ini")
+        cfg = read("Config/Android/AndroidEngine.ini")
+        self.assertNotIn("[/Script/AndroidRuntimeSettings.AndroidRuntimeSettings]", read("Config/Android/AndroidGame.ini"))
         script = read("tools/package_android.ps1")
         for term in ("Orientation=Landscape", "bBuildForArm64=True",
                      "MinSDKVersion=26", "TargetSDKVersion=35"):
