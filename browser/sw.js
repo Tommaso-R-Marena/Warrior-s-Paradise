@@ -1,5 +1,5 @@
 "use strict";
-const CACHE="wp-field-edition-v2";
+const CACHE="wp-field-edition-v3";
 const ESSENTIAL=["./","./index.html","./style.css","./visuals.js","./game.js","./manifest.webmanifest","./icon.svg"];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ESSENTIAL)).then(()=>self.skipWaiting()));
