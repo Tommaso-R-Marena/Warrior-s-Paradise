@@ -32,6 +32,7 @@ REQUIRED = [
     "Content/Python/wp_prepare_native_mobile.py",
     "tools/assets/audit_mobile_content.py",
     "docs/NATIVE_ANDROID_PRODUCTION.md",
+    "docs/CLOUDFLARE_3D_DEPLOYMENT.md",
     "tools/package_android.ps1",
     "Config/Android/AndroidGame.ini",
     "Source/WarriorParadise/Public/UI/WPMobileControls.h",
