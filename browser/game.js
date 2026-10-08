@@ -9,6 +9,7 @@
   const dom = {
     modal: $("modal"), start: $("start-btn"), title: $("modal-title"),
     battlefield: $("battlefield"), difficulty: $("difficulty"), mode: $("mode"),
+    sensitivity: $("sensitivity"),
     copy: $("modal-copy"), quality: $("quality"), qualityLabel: $("quality-label"),
     health: $("health"), ammo: $("ammo"), medkits: $("medkits"),
     grenades: $("grenades"), loadout: $("loadout"), aimRing: $("aim-ring"), crosshair: $("crosshair"),
@@ -145,7 +146,7 @@
   }
   function spawnAt(x, y, team, role) {
     return { x, y, team, role, hp: team === "enemy" ? 74 : 100, maxHp: team === "enemy" ? 74 : 100,
-      angle: .6, alive: true, cooldown: random(.2, 1.2), flash: 0, hit: 0,
+      angle: .6, pitch: 0, alive: true, cooldown: random(.2, 1.2), flash: 0, hit: 0,
       weapon: role === "ASSAULT" ? "smg" : role === "MEDIC" ? "lmg" : "rifle",
       ammo: role === "ASSAULT" ? 32 : role === "MEDIC" ? 30 : 10,
       reserve: team === "enemy" ? 36 : role === "ASSAULT" ? 128 : role === "MEDIC" ? 90 : 70,
@@ -160,6 +161,7 @@
     objective: 0, cap: 0, kills: 0, time: 0, screenW: 288, screenH: 170,
     ord: "FOLLOW", thrown: [], particles: [],
     battlefield: "farm", difficulty: "regular", mode: "assault",
+    sensitivity: 1,
     wave: 0, waveCooldown: 0, defenderSpawns: [], defensePosition:{x:3.5,y:3.4},
     shake: 0, flash: 0, hitTime: 0, message: "", messageTimer: 0,
     quality: dom.quality.value, fps: 30, fpsTime: 0, lastFrame: 0, raf: 0,
@@ -296,6 +298,7 @@
   }
   function reset() {
     game.difficulty=dom.difficulty.value;
+    game.sensitivity=clamp(Number(dom.sensitivity.value)||1,.4,2);
     game.mode=dom.mode.value==="defense"?"defense":"assault";
     game.wave=0;game.waveCooldown=0;
     setBattlefield(dom.battlefield.value);
@@ -427,7 +430,12 @@
       if(!e.alive)continue;
       const vx=e.x-p.x,vy=e.y-p.y,forward=vx*dx+vy*dy,offset=Math.abs(vx*dy-vy*dx);
       const assist=coarse&&p.ads?.034:.0;
-      if(forward>0&&forward<bestRange&&offset<.20+forward*(p.ads?.002:.005)+forward*assist&&seen(p,e)){
+      // Approximate vertical hit-box overlap for the 2.5D sprites.
+      // It prevents hits with the muzzle aimed far above/below infantry.
+      const verticalTolerance=.055+.38/Math.max(.6,forward);
+      if(forward>0&&forward<bestRange&&
+         Math.abs(p.pitch)<verticalTolerance&&
+         offset<.20+forward*(p.ads?.002:.005)+forward*assist&&seen(p,e)){
         best=e;bestRange=forward;
       }
     }
@@ -779,11 +787,12 @@
   function renderWorld() {
     const p=game.player; if(!p)return;
     ctx.save();
-    const w=canvas.width,h=canvas.height,horizon=Math.floor(h*.53);
+    const w=canvas.width,h=canvas.height,
+      horizon=Math.floor(h*(.53-p.pitch*.56));
     if(visuals){
       visuals.setup();
-      visuals.background(ctx,w,h,p.angle,game.time);
-      visuals.floor(ctx,w,h,p.x,p.y,p.angle,!!p.ads,game.quality);
+      visuals.background(ctx,w,h,p.angle,game.time,p.pitch);
+      visuals.floor(ctx,w,h,p.x,p.y,p.angle,!!p.ads,game.quality,p.pitch);
     }
     else{
       const sky=ctx.createLinearGradient(0,0,0,horizon);
@@ -995,7 +1004,11 @@
     if(document.hidden){input.fire=false;input.joyX=0;input.joyY=0;setADS(false);}
   });
   document.addEventListener("mousemove",(e)=>{
-    if(document.pointerLockElement===canvas&&game.phase==="playing")game.player.angle+=e.movementX*(game.player.ads?.00145:.0028);
+    if(document.pointerLockElement===canvas&&game.phase==="playing"){
+      const scale=game.sensitivity*(game.player.ads?.00145:.0028);
+      game.player.angle+=e.movementX*scale;
+      game.player.pitch=clamp(game.player.pitch+e.movementY*scale*.9,-.34,.34);
+    }
   });
   canvas.addEventListener("pointerdown",(e)=>{
     if(coarse||game.phase!=="playing")return;
@@ -1006,7 +1019,7 @@
   canvas.addEventListener("contextmenu",(e)=>e.preventDefault());
   document.addEventListener("pointerlockchange",()=>{if(document.pointerLockElement!==canvas)input.fire=false;});
   const movePad=$("move-pad"),knob=$("move-knob"),lookZone=$("look-zone");
-  const touches={move:null,look:null,lastLookX:0};
+  const touches={move:null,look:null,lastLookX:0,lastLookY:0};
   function joy(e){
     const rect=movePad.getBoundingClientRect(),centerX=rect.left+rect.width/2,centerY=rect.top+rect.height/2;
     const dx=e.clientX-centerX,dy=e.clientY-centerY,span=rect.width*.36,length=Math.max(1,Math.hypot(dx,dy));
@@ -1019,8 +1032,16 @@
   movePad.addEventListener("pointermove",(e)=>{if(e.pointerId===touches.move)joy(e);});
   const clearMove=(e)=>{if(e.pointerId!==touches.move)return;touches.move=null;input.joyX=0;input.joyY=0;knob.style.left="";knob.style.top="";};
   movePad.addEventListener("pointerup",clearMove);movePad.addEventListener("pointercancel",clearMove);
-  lookZone.addEventListener("pointerdown",(e)=>{if(touches.look!==null)return;touches.look=e.pointerId;touches.lastLookX=e.clientX;lookZone.setPointerCapture(e.pointerId);});
-  lookZone.addEventListener("pointermove",(e)=>{if(touches.look!==e.pointerId||!game.player||game.phase!=="playing")return;const delta=clamp(e.clientX-touches.lastLookX,-55,55);touches.lastLookX=e.clientX;game.player.angle+=delta*(game.player.ads?.0044:.008);});
+  lookZone.addEventListener("pointerdown",(e)=>{if(touches.look!==null)return;touches.look=e.pointerId;touches.lastLookX=e.clientX;touches.lastLookY=e.clientY;lookZone.setPointerCapture(e.pointerId);});
+  lookZone.addEventListener("pointermove",(e)=>{
+    if(touches.look!==e.pointerId||!game.player||game.phase!=="playing")return;
+    const deltaX=clamp(e.clientX-touches.lastLookX,-55,55);
+    const deltaY=clamp(e.clientY-touches.lastLookY,-55,55);
+    touches.lastLookX=e.clientX;touches.lastLookY=e.clientY;
+    const scale=game.sensitivity*(game.player.ads?.0044:.008);
+    game.player.angle+=deltaX*scale;
+    game.player.pitch=clamp(game.player.pitch+deltaY*scale*.80,-.34,.34);
+  });
   const clearLook=(e)=>{if(e.pointerId===touches.look)touches.look=null;};
   lookZone.addEventListener("pointerup",clearLook);lookZone.addEventListener("pointercancel",clearLook);
   function button(id,down,up){
