@@ -7,7 +7,9 @@
 #include "Engine/Engine.h"
 #include "Game/WPBattlefieldDirector.h"
 #include "Game/WPGameUserSettings.h"
+#include "Game/WPPlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "UI/WPMobileControls.h"
 #include "Vehicles/WPArmoredVehicle.h"
 #include "Vehicles/WPLightVehicle.h"
 #include "World/WPGunEmplacement.h"
@@ -71,7 +73,15 @@ void AWPCombatHUD::DrawHUD()
     const float Width = Canvas->SizeX;
     const float Height = Canvas->SizeY;
 
-    DrawGraphicsReadout(Width);
+    const AWPPlayerController* MobileController =
+        Cast<AWPPlayerController>(GetOwningPlayerController());
+    const bool bTouchMode =
+        MobileController && MobileController->IsMobileTouchEnabled();
+
+    if (!bTouchMode)
+    {
+        DrawGraphicsReadout(Width);
+    }
 
     APawn* PlayerPawn =
         UGameplayStatics::GetPlayerPawn(this, 0);
@@ -92,6 +102,10 @@ void AWPCombatHUD::DrawHUD()
         }
 
         DrawCombatReadout(Width, Height);
+        if (bTouchMode)
+        {
+            DrawMobileTouchOverlay(Width, Height);
+        }
         return;
     }
 
@@ -153,6 +167,100 @@ void AWPCombatHUD::DrawGraphicsReadout(float Width)
         GEngine->GetSmallFont(),
         0.82f,
         false);
+}
+
+void AWPCombatHUD::DrawMobileTouchOverlay(
+    float Width,
+    float Height)
+{
+    if (!GEngine || Width <= 0.0f || Height <= 0.0f)
+    {
+        return;
+    }
+
+    const AWPPlayerController* Controller =
+        Cast<AWPPlayerController>(GetOwningPlayerController());
+    if (!Controller || !Controller->IsMobileTouchEnabled())
+    {
+        return;
+    }
+
+    const FVector2D ViewSize(Width, Height);
+    const float UIScale = FMath::Clamp(Height / 800.0f, .70f, 1.30f);
+
+    // HUD positions and touch hit boxes are defined by the same table.
+    int32 Count = 0;
+    const FWPMobileButtonSpec* Buttons =
+        WPMobileControls::GetButtons(Count);
+    for (int32 Index = 0; Index < Count; ++Index)
+    {
+        const FWPMobileButtonSpec& Button = Buttons[Index];
+        const float X = (Button.Center.X - Button.HalfSize.X) * Width;
+        const float Y = (Button.Center.Y - Button.HalfSize.Y) * Height;
+        const float W = Button.HalfSize.X * 2.0f * Width;
+        const float H = Button.HalfSize.Y * 2.0f * Height;
+        const bool bHeld = Controller->IsMobileButtonHeld(Button.Action);
+        const bool bFire = Button.Action == EWPMobileButton::Fire;
+
+        const FLinearColor Fill = bHeld
+            ? FLinearColor(.89f, .72f, .34f, .80f)
+            : (bFire
+                ? FLinearColor(.69f, .18f, .11f, .64f)
+                : FLinearColor(.07f, .14f, .14f, .57f));
+        const FLinearColor Outline(.86f, .85f, .72f, .68f);
+        DrawRect(Fill, X, Y, W, H);
+        DrawLine(X, Y, X + W, Y, Outline, 1.0f);
+        DrawLine(X + W, Y, X + W, Y + H, Outline, 1.0f);
+        DrawLine(X + W, Y + H, X, Y + H, Outline, 1.0f);
+        DrawLine(X, Y + H, X, Y, Outline, 1.0f);
+
+        const float TextScale = .83f * UIScale;
+        const float TextX = X + FMath::Max(3.0f,
+            (W - FCString::Strlen(Button.Label) * 7.5f * TextScale) * .5f);
+        const float TextY = Y + (H - 14.0f * TextScale) * .5f;
+        DrawText(
+            FString(Button.Label),
+            bHeld ? FLinearColor(.11f, .14f, .12f, 1.0f)
+                  : FLinearColor(.94f, .94f, .87f, 1.0f),
+            TextX, TextY,
+            GEngine->GetSmallFont(),
+            TextScale,
+            false);
+    }
+
+    // Joystick moves to the player's first movement finger, reducing
+    // reach distance while remaining visible in the HUD.
+    const FVector2D StickCenter = Controller->GetMobileMoveAnchor();
+    const FVector2D Stick = Controller->GetMobileMoveStick();
+    const float Radius = FMath::Max(50.0f, FMath::Min(Width, Height) * .135f);
+
+    DrawRect(
+        FLinearColor(.07f, .15f, .14f, .43f),
+        StickCenter.X - Radius,
+        StickCenter.Y - Radius,
+        Radius * 2.0f,
+        Radius * 2.0f);
+
+    for (int32 Segment = 0; Segment < 32; ++Segment)
+    {
+        const float A = Segment * (2.0f * PI / 32.0f);
+        const float B = (Segment + 1) * (2.0f * PI / 32.0f);
+        DrawLine(
+            StickCenter.X + FMath::Cos(A) * Radius,
+            StickCenter.Y + FMath::Sin(A) * Radius,
+            StickCenter.X + FMath::Cos(B) * Radius,
+            StickCenter.Y + FMath::Sin(B) * Radius,
+            FLinearColor(.77f, .89f, .78f, .57f), 1.5f);
+    }
+
+    const FVector2D Thumb = StickCenter + Stick * Radius;
+    const float ThumbRadius = Radius * .28f;
+    DrawRect(
+        FLinearColor(.78f, .86f, .71f, .69f),
+        Thumb.X - ThumbRadius,
+        Thumb.Y - ThumbRadius,
+        ThumbRadius * 2.0f,
+        ThumbRadius * 2.0f);
 }
 
 void AWPCombatHUD::DrawCrosshair(float CenterX, float CenterY)
@@ -445,14 +553,19 @@ void AWPCombatHUD::DrawCombatReadout(float Width, float Height)
             false);
     }
 
-    DrawText(
-        TEXT("X SWITCH  1 FOLLOW  2 ATTACK  3 HOLD  E USE/REVIVE/TREAT  T ARTILLERY  Y AIR  Z PRONE  F MELEE  V BANDAGE  G FRAG  H SMOKE"),
-        FLinearColor(0.78f, 0.78f, 0.74f, 0.85f),
-        Width * 0.5f - 260.0f,
-        Height - 28.0f,
-        GEngine->GetSmallFont(),
-        0.9f,
-        false);
+    const AWPPlayerController* MobileController =
+        Cast<AWPPlayerController>(GetOwningPlayerController());
+    if (!MobileController || !MobileController->IsMobileTouchEnabled())
+    {
+        DrawText(
+            TEXT("X SWITCH  1 FOLLOW  2 ATTACK  3 HOLD  E USE/REVIVE/TREAT  T ARTILLERY  Y AIR  Z PRONE  F MELEE  V BANDAGE  G FRAG  H SMOKE"),
+            FLinearColor(0.78f, 0.78f, 0.74f, 0.85f),
+            Width * 0.5f - 260.0f,
+            Height - 28.0f,
+            GEngine->GetSmallFont(),
+            0.9f,
+            false);
+    }
 }
 
 
