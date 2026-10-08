@@ -669,18 +669,27 @@ function dynamicGeometry(){
  // Real weapon geometry attached to the perspective camera (no sprite sheet).
  const forward=[-Math.sin(player.yaw),Math.cos(player.yaw)];
  const right=[-Math.cos(player.yaw),-Math.sin(player.yaw)];
- const shift=player.aim?.12:.38;
- const px=player.x+forward[0]*.65+right[0]*shift;
- const pz=player.z+forward[1]*.65+right[1]*shift;
- const eyeY=(player.crouch?1.02:1.67)+Math.sin(game.elapsed*5)*.007;
- const py=eyeY-(player.aim?.18:.40)+player.pitch*.17;
+ const shift=player.aim?.05:.29;
+ const px=player.x+forward[0]*.91+right[0]*shift;
+ const pz=player.z+forward[1]*.91+right[1]*shift;
+ const eyeY=(player.crouch?1.02:1.67)+Math.sin(game.elapsed*5)*.009;
+ const py=eyeY-(player.aim?.20:.39)+player.pitch*.17;
+ const yaw=-player.yaw;
+ const sx=step=>px+forward[0]*step,sz=step=>pz+forward[1]*step;
  const sway=game.flash?.035:0;
- m.box(px,py,pz,.22,.19,.77,COLORS.wood,player.yaw);
- m.box(px,py+.04,pz+0.01,.19,.15,.55,COLORS.metal,player.yaw);
- m.box(px+forward[0]*.49,py+.025,pz+forward[1]*.49,.095,.09,.66,COLORS.metal,player.yaw);
- m.box(px,py-.17,pz,.11,.30,.16,COLORS.metal,player.yaw);
+ // Properly oriented stock, receiver, barrel, front sights, magazine and hand.
+ m.box(sx(-.28),py-.09,sz(-.28),.24,.18,.48,COLORS.wood,yaw);
+ m.box(px,py,pz,.17,.14,.58,COLORS.wood,yaw);
+ m.box(px,py+.075,pz,.18,.13,.43,COLORS.metal,yaw);
+ m.box(sx(.34),py+.035,sz(.34),.09,.09,.72,COLORS.metal,yaw);
+ m.box(sx(.43),py-.046,sz(.43),.15,.065,.22,COLORS.timber,yaw);
+ m.box(sx(.67),py+.092,sz(.67),.06,.095,.055,COLORS.dark,yaw);
+ m.box(sx(-.06),py+.14,sz(-.06),.07,.05,.06,COLORS.dark,yaw);
+ m.box(sx(-.04),py-.17,sz(-.04),.12,.24,.17,COLORS.metal,yaw);
+ m.box(px+right[0]*.22,py-.16,pz+right[1]*.22,.19,.21,.29,COLORS.skin,yaw);
+ m.box(px+right[0]*.33,py-.34,pz+right[1]*.33,.25,.36,.29,COLORS.blue,yaw);
  if(game.flash>0){
-  m.cone(px+forward[0]*.87,py+.015,pz+forward[1]*.87,.22+sway,.5,COLORS.gold,7);
+  m.cone(sx(.87),py+.02,sz(.87),.16+sway,.42,COLORS.gold,7);
  }
  return m.data;
 }
