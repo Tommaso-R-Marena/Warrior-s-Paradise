@@ -128,8 +128,8 @@ window.WPVisuals = (() => {
     box.strokeStyle="#453b2c";box.lineWidth=7;box.beginPath();box.moveTo(20,18);box.lineTo(81,76);box.moveTo(80,18);box.lineTo(20,76);box.stroke();
     sprites.crate=crate;
   }
-  function background(ctx,w,h,angle,time) {
-    const horizon=Math.floor(h*.53);
+  function background(ctx,w,h,angle,time,pitch=0) {
+    const horizon=Math.floor(h*(.53-pitch*.56));
     const sky=ctx.createLinearGradient(0,0,0,horizon);
     sky.addColorStop(0,"#536c79");sky.addColorStop(.59,"#99a6a0");
     sky.addColorStop(1,"#e0bea0");
@@ -178,8 +178,8 @@ window.WPVisuals = (() => {
   // Ground plane casting: perspective-correct world coordinates at each
   // coarse screen cell. Banded/fogged terrain supplies depth absent from
   // a flat-color raycaster, at a capped CPU cost for entry-level phones.
-  function floor(ctx,w,h,px,py,angle,ads,quality) {
-    const horizon=Math.floor(h*.53);
+  function floor(ctx,w,h,px,py,angle,ads,quality,pitch=0) {
+    const horizon=Math.floor(h*(.53-pitch*.56));
     const cell=quality==="eco"?12:quality==="balanced"?8:5;
     const rowStep=quality==="eco"?8:quality==="balanced"?6:4;
     const dx=Math.cos(angle),dy=Math.sin(angle);
