@@ -14,6 +14,10 @@ REQUIRED = [
     "tools/tests/test_browser_field.py",
     "tools/tests/test_native_mobile.py",
     "tools/tests/test_native_mobile_content_pipeline.py",
+    "tools/tests/test_asset_provenance.py",
+    "tools/tests/test_original_3d_props.py",
+    "tools/assets/validate_asset_provenance.py",
+    "tools/assets/generate_original_props.py",
     "tools/assets/activate_mobile_map.py",
     "tools/prepare_native_mobile.ps1",
     "Content/Python/wp_build_mobile_village.py",
@@ -370,6 +374,14 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("tools/assets/validate_asset_provenance.py", "def validate_root("),
+        ("tools/assets/validate_asset_provenance.py", "Untracked importable source"),
+        ("tools/assets/generate_original_props.py", "def generate("),
+        ("tools/assets/generate_original_props.py", "Project-owned-original"),
+        ("Content/Python/wp_import_external_assets.py", "validate_root"),
+        ("Content/Python/wp_build_mobile_village.py", "sandbag"),
+        ("tools/prepare_native_mobile.ps1", "generate_original_props.py"),
+        ("tools/package_android.ps1", "validate_asset_provenance.py"),
         ("Content/Python/wp_build_mobile_village.py", "editor.new_level"),
         ("Content/Python/wp_build_mobile_village.py", "editor.save_current_level"),
         ("Content/Python/wp_prepare_native_mobile.py", "wp_build_mobile_village.py"),
