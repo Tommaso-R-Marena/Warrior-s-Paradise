@@ -8,6 +8,7 @@
   const visuals = window.WPVisuals || null;
   const dom = {
     modal: $("modal"), start: $("start-btn"), title: $("modal-title"),
+    battlefield: $("battlefield"), difficulty: $("difficulty"),
     copy: $("modal-copy"), quality: $("quality"), qualityLabel: $("quality-label"),
     health: $("health"), ammo: $("ammo"), medkits: $("medkits"),
     grenades: $("grenades"), loadout: $("loadout"), aimRing: $("aim-ring"), crosshair: $("crosshair"),
@@ -26,12 +27,12 @@
   });
   const MAP_W = 28, MAP_H = 28;
   const tiles = new Uint8Array(MAP_W * MAP_H);
-  const objectives = [
+  let objectives = [
     { x: 7.5, y: 6.5, name: "FORWARD FARM", description: "CLEAR THE OUTBUILDINGS" },
     { x: 15.5, y: 14.5, name: "CROSSROADS", description: "SECURE THE ROAD JUNCTION" },
     { x: 23.2, y: 22.2, name: "RADIO POST", description: "SILENCE THE ENEMY RADIO" }
   ];
-  const buildings = [
+  let buildings = [
     [8, 2, 3, 2, 1], [4, 9, 3, 3, 1], [11, 8, 4, 2, 1],
     [19, 5, 3, 3, 1], [19, 13, 4, 3, 1], [8, 19, 4, 3, 1],
     [15, 21, 3, 3, 1], [3, 17, 2, 4, 2], [24, 8, 2, 4, 2],
@@ -57,7 +58,7 @@
   }
   populateMap();
   // Decorative billboards: rendered locally and excluded from collision logic.
-  const scenery = [
+  let scenery = [
     [2.5,7.6,"tree",1.9],[4.1,13.5,"tree",1.8],
     [16.1,3.0,"tree",2.1],[23.4,3.6,"tree",2.0],
     [2.6,22.5,"tree",1.9],[6.1,25.0,"tree",1.6],
@@ -67,6 +68,81 @@
     [21.5,21.2,"crate",.78],[11.0,6.5,"crate",.62]
   ].filter(([x,y])=>!wall(x,y))
    .map(([x,y,kind,size])=>({x,y,kind,size}));
+  const MAPS = {
+    farm: {
+      label:"NORMANDY FARM",
+      objectives:objectives.map(o=>({...o})),
+      buildings:buildings.map(b=>b.slice()),
+      scenery:scenery.map(o=>({...o})),
+      defenders:[
+        [[8.8,6.4],[6.7,7.5],[10.4,5.7],[7.1,4.6]],
+        [[13.5,13],[17.2,14],[16.2,16.5],[13.4,16.7]],
+        [[21.3,21.1],[24.8,20.8],[23.8,24],[20.4,23.7],[25.0,23.2]]
+      ]
+    },
+    town: {
+      label:"OCCUPIED TOWN",
+      objectives:[
+        {x:7.3,y:6.5,name:"CHAPEL ROAD",description:"CLEAR THE APPROACH"},
+        {x:15.5,y:14.5,name:"CENTRAL SQUARE",description:"SECURE THE CROSSROADS"},
+        {x:22.5,y:21.5,name:"GARRISON",description:"CAPTURE THE COMMAND POST"}
+      ],
+      buildings:[
+        [8,2,4,3,1],[3,9,3,3,1],[11,8,3,3,1],
+        [19,4,3,4,1],[19,13,4,3,1],[8,18,3,3,1],
+        [15,20,4,4,1],[3,18,3,4,2],[24,8,2,4,2],
+        [11,25,5,2,2],[24,23,2,3,1]
+      ],
+      scenery:[
+        [6.6,5.2,"crate",.8],[17.1,11.7,"crate",.75],
+        [21.2,19.6,"crate",.8],[2.2,13.9,"tree",1.6],
+        [17.5,5.7,"tree",1.5],[6.3,23.7,"tree",1.8],
+        [24.2,17.1,"tree",1.7],[13.5,18.6,"crate",.75]
+      ],
+      defenders:[
+        [[6.6,7.2],[9.3,6.6],[10.4,7.2],[7.2,4.5]],
+        [[13.5,12.6],[17.5,14.4],[16.6,17.3],[13.6,16.4]],
+        [[21.1,21.2],[23.6,20.5],[22.5,24.7],[20.2,24.1],[25.5,21.6]]
+      ]
+    },
+    forest: {
+      label:"FOREST OUTPOST",
+      objectives:[
+        {x:7.2,y:7.2,name:"HILL APPROACH",description:"CLEAR THE WOODLINE"},
+        {x:14.5,y:14.5,name:"AMMO DEPOT",description:"CAPTURE THE SUPPLY POINT"},
+        {x:23.3,y:22.3,name:"FOREST RADIO",description:"CUT ENEMY COMMUNICATIONS"}
+      ],
+      buildings:[
+        [8,3,2,2,2],[5,10,2,2,2],[12,8,3,2,1],
+        [19,6,3,3,2],[19,14,3,3,2],[8,19,2,3,2],
+        [15,21,2,2,2],[3,18,2,4,2],[24,9,2,3,1],[11,25,3,2,2]
+      ],
+      scenery:[
+        [2.5,6.8,"tree",2.0],[5.6,5.2,"tree",2.2],
+        [11.5,3.2,"tree",1.9],[15.5,5.6,"tree",2.1],
+        [24.8,5.5,"tree",2.3],[3.5,14.2,"tree",2.2],
+        [8.5,14.5,"tree",2.2],[17.3,11.3,"tree",1.8],
+        [25.4,14.8,"tree",2.0],[5.5,24.8,"tree",2.2],
+        [14.7,19.1,"tree",2.0],[19.4,20.6,"tree",2.2],
+        [25.1,25.5,"tree",2.0],[10.5,16.8,"crate",.72],
+        [18.2,18.4,"crate",.70],[21.4,24.2,"crate",.72]
+      ],
+      defenders:[
+        [[6.6,7.4],[9.8,6.6],[10.7,7.4],[7.2,4.7]],
+        [[13.4,12.7],[16.4,14.8],[16.2,17.1],[12.8,15.4]],
+        [[22.1,21.5],[24.8,21.2],[23.5,24.5],[20.6,23.9],[25.2,23.2]]
+      ]
+    }
+  };
+  function setBattlefield(key) {
+    const preset=MAPS[key]||MAPS.farm;
+    game.battlefield=MAPS[key]?key:"farm";
+    objectives=preset.objectives.map(o=>({...o}));
+    buildings=preset.buildings.map(b=>b.slice());
+    populateMap();
+    scenery=preset.scenery.filter(o=>!wall(o.x,o.y)).map(o=>({...o}));
+    game.defenderSpawns=preset.defenders.map(group=>group.map(pos=>pos.slice()));
+  }
   function spawnAt(x, y, team, role) {
     return { x, y, team, role, hp: team === "enemy" ? 74 : 100, maxHp: team === "enemy" ? 74 : 100,
       angle: .6, alive: true, cooldown: random(.2, 1.2), flash: 0, hit: 0,
@@ -82,6 +158,7 @@
     phase: "menu", player: null, friends: [], enemies: [], objects: [],
     objective: 0, cap: 0, kills: 0, time: 0, screenW: 288, screenH: 170,
     ord: "FOLLOW", thrown: [], particles: [],
+    battlefield: "farm", difficulty: "regular", defenderSpawns: [],
     shake: 0, flash: 0, hitTime: 0, message: "", messageTimer: 0,
     quality: dom.quality.value, fps: 30, fpsTime: 0, lastFrame: 0, raf: 0
   };
@@ -116,23 +193,23 @@
     for (let i = 0; i < 3; i++) spawnDefenders(i);
   }
   function spawnDefenders(stage) {
-    const positions = [
-      [[8.8,6.4],[6.7,7.5],[10.4,5.7],[7.1,4.6]],
-      [[13.5,13],[17.2,14],[16.2,16.5],[13.4,16.7]],
-      [[21.3,21.1],[24.8,20.8],[23.8,24],[20.4,23.7],[25.0,23.2]]
-    ];
-    for (const [x,y] of positions[stage]) {
+    for (const [x,y] of game.defenderSpawns[stage]||[]) {
       if (!wall(x,y)) {
         const e=spawnAt(x,y,"enemy",stage===2?"DEFENDER":"INFANTRY");
-        e.hp += stage * 10; e.maxHp=e.hp;game.enemies.push(e);
+        const hpScale=game.difficulty==="veteran"?1.25:game.difficulty==="recruit"?.76:1;
+        e.hp=(e.hp+stage*10)*hpScale;e.maxHp=e.hp;
+        game.enemies.push(e);
       }
     }
   }
   function reset() {
-    populateMap(); game.phase="playing"; game.objective=0;game.cap=0;
+    game.difficulty=dom.difficulty.value;
+    setBattlefield(dom.battlefield.value);
+    game.phase="playing"; game.objective=0;game.cap=0;
     game.kills=0;game.time=0;game.shake=0;game.hitTime=0;game.flash=0;
     game.objects=[];game.thrown=[];game.particles=[];game.ord="FOLLOW";
-    makeSoldiers();notify("FOLLOW THE MARKER • SECURE SECTOR ONE",4);
+    makeSoldiers();
+    notify(MAPS[game.battlefield].label+" • SECURE SECTOR ONE",4);
     dom.modal.classList.remove("shown");
     dom.aimRing.classList.remove("aimed");dom.crosshair.classList.remove("aimed");
     resizeRender();
