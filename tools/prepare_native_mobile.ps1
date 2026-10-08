@@ -28,6 +28,10 @@ if (Test-Path $Map) {
 if ($LASTEXITCODE -ne 0) {
     throw "Original starter geometry generation failed; check for edited/generated file conflicts."
 }
+& python (Join-Path $Root "tools\assets\generate_original_materials.py") --root $Root
+if ($LASTEXITCODE -ne 0) {
+    throw "Original tiling material generation failed; check for modified source textures."
+}
 $Validator = Join-Path $Root "tools\assets\validate_asset_provenance.py"
 & python $Validator --root $Root
 if ($LASTEXITCODE -ne 0) {
