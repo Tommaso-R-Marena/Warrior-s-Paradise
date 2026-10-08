@@ -97,10 +97,20 @@ class Geometry{
   }
  }
  roof(cx,y,cz,w,d,height,col){
-  const p=[cx,y+height,cz];
-  const corners=[[cx-w/2,y,cz-d/2],[cx+w/2,y,cz-d/2],
-   [cx+w/2,y,cz+d/2],[cx-w/2,y,cz+d/2]];
-  for(let i=0;i<4;i++)this.tri(corners[i],corners[(i+1)%4],p,col);
+  // Normandy gable and two pitched planes; avoids fake pyramid rooftops.
+  this.quad([cx-w/2,y,cz-d/2],[cx-w/2,y,cz+d/2],
+   [cx,y+height,cz+d/2],[cx,y+height,cz-d/2],col);
+  this.quad([cx,y+height,cz-d/2],[cx,y+height,cz+d/2],
+   [cx+w/2,y,cz+d/2],[cx+w/2,y,cz-d/2],col);
+  this.tri([cx-w/2,y,cz-d/2],[cx+w/2,y,cz-d/2],
+   [cx,y+height,cz-d/2],COLORS.plaster);
+  this.tri([cx+w/2,y,cz+d/2],[cx-w/2,y,cz+d/2],
+   [cx,y+height,cz+d/2],COLORS.plaster);
+  for(let n=0;n<6;n++){
+   const z=cz-d/2+.2+n*(d-.4)/5;
+   this.box(cx-w*.25,y+height*.5,z,.07,.055,.08,COLORS.wood);
+   this.box(cx+w*.25,y+height*.5,z,.07,.055,.08,COLORS.wood);
+  }
  }
 }
 const COLORS={
@@ -164,6 +174,27 @@ function buildWorld(){
   }
   m.box(x,1.12,z+d/2+.09,1.45,2.23,.12,COLORS.timber);
   m.box(x,1.12,z-d/2-.09,1.45,2.23,.12,COLORS.timber);
+  m.box(x,.2,z,w+.09,.4,d+.09,COLORS.stone);
+  for(const side of [-1,1]){
+   const front=z+side*(d/2+.14);
+   m.box(x,2.18,front,w*.95,.13,.11,COLORS.wood);
+   m.box(x,3.78,front,w*.95,.11,.12,COLORS.timber);
+   for(const k of [-1,1]){
+    const wx=x+k*w*.24;
+    m.box(wx,2.20,front,.10,1.35,.12,COLORS.timber);
+    m.box(wx,3.40,front,1.28,.10,.13,COLORS.wood);
+    m.box(wx+k*.66,2.8,front,.33,1.26,.13,COLORS.wood);
+    m.box(wx,2.8,front,.10,1.15,.14,COLORS.wood);
+   }
+   m.box(x,2.3,front,1.70,.15,.15,COLORS.stone);
+   m.box(x+.45,1.1,front+side*.08,.10,.11,.12,COLORS.gold);
+  }
+  for(const k of [-1,1]){
+   m.box(x+k*(w/2-.10),2.1,z,.15,4.1,.15,COLORS.wood);
+   m.box(x,1.90,z+k*(d/2+.08),w*.95,.11,.13,COLORS.wood);
+  }
+  m.box(x+w*.31,5.65,z-d*.15,.68,2.05,.72,COLORS.brick);
+  m.box(x+w*.31,6.72,z-d*.15,.87,.20,.90,COLORS.stone);
  }
  for(let i=0;i<80;i++){
   const x=-45+rnd()*90,z=-45+rnd()*90;
