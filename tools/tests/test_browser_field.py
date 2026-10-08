@@ -59,7 +59,7 @@ class BrowserEditionTests(unittest.TestCase):
         node = shutil.which("node")
         if not node:
             self.skipTest("Node.js unavailable; JS is additionally parsed at development time")
-        for name in ("game.js", "sw.js"):
+        for name in ("game.js", "visuals.js", "sw.js"):
             proc = subprocess.run(
                 [node, "--check", str(BROWSER / name)],
                 capture_output=True, text=True, check=False, timeout=10,
@@ -77,6 +77,26 @@ class BrowserEditionTests(unittest.TestCase):
         self.assertIn('src="./visuals.js"', html)
         self.assertTrue((BROWSER / "visuals.js").is_file())
         self.assertIn("visuals.setup()", js)
+
+    def test_multiple_maps_modes_and_pitch(self) -> None:
+        html = (BROWSER / "index.html").read_text(encoding="utf-8")
+        js = (BROWSER / "game.js").read_text(encoding="utf-8")
+        visuals = (BROWSER / "visuals.js").read_text(encoding="utf-8")
+        for selector in ("battlefield", "difficulty", "mode", "sensitivity"):
+            self.assertIn(f'id="{selector}"', html)
+        for mode in ("assault", "defense"):
+            self.assertIn(f'value="{mode}"', html)
+        for battlefield in ("farm", "town", "forest"):
+            self.assertIn(f'value="{battlefield}"', html)
+        self.assertIn('value="ultra"', html)
+        for feature in ("function setBattlefield(", "function spawnDefenseWave(",
+                        "function resupplyBetweenWaves(", "function adjustRendering(",
+                        "function playGunshot("):
+            self.assertIn(feature, js)
+        self.assertIn("player.pitch", js)
+        self.assertIn("touches.lastLookY", js)
+        self.assertIn("function floor(", visuals)
+        self.assertIn("pitch=0", visuals)
 
     def test_mobile_device_profiles_are_render_only(self) -> None:
         profiles = (ROOT / "Config/DefaultDeviceProfiles.ini").read_text(encoding="utf-8")
@@ -99,6 +119,9 @@ class BrowserEditionTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
         self.assertIn("PASS 390x844", proc.stdout)
         self.assertIn("PASS 844x390", proc.stdout)
+        self.assertIn("farm defense ultra", proc.stdout)
+        self.assertIn("forest defense ultra", proc.stdout)
+        self.assertIn("town assault sharp", proc.stdout)
 
 
 
