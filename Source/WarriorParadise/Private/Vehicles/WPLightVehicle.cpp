@@ -193,6 +193,30 @@ void AWPLightVehicle::SetupPlayerInputComponent(
         &AWPLightVehicle::InteractInput);
 }
 
+void AWPLightVehicle::ApplyMobileMovement(float Forward, float Steering)
+{
+    MoveForward(Forward);
+    Turn(Steering);
+}
+
+void AWPLightVehicle::ApplyMobileLook(float Yaw, float Pitch)
+{
+    Turn(Yaw);
+}
+
+void AWPLightVehicle::ExecuteMobileAction(EWPMobileButton Action, bool bPressed)
+{
+    if (Action == EWPMobileButton::Fire)
+    {
+        if (bPressed) StartFire();
+        else StopFire();
+    }
+    else if (Action == EWPMobileButton::Interact && bPressed)
+    {
+        InteractInput();
+    }
+}
+
 void AWPLightVehicle::MoveForward(float Value)
 {
     if (bDestroyed || FMath::IsNearlyZero(Value))
