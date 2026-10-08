@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#182622"><meta name="description" content="Warrior's Paradise 3D Preview: free 3D WWII skirmish playable directly in your browser.">
+<title>Warrior's Paradise | 3D Frontline</title>
+<link rel="stylesheet" href="./style.css">
+</head><body>
+<main id="game">
+<canvas id="viewport" aria-label="Three-dimensional battlefield rendered with WebGL2"></canvas>
+<div id="shade"></div><div id="hurt"></div>
+<header id="top">
+  <div class="logo">WARRIOR'S <strong>PARADISE</strong><small>3D FRONTLINE PREVIEW</small></div>
+  <div class="stats"><span id="hp">HP 100</span><span id="mag">10 / 70</span><span id="frags">FRAG × 2</span></div>
+  <div id="mission">OPERATION DAWN WATCH</div><div id="objective">SECURE THE FORWARD POSITION</div>
+  <div id="info">LEE-ENFIELD · RIFLEMAN</div>
+</header>
+<div id="crosshair" aria-hidden="true"></div>
+<div id="hitmarker" aria-hidden="true">×</div>
+<div id="left-stick" aria-label="Move with left thumb"><div class="ring"></div><div id="nub"></div></div>
+<div id="right-look" aria-label="Drag to look around"></div>
+<div id="actions">
+<button id="fire" class="large" aria-label="Fire weapon">FIRE</button>
+<button id="aim" aria-label="Aim down sights">ADS</button>
+<button id="reload" aria-label="Reload">RLD</button>
+<button id="grenade" aria-label="Throw fragmentation grenade">FRAG</button>
+<button id="heal" aria-label="Use field dressing">MED</button>
+<button id="swap" aria-label="Change weapon">GUN</button>
+</div>
+<footer><span id="status">THREE SECTORS TO SECURE</span><span id="fps">WEBGL2 · AUTO</span></footer>
+<section id="menu" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+<div class="panel">
+<p class="eyebrow">NORMANDY · JUNE 1944</p>
+<h1 id="menu-title">WARRIOR'S<br><em>PARADISE</em></h1>
+<p class="edition">3D FRONTLINE · BROWSER PREVIEW</p>
+<p id="menu-copy">A real 3D skirmish rendered directly on your device. Lead an infantry assault, defeat defenders and capture three positions. No sign-in, no dedicated GPU, no paid game server.</p>
+<div class="options"><label>RENDERING <select id="quality"><option value="low">LOW · PHONE</option><option value="medium" selected>BALANCED</option><option value="high">HIGH · LAPTOP</option></select></label>
+<label>WEAPON <select id="weapon"><option value="rifle">LEE-ENFIELD</option><option value="smg">STEN SMG</option><option value="lmg">BREN LMG</option></select></label></div>
+<button id="deploy" class="primary">DEPLOY IN 3D →</button>
+<a href="../index.html">Use lightweight 2.5D Field Edition instead</a>
+<p class="disclaimer">Requires WebGL2 and browser graphics acceleration (integrated GPUs are supported). This is a playable technology preview—not the finished Unreal game or Enlisted-quality assets/multiplayer.</p>
+</div>
+</section>
+<div id="fallback" hidden role="alert"><strong>WebGL2 unavailable.</strong> Your browser has no usable 3D graphics context. <a href="../index.html">Play the lightweight Field Edition</a>.</div>
+</main><script src="./game.js" defer></script>
+</body></html>
