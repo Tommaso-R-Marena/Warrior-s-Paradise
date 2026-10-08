@@ -26,3 +26,36 @@ button,select{font:inherit}button{cursor:pointer}button:focus-visible,select:foc
 @media (pointer:coarse){#touch{display:block}#tip{display:none}#radar{width:96px;height:96px;right:12px;top:calc(54px + env(safe-area-inset-top))}.brand small{display:none}#hud{padding:calc(8px + env(safe-area-inset-top)) 12px 8px}.stats{margin-top:6px;font-size:15px;gap:12px}.status{margin-top:5px;font-size:9px;max-width:55%;}.status.small{font-size:9px;max-width:60%}#bottom-bar{bottom:calc(9px + env(safe-area-inset-bottom));left:12px;font-size:10px}#bottom-bar>div:first-child{max-width:45%}}
 @media (pointer:coarse) and (orientation:portrait){#move-pad{width:110px;height:110px;bottom:calc(44px + env(safe-area-inset-bottom))}.pad-knob{width:48px;height:48px;left:31px;top:31px}#touch-actions{transform:scale(.84);transform-origin:bottom right;bottom:calc(25px + env(safe-area-inset-bottom))}#modal{align-items:center;padding:12px}.modal-card{padding:22px}#radar{width:86px;height:86px}}
 @media (max-height:440px){.modal-card{padding:16px 28px}.modal-card h1{margin:8px 0;font-size:34px}.modal-details{margin:8px 0}.modal-actions{margin-top:12px}.fine-print{margin-top:8px}#touch-actions{transform:scale(.78);transform-origin:bottom right;bottom:calc(7px + env(safe-area-inset-bottom))}#move-pad{transform:scale(.78);transform-origin:bottom left;bottom:calc(7px + env(safe-area-inset-bottom))}#radar{top:9px}}
+
+
+/* Field Edition 2: responsive combat controls with two-thumb spacing. */
+#aim-ring{pointer-events:none;position:absolute;top:50%;left:50%;width:74px;height:74px;transform:translate(-50%,-50%);border:1px solid rgba(236,219,166,.5);border-radius:100%;opacity:0;z-index:3;box-shadow:0 0 30px rgba(210,193,139,.08)}
+#crosshair.aimed{opacity:.12;transform:translate(-50%,-50%) scale(.55)}
+#aim-ring.aimed{opacity:.9}
+#grenades{color:#e6c393}
+#loadout{color:#d6c58d!important}
+#touch-actions{width:216px;height:211px;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:5px}
+#fire-btn.action.danger{grid-column:3/span 2;grid-row:1/span 2}
+#reload-btn{grid-column:2;grid-row:2}
+#heal-btn{grid-column:1;grid-row:4}
+#switch-btn{grid-column:2;grid-row:4}
+#ads-btn{grid-column:2;grid-row:1;font-size:11px}
+#frag-btn{grid-column:3;grid-row:3;font-size:10px}
+#smoke-btn{grid-column:4;grid-row:3;font-size:10px}
+#order-btn{grid-column:3/span 2;grid-row:4;font-size:11px;border-radius:18px}
+#touch-actions .action{min-width:40px;min-height:39px}
+#touch-actions .action:disabled{opacity:.35}
+@media(pointer:coarse){
+ #touch-actions{right:max(7px,env(safe-area-inset-right));bottom:calc(20px + env(safe-area-inset-bottom))}
+ #move-pad{left:max(13px,env(safe-area-inset-left));bottom:calc(51px + env(safe-area-inset-bottom))}
+ #hud .stats{max-width:65%;gap:10px;flex-wrap:wrap}
+}
+@media(pointer:coarse) and (orientation:portrait){
+ #touch-actions{transform:scale(.82);transform-origin:bottom right;bottom:calc(37px + env(safe-area-inset-bottom))}
+ #move-pad{bottom:calc(48px + env(safe-area-inset-bottom))}
+ #hud .stats{max-width:72%;font-size:12px;gap:8px}
+}
+@media(pointer:coarse) and (max-height:440px){
+ #touch-actions{transform:scale(.78);bottom:calc(5px + env(safe-area-inset-bottom))}
+ #move-pad{transform:scale(.78);bottom:calc(7px + env(safe-area-inset-bottom))}
+}
