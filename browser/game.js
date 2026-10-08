@@ -179,6 +179,47 @@
       o.connect(gain); gain.connect(audio.destination); o.start(); o.stop(audio.currentTime + duration);
     } catch { /* Silent mode is safe and supported. */ }
   }
+  let gunshotNoise=null;
+  function playGunshot(weaponKey) {
+    // Layered filtered noise + low-frequency mechanical punch. This
+    // creates a much fuller report than a single oscillator beep while
+    // requiring no downloadable copyrighted audio files.
+    try {
+      if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();
+      if(audio.state==="suspended")audio.resume();
+      if(!gunshotNoise){
+        const count=Math.ceil(audio.sampleRate*.18);
+        gunshotNoise=audio.createBuffer(1,count,audio.sampleRate);
+        const data=gunshotNoise.getChannelData(0);
+        for(let i=0;i<count;i++){
+          const envelope=Math.pow(1-i/count,2.0);
+          data[i]=(Math.random()*2-1)*envelope;
+        }
+      }
+      const now=audio.currentTime;
+      const src=audio.createBufferSource();src.buffer=gunshotNoise;
+      const filter=audio.createBiquadFilter();
+      filter.type="bandpass";
+      filter.frequency.value=weaponKey==="smg"?2050:weaponKey==="lmg"?1150:1550;
+      filter.Q.value=.62;
+      const gain=audio.createGain();
+      gain.gain.setValueAtTime(.001,now);
+      gain.gain.exponentialRampToValueAtTime(.075,now+.003);
+      gain.gain.exponentialRampToValueAtTime(.002,now+.17);
+      src.connect(filter);filter.connect(gain);gain.connect(audio.destination);
+      src.start(now);
+      const body=audio.createOscillator(),bodyGain=audio.createGain();
+      body.type="triangle";
+      body.frequency.setValueAtTime(weaponKey==="smg"?128:weaponKey==="lmg"?79:95,now);
+      body.frequency.exponentialRampToValueAtTime(43,now+.12);
+      bodyGain.gain.setValueAtTime(.052,now);
+      bodyGain.gain.exponentialRampToValueAtTime(.001,now+.135);
+      body.connect(bodyGain);bodyGain.connect(audio.destination);
+      body.start(now);body.stop(now+.15);
+    }catch{
+      beep(weaponKey==="smg"?190:130,.07,.027,"sawtooth");
+    }
+  }
   function notify(message, duration = 3) {
     game.message = message;
     game.messageTimer = duration;
@@ -403,7 +444,8 @@
     const movementSpread=walking*.027+(p.crouch?-.003:0);
     p.angle+=random(-recoil,recoil)*.12;
     game.shake=p.ads?.035:.068;
-    beep(w.sound,.07,.038,"sawtooth");
+    playGunshot(p.weapon);
+    if(coarse&&navigator.vibrate)navigator.vibrate(7);
     const e=mouseTarget(random(-1,1)*Math.max(.003,recoil+movementSpread));
     if(e){
       const distance=dist2(p,e);
@@ -412,6 +454,7 @@
       if(Math.random()<.09)damage*=1.45;
       e.hp-=damage;e.hit=.19;e.suppression=.85;
       game.hitTime=.17;beep(470,.045,.017,"triangle");
+      if(coarse&&navigator.vibrate)navigator.vibrate(13);
       if(e.hp<=0){e.alive=false;game.kills++;notify("TARGET NEUTRALIZED",.7);}
     }else{
       for(const enemy of game.enemies){
@@ -735,6 +778,7 @@
   const shade=(rgb,f)=>"rgb("+rgb.map(v=>Math.round(clamp(v*f,0,255))).join(",")+")";
   function renderWorld() {
     const p=game.player; if(!p)return;
+    ctx.save();
     const w=canvas.width,h=canvas.height,horizon=Math.floor(h*.53);
     if(visuals){
       visuals.setup();
@@ -749,6 +793,10 @@
       ground.addColorStop(0,"#77745b");ground.addColorStop(1,"#29382c");
       ctx.fillStyle=ground;ctx.fillRect(0,horizon,w,h-horizon);
       ctx.fillStyle="#a8a27a43";ctx.fillRect(0,horizon-2,w,5);
+    }
+    if(game.shake>.01){
+      const amount=game.shake*h*.015;
+      ctx.translate((Math.random()-.5)*amount,(Math.random()-.5)*amount);
     }
     const dirX=Math.cos(p.angle),dirY=Math.sin(p.angle),
       fov=p.ads?.44:.69,planeX=-dirY*fov,planeY=dirX*fov;
@@ -874,6 +922,7 @@
       ctx.fillStyle="#e8d7b3";ctx.font=Math.max(9,w*.031)+"px monospace";
       ctx.textAlign="center";ctx.fillText("RELOADING",w/2,h*.76);
     }
+    ctx.restore();
     renderRadar();
   }
   function renderRadar(){
