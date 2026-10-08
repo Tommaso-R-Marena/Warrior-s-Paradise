@@ -171,46 +171,104 @@
     }
     return {distance:maxDist,type:0,side:0,cx,cy,texture:0};
   }
-  const seen=(a,b)=>!wall(b.x,b.y)&&trace(a.x,a.y,(b.x-a.x)/Math.max(.001,dist2(a,b)),(b.y-a.y)/Math.max(.001,dist2(a,b)),dist2(a,b)).distance>=dist2(a,b)-.15;
-  function mouseTarget() {
+  const seen=(a,b)=>!wall(b.x,b.y)&&!smokeBlocks(a,b)&&trace(a.x,a.y,(b.x-a.x)/Math.max(.001,dist2(a,b)),(b.y-a.y)/Math.max(.001,dist2(a,b)),dist2(a,b)).distance>=dist2(a,b)-.15;
+  function smokeBlocks(a,b) {
+    const dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;
+    if(len2<.01)return false;
+    for(const cloud of game.thrown){
+      if(cloud.kind!=="smoke"||cloud.fuse>0||cloud.life<=0)continue;
+      const t=clamp(((cloud.x-a.x)*dx+(cloud.y-a.y)*dy)/len2,0,1);
+      if(Math.hypot(a.x+t*dx-cloud.x,a.y+t*dy-cloud.y)<cloud.radius)return true;
+    }
+    return false;
+  }
+  function mouseTarget(spread=0) {
     const p=game.player;
     if(!p)return null;
-    const dx=Math.cos(p.angle),dy=Math.sin(p.angle);
-    const maxRange=13, wallDist=trace(p.x,p.y,dx,dy,maxRange).distance;
-    let best=null,bestRange=Math.min(maxRange,wallDist+.1);
+    const direction=p.angle+spread;
+    const dx=Math.cos(direction),dy=Math.sin(direction);
+    const config=WEAPONS[p.weapon];
+    const wallDist=trace(p.x,p.y,dx,dy,config.range).distance;
+    let best=null,bestRange=Math.min(config.range,wallDist+.04);
     for(const e of game.enemies){
       if(!e.alive)continue;
       const vx=e.x-p.x,vy=e.y-p.y,forward=vx*dx+vy*dy,offset=Math.abs(vx*dy-vy*dx);
-      if(forward>0&&forward<bestRange&&offset<.26+forward*.008&&seen(p,e)){
+      const assist=coarse&&p.ads?.034:.0;
+      if(forward>0&&forward<bestRange&&offset<.20+forward*(p.ads?.002:.005)+forward*assist&&seen(p,e)){
         best=e;bestRange=forward;
       }
     }
     return best;
   }
   function fire() {
-    const p=game.player;if(!p||!p.alive||game.phase!=="playing"||p.cooldown>0||p.reload>0)return;
-    if(p.ammo<=0){reload();notify("RELOAD • MAGAZINE EMPTY",1);return;}
-    p.cooldown=.28;p.ammo--;p.flash=.12;game.shake=.065;
-    beep(165,.08,.048,"sawtooth");
-    const e=mouseTarget();
+    const p=game.player;
+    if(!p||!p.alive||game.phase!=="playing"||p.cooldown>0||p.reload>0)return;
+    if(p.ammo<=0){reload();notify("MAGAZINE EMPTY • RELOADING",1);return;}
+    const w=WEAPONS[p.weapon];
+    p.cooldown=w.interval;p.ammo--;p.flash=.10;
+    const recoil=w.spread*(p.ads?.27:1);
+    const walking=(input.keys.KeyW||input.keys.KeyS||Math.abs(input.joyY)>.12)?.85:0;
+    const movementSpread=walking*.027+(p.crouch?-.003:0);
+    p.angle+=random(-recoil,recoil)*.12;
+    game.shake=p.ads?.035:.068;
+    beep(w.sound,.07,.038,"sawtooth");
+    const e=mouseTarget(random(-1,1)*Math.max(.003,recoil+movementSpread));
     if(e){
-      let damage=36+Math.random()*14;
-      if(Math.random()<.14)damage*=1.5;
+      const distance=dist2(p,e);
+      const falloff=clamp(1-Math.max(0,distance-w.range*.5)/w.range*.28,.65,1);
+      let damage=w.damage*falloff*random(.87,1.13);
+      if(Math.random()<.09)damage*=1.45;
       e.hp-=damage;e.hit=.19;e.suppression=.85;
-      game.hitTime=.17;beep(470,.045,.024,"triangle");
+      game.hitTime=.17;beep(470,.045,.017,"triangle");
       if(e.hp<=0){e.alive=false;game.kills++;notify("TARGET NEUTRALIZED",.7);}
-    } else {
+    }else{
       for(const enemy of game.enemies){
-        if(enemy.alive&&dist2(p,enemy)<11&&seen(p,enemy))enemy.suppression=Math.max(enemy.suppression,.3);
+        if(enemy.alive&&dist2(p,enemy)<9&&seen(p,enemy))enemy.suppression=Math.max(enemy.suppression,.23);
       }
     }
   }
   function reload() {
-    const p=game.player;if(!p||p.reload>0||p.ammo===8||p.reserve===0||game.phase!=="playing")return;
-    p.reload=1.35;notify("RELOADING",.8);beep(420,.09,.016,"triangle");
+    const p=game.player;if(!p||p.reload>0||game.phase!=="playing")return;
+    const w=WEAPONS[p.weapon];
+    if(p.ammo>=w.capacity||p.reserve<=0)return;
+    p.reload=w.reload;
+    notify("RELOADING • "+w.name,1.0);
+    beep(420,.09,.016,"triangle");
   }
   function finishReload(s) {
-    const need=Math.min(8-s.ammo,s.reserve);s.ammo+=need;s.reserve-=need;
+    const need=Math.min(WEAPONS[s.weapon].capacity-s.ammo,s.reserve);
+    s.ammo+=need;s.reserve-=need;
+  }
+  function setADS(active) {
+    const p=game.player;
+    if(!p||game.phase!=="playing")return;
+    p.ads=!!active;
+    dom.aimRing.classList[p.ads?"add":"remove"]("aimed");
+    dom.crosshair.classList[p.ads?"add":"remove"]("aimed");
+  }
+  function toggleCrouch(){
+    if(game.phase!=="playing")return;
+    game.player.crouch=!game.player.crouch;
+    notify(game.player.crouch?"CROUCH":"STAND",.7);
+  }
+  function toggleOrders() {
+    if(game.phase!=="playing")return;
+    game.ord=game.ord==="FOLLOW"?"HOLD":"FOLLOW";
+    notify("SQUAD ORDER • "+game.ord,1.7);
+  }
+  function throwGrenade(kind="frag") {
+    const p=game.player;if(!p||game.phase!=="playing"||!p.alive)return;
+    if(kind==="smoke"?p.smokes<=0:p.frags<=0){notify("NO "+kind.toUpperCase()+" GRENADES",.9);return;}
+    const dx=Math.cos(p.angle),dy=Math.sin(p.angle);
+    const wallDist=trace(p.x,p.y,dx,dy,5.5).distance;
+    const distance=Math.min(4.7,Math.max(.7,wallDist-.35));
+    const point={x:p.x+dx*distance,y:p.y+dy*distance,kind,
+      fuse:kind==="frag"?1.45:1.12,life:kind==="smoke"?10.5:.55,
+      radius:kind==="smoke"?1.35:2.35};
+    if(kind==="smoke")p.smokes--;else p.frags--;
+    game.thrown.push(point);
+    notify(kind==="smoke"?"SMOKE OUT":"FRAG OUT",.8);
+    beep(kind==="smoke"?275:340,.14,.025,"triangle");
   }
   function heal() {
     const p=game.player;if(!p||!p.alive||p.hp>=p.maxHp||p.medkits<=0||game.phase!=="playing")return;
@@ -221,7 +279,13 @@
     const alive=game.friends.filter(s=>s.alive);
     if(alive.length<=1){notify("NO OTHER SQUADMATE AVAILABLE",1.4);return;}
     const idx=alive.indexOf(game.player);
-    game.player=alive[(idx+1)%alive.length];notify("NOW CONTROLLING "+game.player.role,1.7);beep(700,.10,.024,"triangle");
+    game.player=alive[(idx+1)%alive.length];
+    setADS(false);
+    game.player.ads=false;
+    dom.aimRing.classList.remove("aimed");
+    dom.crosshair.classList.remove("aimed");
+    notify("NOW CONTROLLING "+game.player.role+" • "+WEAPONS[game.player.weapon].name,1.7);
+    beep(700,.10,.024,"triangle");
   }
   function knockDown(s) {
     s.alive=false;s.hp=0;s.flash=0;
