@@ -13,6 +13,11 @@ REQUIRED = [
     "tools/tests/test_headless_smoke_contracts.py",
     "tools/tests/test_browser_field.py",
     "tools/tests/test_native_mobile.py",
+    "tools/tests/test_native_mobile_content_pipeline.py",
+    "tools/assets/activate_mobile_map.py",
+    "tools/prepare_native_mobile.ps1",
+    "Content/Python/wp_build_mobile_village.py",
+    "Content/Python/wp_prepare_native_mobile.py",
     "tools/assets/audit_mobile_content.py",
     "docs/NATIVE_ANDROID_PRODUCTION.md",
     "tools/package_android.ps1",
@@ -365,6 +370,13 @@ def main() -> None:
     require_text("Config/DefaultEngine.ini", "r.SupportLocalFogVolumes=True")
 
     contracts = (
+        ("Content/Python/wp_build_mobile_village.py", "editor.new_level"),
+        ("Content/Python/wp_build_mobile_village.py", "editor.save_current_level"),
+        ("Content/Python/wp_prepare_native_mobile.py", "wp_build_mobile_village.py"),
+        ("tools/assets/activate_mobile_map.py", "asset_path_to_umap"),
+        ("tools/prepare_native_mobile.ps1", "-ExecutePythonScript="),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "SkyComponent->SetRealTimeCapture(false)"),
+        ("Source/WarriorParadise/Private/Game/WPBattlefieldDirector.cpp", "Fog->GetComponent()->SetVolumetricFog(false)"),
         ("Source/WarriorParadise/Public/UI/WPMobileControls.h", "GetButtons"),
         ("Source/WarriorParadise/Public/UI/WPMobileControls.h", "HitTest"),
         ("Source/WarriorParadise/Public/Game/WPPlayerController.h", "TrackedMobilePawn"),
