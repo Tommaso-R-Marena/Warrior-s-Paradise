@@ -155,6 +155,50 @@
     if (ok(s.x+dx,s.y)) s.x+=dx;
     if (ok(s.x,s.y+dy)) s.y+=dy;
   }
+  // Grid waypoint planner: cheap BFS with short caching per soldier.
+  // Direct motion is preferred; BFS only runs when a wall blocks it.
+  function moveSmart(s,to,speed,dt) {
+    if(!s||!to||!s.alive)return;
+    const d=dist2(s,to);if(d<.08)return;
+    const dx=(to.x-s.x)/d,dy=(to.y-s.y)/d;
+    const forward=trace(s.x,s.y,dx,dy,Math.min(d,3)).distance;
+    if(forward>=Math.min(d,3)-.28) {
+      slide(s,dx*speed*dt,dy*speed*dt);
+      s.pathNode=null;
+      return;
+    }
+    s.pathTimer=(s.pathTimer||0)-dt;
+    const destX=Math.floor(to.x),destY=Math.floor(to.y);
+    if(s.pathTimer<=0||!s.pathNode||s.pathGoal!==destY*MAP_W+destX) {
+      s.pathTimer=.65+Math.random()*.18;
+      s.pathGoal=destY*MAP_W+destX;
+      const source=Math.floor(s.y)*MAP_W+Math.floor(s.x);
+      const goal=s.pathGoal;
+      const queue=new Int16Array(MAP_W*MAP_H),parents=new Int16Array(MAP_W*MAP_H);
+      parents.fill(-1);
+      let first=0,last=0;queue[last++]=source;parents[source]=source;
+      while(first<last){
+        const curr=queue[first++];if(curr===goal)break;
+        const x=curr%MAP_W,y=(curr/MAP_W)|0;
+        for(const [nx,ny] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]){
+          if(wall(nx+.5,ny+.5))continue;
+          const next=ny*MAP_W+nx;
+          if(parents[next]!==-1)continue;
+          parents[next]=curr;queue[last++]=next;
+        }
+      }
+      if(goal>=0&&goal<parents.length&&parents[goal]!==-1){
+        let cell=goal;
+        while(parents[cell]!==source&&cell!==source&&parents[cell]!==-1)
+          cell=parents[cell];
+        s.pathNode={x:cell%MAP_W+.5,y:Math.floor(cell/MAP_W)+.5};
+      }else s.pathNode=null;
+    }
+    if(s.pathNode){
+      const node=s.pathNode,dist=dist2(s,node);
+      if(dist>.10)slide(s,(node.x-s.x)/dist*speed*dt,(node.y-s.y)/dist*speed*dt);
+    }
+  }
   // DDA against tile geometry: also used for gameplay line of sight.
   function trace(x,y,dx,dy,maxDist=26) {
     let cx=Math.floor(x),cy=Math.floor(y);
@@ -299,6 +343,29 @@
     const p=game.player;
     game.time+=dt;game.hitTime=Math.max(0,game.hitTime-dt);game.shake=Math.max(0,game.shake-dt*2);
     game.flash=Math.max(0,game.flash-dt*3);game.messageTimer=Math.max(0,game.messageTimer-dt);
+    for(const g of game.thrown){
+      const wasFused=g.fuse>0;
+      if(g.fuse>0)g.fuse-=dt;
+      if(wasFused&&g.fuse<=0){
+        if(g.kind==="frag"){
+          beep(74,.24,.09,"sawtooth");
+          game.shake=.22;
+          for(const soldier of game.enemies.concat(game.friends)){
+            if(!soldier.alive)continue;
+            const d=dist2(g,soldier);
+            if(d>=g.radius||!seen(g,soldier))continue;
+            soldier.hp-=(1-d/g.radius)*110;
+            soldier.hit=.25;soldier.suppression=.94;
+            if(soldier.hp<=0){
+              if(soldier.team==="enemy"){soldier.alive=false;game.kills++;}
+              else knockDown(soldier);
+            }
+          }
+        }
+      }
+      if(g.fuse<=0)g.life-=dt;
+    }
+    game.thrown=game.thrown.filter(g=>g.fuse>0||g.life>0);
     for(const s of game.friends.concat(game.enemies)){
       if(!s.alive)continue;
       s.flash=Math.max(0,s.flash-dt);s.hit=Math.max(0,s.hit-dt);s.suppression=Math.max(0,s.suppression-dt*.1);
@@ -310,7 +377,8 @@
     let strafe=(input.keys.KeyD?1:0)-(input.keys.KeyA?1:0)+input.joyX;
     const len=Math.hypot(forward,strafe);
     if(len>1){forward/=len;strafe/=len;}
-    const speed=(input.keys.ShiftLeft||input.keys.ShiftRight?4.6:3.05)*(p.hp<35?.84:1);
+    const speed=(input.keys.ShiftLeft||input.keys.ShiftRight?4.6:3.05)*
+      (p.crouch?.51:1)*(p.ads?.78:1)*(p.hp<35?.84:1);
     const ca=Math.cos(p.angle),sa=Math.sin(p.angle);
     slide(p,(ca*forward-sa*strafe)*speed*dt,(sa*forward+ca*strafe)*speed*dt);
     if(input.keys.ArrowLeft)p.angle-=dt*1.65;
@@ -325,9 +393,8 @@
       const wanted={x:p.x-Math.cos(p.angle)*1.15-Math.sin(p.angle)*side*.85,
         y:p.y-Math.sin(p.angle)*1.15+Math.cos(p.angle)*side*.85};
       const d=dist2(f,wanted);
-      if(d>.45) {
-        const theta=Math.atan2(wanted.y-f.y,wanted.x-f.x);
-        slide(f,Math.cos(theta)*dt*(d>4?3.7:2.8),Math.sin(theta)*dt*(d>4?3.7:2.8));
+      if(d>.45&&game.ord==="FOLLOW") {
+        moveSmart(f,wall(wanted.x,wanted.y)?p:wanted,(d>4?3.7:2.8),dt);
       }
       let target=null,best=9.5;
       for(const e of game.enemies){
@@ -352,7 +419,7 @@
         const a=Math.atan2(target.y-e.y,target.x-e.x);e.angle=a;
         if(best>4.5&&best<14){
           const speed=e.suppression>.5?0.24:.50;
-          slide(e,Math.cos(a)*speed*dt,Math.sin(a)*speed*dt);
+          moveSmart(e,target,speed,dt);
         }
         if(e.cooldown<=0&&best<11){
           e.cooldown=random(1.05,2.1)*(e.suppression>.6?1.5:1);
@@ -365,7 +432,12 @@
             if(target.hp<=0)knockDown(target);
           }
         }
-      } else {e.memory=Math.max(0,e.memory-dt);}
+      } else {
+        e.memory=Math.max(0,e.memory-dt);
+        const heard=game.friends.filter(f=>f.alive&&dist2(e,f)<8)
+          .sort((a,b)=>dist2(e,a)-dist2(e,b))[0];
+        if(heard&&!seen(e,heard))moveSmart(e,heard,.56,dt);
+      }
     }
 
     // Capture sectors in order; enemies contest at very short range.
@@ -391,6 +463,8 @@
     dom.health.style.color=p.hp<30?"#f47b68":"";
     dom.ammo.textContent=String(p.ammo).padStart(2,"0")+" / "+String(p.reserve).padStart(2,"0")+(p.reload>0?" ↻":"");
     dom.medkits.textContent="✚ "+p.medkits;
+    dom.grenades.textContent="◉ "+p.frags+" / ▤ "+p.smokes;
+    dom.loadout.textContent=WEAPONS[p.weapon].name+" · "+(p.crouch?"CROUCH":"STAND")+" · "+game.ord;
     const o=objectives[game.objective];
     dom.mission.textContent=o?(game.message||"SECURE "+o.name):(game.message||"VICTORY");
     dom.progress.textContent=o?"SECTOR "+(game.objective+1)+" / 3 · "+(dist2(p,o)<2.05?(game.cap*100|0)+"% CAPTURED":o.description):"MISSION COMPLETE";
@@ -422,7 +496,8 @@
       ctx.fillStyle=ground;ctx.fillRect(0,horizon,w,h-horizon);
       ctx.fillStyle="#a8a27a43";ctx.fillRect(0,horizon-2,w,5);
     }
-    const dirX=Math.cos(p.angle),dirY=Math.sin(p.angle),planeX=-dirY*.69,planeY=dirX*.69;
+    const dirX=Math.cos(p.angle),dirY=Math.sin(p.angle),
+      fov=p.ads?.44:.69,planeX=-dirY*fov,planeY=dirX*fov;
     const step=game.quality==="eco"?2:1;
     zBuffer.length=w;
     for(let x=0;x<w;x+=step){
@@ -457,6 +532,8 @@
       }
     }
     const sprites=scenery.slice();
+    for(const g of game.thrown)if(g.fuse<=0&&g.life>0)
+      sprites.push({x:g.x,y:g.y,kind:g.kind,size:g.kind==="smoke"?3.1:1.1,life:g.life});
     const o=objectives[game.objective];
     if(o)sprites.push({x:o.x,y:o.y,kind:"objective",size:1.55});
     for(const e of game.enemies)if(e.alive)sprites.push({...e,kind:"enemy",size:.92});
@@ -485,6 +562,15 @@
       }
       if(s.kind==="tree"||s.kind==="crate"){
         if(visuals)visuals.decoration(ctx,s,mid,top,spriteW,spriteH);
+        continue;
+      }
+      if(s.kind==="smoke"||s.kind==="frag"){
+        const radius=Math.max(2,spriteH*.5);
+        const haze=ctx.createRadialGradient(mid,top+spriteH*.52,0,mid,top+spriteH*.52,radius);
+        haze.addColorStop(0,s.kind==="smoke"?"rgba(187,195,177,.69)":"rgba(251,195,100,.9)");
+        haze.addColorStop(.62,s.kind==="smoke"?"rgba(154,164,152,.47)":"rgba(247,109,55,.55)");
+        haze.addColorStop(1,"rgba(126,136,126,0)");
+        ctx.fillStyle=haze;ctx.fillRect(mid-radius,top,radius*2,spriteH);
         continue;
       }
       if(visuals){
