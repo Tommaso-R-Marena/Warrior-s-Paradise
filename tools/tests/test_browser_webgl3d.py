@@ -13,7 +13,7 @@ GAME3D = BROWSER / "3d"
 
 class WebGL3DTests(unittest.TestCase):
     def test_cloudflare_fully_static_with_low_end_fallback(self):
-        for name in ("index.html", "style.css", "game.js", "asset-loader.js"):
+        for name in ("index.html", "style.css", "game.js", "asset-loader.js", "battle-art.js", "battle-audio.js"):
             self.assertTrue((GAME3D / name).is_file(), name)
         html = (GAME3D / "index.html").read_text(encoding="utf-8")
         script = (GAME3D / "game.js").read_text(encoding="utf-8")
@@ -58,7 +58,10 @@ class WebGL3DTests(unittest.TestCase):
         for file in (GAME3D / "game.js", GAME3D / "asset-loader.js",
                      ROOT / "tools/tests/browser_webgl3d_smoke.js",
                      ROOT / "tools/tests/browser_cc0_glb_smoke.js",
-                     ROOT / "tools/tests/browser_cc0_scene_smoke.js"):
+                     ROOT / "tools/tests/browser_cc0_scene_smoke.js",
+                     ROOT / "tools/tests/browser_quaternius_glb_smoke.js",
+                     ROOT / "tools/tests/browser_visual_audio_smoke.js",
+                     GAME3D / "battle-art.js", GAME3D / "battle-audio.js"):
             p = subprocess.run([node, "--check", str(file)], capture_output=True,
                                text=True, timeout=15, check=False)
             self.assertEqual(p.returncode, 0, p.stdout+p.stderr)
@@ -74,6 +77,14 @@ class WebGL3DTests(unittest.TestCase):
                                capture_output=True, text=True, timeout=50, check=False)
         self.assertEqual(scene.returncode, 0, scene.stdout + scene.stderr)
         self.assertIn("PASS CC0 integrated WebGL2 scenes:", scene.stdout)
+        for path, marker in [
+            ("browser_quaternius_glb_smoke.js", "PASS Quaternius farm artwork:"),
+            ("browser_visual_audio_smoke.js", "PASS visual and spatial audio systems:"),
+        ]:
+            p = subprocess.run([node, str(ROOT / "tools/tests" / path)],
+                               capture_output=True, text=True, timeout=50, check=False)
+            self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+            self.assertIn(marker, p.stdout)
 
 
 if __name__ == "__main__":
