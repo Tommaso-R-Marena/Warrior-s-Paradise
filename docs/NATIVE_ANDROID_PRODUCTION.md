@@ -29,6 +29,37 @@ python tools/assets/audit_mobile_content.py --strict
 
 The `--strict` check is intentionally expected to fail until the art inventory is populated, and cannot independently judge the quality or licenses of imported models. The source assets should be introduced through `tools/setup_free_content.ps1`, `Content/Python/wp_import_external_assets.py` and the existing presentation binding profile workflow. Follow `docs/THIRD_PARTY_ASSETS.md` and keep the source/license lock.
 
+## End-to-end licensed 3D level assembly (new)
+
+The editor pipeline now prepares a real Unreal **Normandy mobile map** from locally obtained, license-tracked environmental meshes. The generator is non-destructive: it refuses to replace an existing map, leaves the actual battlefield's collision, spawn points, objectives and lighting in the runtime `AWPBattlefieldDirector`, and places decorative imported meshes around the playable combat routes.
+
+1. Obtain usable CC0/free models, textures and environmental sounds under their actual licenses. The existing tool supports `python tools/assets/bootstrap_free_assets.py --polyhaven --resolution 2k` and `--direct-cc0` as appropriate, and writes `ExternalAssets/asset-lock.json`. Poly Haven's CC0 license permits commercial use; other Fab/Epic content may have different redistribution conditions.
+2. On a Windows machine with **Unreal 5.8 compiled successfully**, run:
+
+   ```powershell
+   .\tools\prepare_native_mobile.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.8"
+   ```
+
+   This starts the Unreal Editor Python workflow: imported source files → PBR CC0 materials → existing presentation bindings → saved `/Game/WarriorParadise/Maps/WP_NormandyMobile`. Because the repository currently has **zero** imported assets, this stage is not yet runnable to completion.
+
+3. Open the generated level in Unreal Editor and correct mesh scale, pivot placement, material assignments, animation references, mobile shader/collision bugs and lighting as necessary. `WP_ALLOW_BLOCKOUT=1` is **only** for a deliberately incomplete no-art experiment.
+4. Preview the level activation:
+
+   ```powershell
+   python tools/assets/activate_mobile_map.py
+   ```
+
+   Once inspected and ready to use as the startup map:
+
+   ```powershell
+   python tools/assets/activate_mobile_map.py --apply
+   ```
+
+   For a production art gate add `--require-production-art`. `--reset --apply` restores Unreal's Entry map if needed. Commit the actual `.umap` through Git LFS after evaluating licensing and packaging.
+5. Use `tools/package_android.ps1` to attempt a Development cook and install on a physical Android device. The production-content audit and independent QA remain separate acceptance gates.
+
+**Unreal Editor Python scripts are source-complete but have not executed in UE5.8 here.** Editor API/property compatibility and specific mesh imports must be verified in the real editor.
+
 ## How to attempt a real Android development package
 
 **Prerequisite:** Windows computer with a working UE 5.8 installation, supported Android SDK/NDK/JDK through **UE Turnkey**, USB-connected Android device (USB debugging), and enough storage/RAM for Unreal's cook and shader compilation. In Unreal's Project Settings → Platforms → Android, use **Configure Now**, accept SDK licenses and verify the intended package name.
