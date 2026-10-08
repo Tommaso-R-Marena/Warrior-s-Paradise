@@ -19,6 +19,8 @@ REQUIRED = [
     "browser/3d/game.js",
     "browser/3d/asset-loader.js",
     "tools/tests/browser_cc0_glb_smoke.js",
+    "tools/tests/browser_cc0_scene_smoke.js",
+    "browser/3d/assets/kenney/MANIFEST.json",
     "browser/3d/assets/kenney/tree-oak.glb.b64",
     "browser/3d/assets/kenney/tree-pinedefaulta.glb.b64",
     "browser/3d/assets/kenney/rock-largea.glb.b64",
