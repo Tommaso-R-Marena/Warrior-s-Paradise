@@ -326,14 +326,15 @@ function spawnEnemies(){
    const x=f.x+dx,z=f.z+dz;
    if(blocked(x,z,.8))continue;
    game.enemies.push({x,z,hp:80,maxHp:80,sector:n,cd:.5+rnd()*1.7,
+     facing:rnd()*Math.PI*2,moveSpeed:0,
     alert:0,lastX:x,lastZ:z,strafe:rnd()>.5?1:-1,phase:rnd()*6,hit:0});
    if(++count>=3+n)break;
   }
  }
 }
 function spawnAllies(){
- game.allies=[{x:-37.5,z:-35,hp:85,cd:1.1,ammo:16,reload:0,phase:0},
-             {x:-33.5,z:-35,hp:85,cd:1.5,ammo:16,reload:0,phase:2.1}];
+ game.allies=[{x:-37.5,z:-35,hp:85,cd:1.1,ammo:16,reload:0,phase:0,moveSpeed:0,facing:-.78,alert:1},
+             {x:-33.5,z:-35,hp:85,cd:1.5,ammo:16,reload:0,phase:2.1,moveSpeed:0,facing:-.78,alert:1}];
 }
 function addTracer(ax,az,bx,bz,team){
  game.tracers.push({ax,az,bx,bz,life:.12,team});
@@ -542,11 +543,13 @@ function updateCombinedArms(dt){
   const side=i?1:-1,behind=3+i*.8;
   const fx=player.x+Math.sin(player.yaw)*behind+Math.cos(player.yaw)*side*2.1;
   const fz=player.z-Math.cos(player.yaw)*behind+Math.sin(player.yaw)*side*2.1;
-  const to=Math.hypot(fx-a.x,fz-a.z);
+  const to=Math.hypot(fx-a.x,fz-a.z),oldX=a.x,oldZ=a.z;
   if(game.order==="follow"&&to>2.1){
    [a.x,a.z]=move(a.x,a.z,(fx-a.x)/to*Math.min(4.7,to)*dt,
     (fz-a.z)/to*Math.min(4.7,to)*dt);
   }
+  a.moveSpeed=Math.hypot(a.x-oldX,a.z-oldZ)/Math.max(dt,.001);
+  if(a.moveSpeed>.05)a.facing=Math.atan2(player.x-a.x,player.z-a.z);
   let victim=null,near=26;
   for(const enemy of game.enemies){
    const dist=Math.hypot(enemy.x-a.x,enemy.z-a.z);
@@ -554,6 +557,7 @@ function updateCombinedArms(dt){
     near=dist;victim=enemy;
    }
   }
+  if(victim)a.facing=Math.atan2(victim.x-a.x,victim.z-a.z);
   if(victim&&a.cd<=0&&a.reload<=0){
    if(a.ammo<=0){a.reload=1.9;continue;}
    a.ammo--;a.cd=.42+rnd()*.48;
@@ -623,11 +627,13 @@ function simulate(dt){
   if(visible){e.alert=2.1;e.lastX=victim.x;e.lastZ=victim.z;}
   else e.alert=Math.max(0,e.alert-dt);
   const tx=visible?victim.x:e.lastX,tz=visible?victim.z:e.lastZ;
-  const targetD=Math.hypot(tx-e.x,tz-e.z);
+  const targetD=Math.hypot(tx-e.x,tz-e.z),oldX=e.x,oldZ=e.z;
   if(e.alert>0&&targetD>7){
    const speed=e.suppression>.2?.38:visible?1.24:.84;
    [e.x,e.z]=move(e.x,e.z,(tx-e.x)/targetD*speed*dt,(tz-e.z)/targetD*speed*dt);
   }
+  e.moveSpeed=Math.hypot(e.x-oldX,e.z-oldZ)/Math.max(dt,.001);
+  if(e.alert>0)e.facing=Math.atan2(tx-e.x,tz-e.z);
   if(visible&&d<21&&e.cd<=0){
    e.cd=(e.suppression>.2?2.2:1.3)+rnd()*.95;
    const difficulty=game.difficulty==="veteran"?1.18:game.difficulty==="recruit"?.55:1;
@@ -663,35 +669,28 @@ function simulate(dt){
 }
 function dynamicGeometry(){
  const m=new Geometry();
- for(const e of game.enemies){
-  if(e.hp<=0)continue;
-  const angle=Math.atan2(e.x-player.x,player.z-e.z);
-  const color=e.hit>0?COLORS.red:COLORS.dark;
-  m.box(e.x,1.34,e.z,.74,1.16,.44,color,angle);
-  m.box(e.x,2.10,e.z,.49,.45,.45,COLORS.skin,angle);
-  m.box(e.x,2.37,e.z,.68,.24,.59,COLORS.helmet,angle);
-  m.box(e.x-.48,1.35,e.z,.23,1.08,.29,color,angle);
-  m.box(e.x+.48,1.35,e.z,.23,1.08,.29,color,angle);
-  m.box(e.x-.22,.46,e.z,.24,.91,.31,COLORS.dark,angle);
-  m.box(e.x+.22,.46,e.z,.24,.91,.31,COLORS.dark,angle);
-  m.box(e.x+.38,1.39,e.z+.43,.18,.16,.96,COLORS.metal,angle);
-  m.box(e.x,1.57,e.z+.25,.48,.5,.14,COLORS.wood,angle);
-  m.box(e.x,1.9,e.z-.27,.45,.14,.12,COLORS.timber,angle);
- }
- // Allied squadmates have their own silhouettes, field packs and weapons.
- for(const a of game.allies){
-  if(a.hp<=0)continue;
-  const angle=Math.atan2(player.x-a.x,player.z-a.z);
-  const bob=Math.sin(game.elapsed*8+a.phase)*.04;
-  m.box(a.x,1.33,a.z,.7,1.12,.44,COLORS.blue,angle);
-  m.box(a.x,2.09,a.z,.47,.44,.43,COLORS.skin,angle);
-  m.box(a.x,2.37,a.z,.63,.22,.57,COLORS.helmet,angle);
-  m.box(a.x-.45,1.33,a.z,.21,.96,.27,COLORS.blue,angle);
-  m.box(a.x+.45,1.33,a.z,.21,.96,.27,COLORS.blue,angle);
-  m.box(a.x-.22,.47+bob,a.z,.24,.92,.31,COLORS.dark,angle);
-  m.box(a.x+.22,.47-bob,a.z,.24,.92,.31,COLORS.dark,angle);
-  m.box(a.x+.36,1.4,a.z+.4,.14,.15,.94,COLORS.metal,angle);
-  m.box(a.x,1.58,a.z-.28,.52,.6,.14,COLORS.sand,angle);
+ const art=window.WPBattleArt;
+ if(art){
+  for(const e of game.enemies){
+   if(e.hp<=0)continue;
+   art.soldier(m,e,"axis",game.elapsed,e.moveSpeed||0);
+  }
+  for(const a of game.allies){
+   if(a.hp<=0)continue;
+   art.soldier(m,a,"ally",game.elapsed,a.moveSpeed||0);
+  }
+ }else{
+  // Original player-visible fallbacks survive missing optional presentation script.
+  for(const e of game.enemies){
+   if(e.hp<=0)continue;
+   m.box(e.x,1.4,e.z,.7,1.5,.5,COLORS.dark);
+   m.box(e.x,2.2,e.z,.5,.48,.5,COLORS.helmet);
+  }
+  for(const a of game.allies){
+   if(a.hp<=0)continue;
+   m.box(a.x,1.4,a.z,.7,1.5,.5,COLORS.blue);
+   m.box(a.x,2.2,a.z,.5,.48,.5,COLORS.helmet);
+  }
  }
  for(const t of game.tracers){
   const dx=t.bx-t.ax,dz=t.bz-t.az,len=Math.hypot(dx,dz);
@@ -714,30 +713,12 @@ function dynamicGeometry(){
    m.cone(g.x,.03,g.z,1.4,3,COLORS.red,12);
   }else m.box(g.x,.22,g.z,.25,.4,.25,COLORS.metal);
  }
- // Real weapon geometry attached to the perspective camera (no sprite sheet).
- const forward=[-Math.sin(player.yaw),Math.cos(player.yaw)];
- const right=[-Math.cos(player.yaw),-Math.sin(player.yaw)];
- const shift=player.aim?.05:.29;
- const px=player.x+forward[0]*.91+right[0]*shift;
- const pz=player.z+forward[1]*.91+right[1]*shift;
- const eyeY=(player.crouch?1.02:1.67)+Math.sin(game.elapsed*5)*.009;
- const py=eyeY-(player.aim?.20:.39)+player.pitch*.17;
- const yaw=-player.yaw;
- const sx=step=>px+forward[0]*step,sz=step=>pz+forward[1]*step;
- const sway=game.flash?.035:0;
- // Properly oriented stock, receiver, barrel, front sights, magazine and hand.
- m.box(sx(-.28),py-.09,sz(-.28),.24,.18,.48,COLORS.wood,yaw);
- m.box(px,py,pz,.17,.14,.58,COLORS.wood,yaw);
- m.box(px,py+.075,pz,.18,.13,.43,COLORS.metal,yaw);
- m.box(sx(.34),py+.035,sz(.34),.09,.09,.72,COLORS.metal,yaw);
- m.box(sx(.43),py-.046,sz(.43),.15,.065,.22,COLORS.timber,yaw);
- m.box(sx(.67),py+.092,sz(.67),.06,.095,.055,COLORS.dark,yaw);
- m.box(sx(-.06),py+.14,sz(-.06),.07,.05,.06,COLORS.dark,yaw);
- m.box(sx(-.04),py-.17,sz(-.04),.12,.24,.17,COLORS.metal,yaw);
- m.box(px+right[0]*.22,py-.16,pz+right[1]*.22,.19,.21,.29,COLORS.skin,yaw);
- m.box(px+right[0]*.33,py-.34,pz+right[1]*.33,.25,.36,.29,COLORS.blue,yaw);
- if(game.flash>0){
-  m.cone(sx(.87),py+.02,sz(.87),.16+sway,.42,COLORS.gold,7);
+ // Model-specific Lee-Enfield, Sten and Bren view models (or compatibility gun).
+ if(art)art.weapon(m,player,game);
+ else{
+  const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw),yaw=-player.yaw;
+  const py=(player.crouch?1.02:1.67)-.4;
+  m.box(player.x+dx*.85,py,player.z+dz*.85,.2,.17,.85,COLORS.metal,yaw);
  }
  return m.data;
 }
