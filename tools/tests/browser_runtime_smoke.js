@@ -49,20 +49,45 @@ function testDevice(width,height,map="farm",mode="assault",quality="eco",short=f
   setTimeout(){}};
  vm.createContext(ctx0);
  vm.runInContext(visuals,ctx0,{filename:"visuals.js"});
- vm.runInContext(game,ctx0,{filename:"game.js"});
+ const instrumented=game.replace(
+  "  setQuality(dom.quality.value);",
+  "  window.__wpTest={get state(){return game},update};\n  setQuality(dom.quality.value);"
+ );
+ vm.runInContext(instrumented,ctx0,{filename:"game.js"});
  const frame=i=>{const fn=frames.shift();assert(fn,"no animation frame");fn((i+1)*36)};
  el("battlefield").value=map;el("mode").value=mode;
  el("difficulty").value="regular";el("quality").value=quality;
+ el("sensitivity").value="1.45";
  el("quality").fire("change");
  el("start-btn").fire("click");
+ const gameState=ctx0.window.__wpTest.state;
+ assert.equal(gameState.battlefield,map);
+ assert.equal(gameState.mode,mode);
+ assert.equal(gameState.sensitivity,1.45);
+ if(mode==="defense")assert.equal(gameState.wave,1);
+ el("look-zone").fire("pointerdown",{clientX:120,clientY:160});
+ el("look-zone").fire("pointermove",{clientX:144,clientY:192});
+ el("look-zone").fire("pointerup",{clientX:144,clientY:192});
+ assert(gameState.player.pitch>.01,"touch aiming must move pitch");
  for(let i=0;i<(short?70:120);i++)frame(i);
  if(short){
    assert(el("world").width>0&&el("world").height>0);
    assert(draws>20,"new map did not render textures");
    assert(el("mission").textContent.length>0,"new map has no mission text");
-   if(mode==="defense")assert.match(el("progress").textContent,/WAVE 1 / 5/);
-   else assert.match(el("progress").textContent,/SECTOR 1 / 3/);
-   console.log("PASS",map,mode,quality,"map initialization/render frames");
+   if(mode==="defense"){
+     assert.match(el("progress").textContent,/WAVE 1 / 5/);
+     gameState.player.hp=1e7; // Testing only; avoid stochastic defeats.
+     for(let wave=1;wave<=5;wave++){
+       assert.equal(gameState.wave,wave,"unexpected survival wave");
+       assert(gameState.enemies.some(e=>e.alive),"wave spawned no enemies");
+       for(const enemy of gameState.enemies)enemy.alive=false;
+       let count=0;
+       while(gameState.phase==="playing"&&gameState.wave===wave&&count++<140)
+         ctx0.window.__wpTest.update(.055);
+     }
+     assert.equal(gameState.phase,"won","survival mode did not reach victory");
+   } else assert.match(el("progress").textContent,/SECTOR 1 / 3/);
+   console.log("PASS",map,mode,quality,"map initialization, touch pitch and battle-mode logic");
    return;
  }
  const start=el("ammo").textContent;
