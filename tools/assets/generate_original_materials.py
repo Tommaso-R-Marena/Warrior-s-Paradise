@@ -143,6 +143,13 @@ def maps_for(surface: str, size: int = TILE_SIZE) -> dict[str, bytes]:
             ]
             normal[y][x*3:x*3+3] = rgb
 
+    # Force periodic pixel boundaries after normal-map derivation. This
+    # avoids a hard seam when Unreal repeats a tile across large walls/roads.
+    for rows in (colors, normal, rough):
+        for row in rows:
+            row[-3:] = row[:3]
+        rows[-1][:] = rows[0][:]
+
     return {
         "diff": png([bytes(row) for row in colors], size),
         "nor_gl": png([bytes(row) for row in normal], size),
