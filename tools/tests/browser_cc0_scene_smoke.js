@@ -11,6 +11,7 @@ const loader=fs.readFileSync(path.join(root,"asset-loader.js"),"utf8");
 const gameplay=fs.readFileSync(path.join(root,"game.js"),"utf8");
 const infantry=fs.readFileSync(path.join(root,"battle-art.js"),"utf8");
 const skinning=fs.readFileSync(path.join(root,"skinning.js"),"utf8");
+const materials=fs.readFileSync(path.join(root,"material-atlas.js"),"utf8");
 const spatialAudio=fs.readFileSync(path.join(root,"battle-audio.js"),"utf8");
 const kenney=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
 const quaternius=["barn","chicken_coop","windmill","well"];
@@ -22,17 +23,28 @@ const models=Object.fromEntries([
 ]);
 
 async function scenario(shouldLoad,farms=true){
- const raf=[],els={},stats={draws:0,uploads:0},events={};
+ const raf=[],els={},stats={draws:0,uploads:0,textures:0},events={};
  const gl={VERTEX_SHADER:1,FRAGMENT_SHADER:2,COMPILE_STATUS:3,LINK_STATUS:4,
   DEPTH_TEST:5,ARRAY_BUFFER:6,STATIC_DRAW:7,DYNAMIC_DRAW:8,FLOAT:9,
-  TRIANGLES:10,COLOR_BUFFER_BIT:16,DEPTH_BUFFER_BIT:32};
+  TRIANGLES:10,COLOR_BUFFER_BIT:16,DEPTH_BUFFER_BIT:32,
+  TEXTURE_2D:40,TEXTURE0:41,TEXTURE1:42,RGBA:43,UNSIGNED_BYTE:44,
+  UNPACK_ALIGNMENT:45,TEXTURE_WRAP_S:46,TEXTURE_WRAP_T:47,
+  TEXTURE_MIN_FILTER:48,TEXTURE_MAG_FILTER:49,
+  CLAMP_TO_EDGE:50,LINEAR:51,LINEAR_MIPMAP_LINEAR:52};
  for(const n of ["createShader","createProgram","createVertexArray","createBuffer","getUniformLocation"])
   gl[n]=()=>({});
  for(const n of ["shaderSource","compileShader","attachShader","linkProgram","useProgram",
   "enable","clearColor","bindVertexArray","bindBuffer","enableVertexAttribArray",
-  "vertexAttribPointer","viewport","clear","uniformMatrix4fv","uniform3fv"])
+  "vertexAttribPointer","viewport","clear","uniformMatrix4fv","uniform3fv",
+  "bindTexture","pixelStorei","texParameteri","generateMipmap",
+  "activeTexture","uniform1i","uniform1f"])
   gl[n]=()=>{};
  gl.bufferData=()=>{stats.uploads++};
+ gl.createTexture=()=>{stats.textures++;return {index:stats.textures}};
+ gl.texImage2D=(...args)=>{
+  assert.equal(args[3],512,"Unexpected material width");
+  assert.equal(args[4],128,"Unexpected material height");
+ };
  gl.drawArrays=()=>{stats.draws++};
  gl.getShaderParameter=gl.getProgramParameter=()=>true;
  const el=id=>els[id]??={
@@ -63,9 +75,11 @@ async function scenario(shouldLoad,farms=true){
  vm.createContext(sandbox);
  vm.runInContext(loader,sandbox,{filename:"asset-loader.js",timeout:15000});
  vm.runInContext(skinning,sandbox,{filename:"skinning.js",timeout:15000});
+ vm.runInContext(materials,sandbox,{filename:"material-atlas.js",timeout:15000});
  vm.runInContext(infantry,sandbox,{filename:"battle-art.js",timeout:15000});
  vm.runInContext(spatialAudio,sandbox,{filename:"battle-audio.js",timeout:15000});
- assert(win.WPBattleArt&&win.WPBattleSound,"Full presentation modules failed to initialize");
+ assert(win.WPBattleArt&&win.WPBattleSound&&win.WPMaterialAtlas,
+  "Full presentation modules failed to initialize");
  vm.runInContext(gameplay,sandbox,{filename:"game.js",timeout:15000});
  // Microtask drain for asynchronous fetch, text decoding and static mesh upload.
  for(let i=0;i<120;i++){
@@ -74,6 +88,8 @@ async function scenario(shouldLoad,farms=true){
   if(shouldLoad?(state.assetsLoaded&&state.rigLoaded&&(state.buildingsLoaded===4||state.farmError)):state.assetError)break;
  }
  const before=win.WP3DDiagnostics();
+ assert.equal(before.texturesLoaded,true,"Material textures failed to upload");
+ assert.equal(stats.textures,2,"Expected albedo/roughness and bump textures");
  assert.equal(before.assetsLoaded,shouldLoad,JSON.stringify(before));
  assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length+1:kenney.length+1);
  assert(sources.every(url=>/^\.\/assets\/(kenney|quaternius)\//.test(url)));
