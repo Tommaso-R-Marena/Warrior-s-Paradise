@@ -22,7 +22,8 @@ const VS=[
 const FS=[
  "#version 300 es","precision highp float;",
  "in vec3 vColor;in vec3 vPos;in vec3 vNorm;",
- "uniform vec3 uEye;uniform float uDetailLevel;out vec4 outColor;",
+ "uniform vec3 uEye;uniform float uDetailLevel;uniform float uUseAtlas;",
+ "uniform sampler2D uDiffuse;uniform sampler2D uBump;out vec4 outColor;",
  "float hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
  "float valnoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);",
  "return mix(mix(hash21(i),hash21(i+vec2(1.,0.)),f.x),",
@@ -53,6 +54,22 @@ const FS=[
  "float rough=.5;",
  "if(uDetailLevel>.02)rough=earth*vertical*hash21(floor(surface*23.));",
  "rgb*=1.+.07*(rough-.5)*nearby*uDetailLevel;",
+ "if(uUseAtlas>.5&&uDetailLevel>.02){",
+ "float terrain=step(.65,n.y)*(1.-smoothstep(.25,.9,vPos.y));",
+ "float masonry=vertical*step(.10,vColor.r-vColor.g)*step(.9,vPos.y);",
+ "float tile=terrain>.5?(grass>.5?0.:1.):(masonry>.5?3.:2.);",
+ "float intensity=max(terrain,masonry)*uDetailLevel;",
+ "vec2 uv=(fract(surface*.26)*.968+.016+vec2(tile,0.))/vec2(4.,1.);",
+ "vec4 pbr=texture(uDiffuse,uv);vec3 bump=texture(uBump,uv).rgb;",
+ "float roughness=clamp(pbr.a,.3,1.);",
+ "float bumpSun=max(0.,dot(normalize(vec3((bump.r-.5)*1.25,.96,(bump.g-.5)*1.25)),normalize(vec3(.53,.88,-.36))));",
+ "vec3 textured=pbr.rgb*(.39+.7*bumpSun);",
+ "rgb=mix(rgb,textured,intensity*.78);",
+ "vec3 eyeDir=normalize(uEye-vPos);",
+ "vec3 halfDir=normalize(eyeDir+normalize(vec3(.53,.88,-.36)));",
+ "float highlight=pow(max(0.,dot(n,halfDir)),mix(92.,8.,roughness));",
+ "rgb+=vec3(.07)*highlight*(1.-roughness)*intensity;",
+ "}",
  "float fog=1.-exp(-pow(max(0.,distanceToEye-18.)/78.,1.45));",
  "rgb=mix(rgb,vec3(.58,.66,.64),min(.81,fog));",
  "rgb=(rgb*(2.51*rgb+.03))/(rgb*(2.43*rgb+.59)+.14);",
@@ -77,6 +94,14 @@ gl.useProgram(program);
 const vpLocation=gl.getUniformLocation(program,"uVP");
 const eyeLocation=gl.getUniformLocation(program,"uEye");
 const detailLocation=gl.getUniformLocation(program,"uDetailLevel");
+const useAtlasLocation=gl.getUniformLocation(program,"uUseAtlas");
+const diffuseLocation=gl.getUniformLocation(program,"uDiffuse");
+const bumpLocation=gl.getUniformLocation(program,"uBump");
+let materialTextures=null;
+const atlasKit=window.WPMaterialAtlas;
+try{if(atlasKit)materialTextures=atlasKit.upload(gl);}catch(error){
+ materialTextures=null;
+}
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(.58,.68,.73,1);
 function mesh(dynamic=false){
@@ -291,6 +316,19 @@ const staticMesh=mesh(false),liveMesh=mesh(true);
 const fallbackWorld=buildWorld();
 upload(staticMesh,fallbackWorld);
 const scenery={loaded:false,instances:0,triangles:0,error:""};
+const rig={model:null,ready:false,error:"",skinnedLastFrame:0,skinnedTriangles:0};
+function loadSkinnedCharacters(){
+ const runtime=window.WPSkinning;
+ if(!runtime)return;
+ runtime.load("character_medium").then(model=>{
+  rig.model=model;rig.ready=true;
+  if($("rigstatus"))$("rigstatus").textContent="58-JOINT CC0 CHARACTER RIG READY";
+ }).catch(error=>{
+  rig.error=String(error);
+  if($("rigstatus"))$("rigstatus").textContent="FALLBACK SOLDIERS READY";
+ });
+}
+
 function loadLicensedScenery(){
  const kit=window.WPAssetKit;
  if(!kit||typeof fetch!=="function"){scenery.error="GLB loader or fetch unavailable";return;}
@@ -749,29 +787,34 @@ function simulate(dt){
 }
 function dynamicGeometry(){
  const m=new Geometry();
- const art=window.WPBattleArt;
- if(art){
-  for(const e of game.enemies){
-   if(e.hp<=0)continue;
-   art.soldier(m,e,"axis",game.elapsed,e.moveSpeed||0);
+ const art=window.WPBattleArt,skinner=window.WPSkinning;
+ let skinnedActors=0,skinnedTriangles=0;
+ // Save low-end phones: limit both shading work and CPU-skinned scene actors.
+ const limit=game.quality==="high"?8:game.quality==="medium"?5:2;
+ const maxActors=game.fps<24?1:game.fps<35?Math.min(limit,3):limit;
+ const viewDist=game.quality==="low"?14:game.quality==="medium"?23:28;
+ const candidates=[
+  ...game.allies.filter(a=>a.hp>0),
+  ...game.enemies.filter(e=>e.hp>0)
+ ].sort((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)-Math.hypot(b.x-player.x,b.z-player.z));
+ const selected=new Set(candidates.slice(0,maxActors));
+ const present=(actor,team)=>{
+  const distance=Math.hypot(actor.x-player.x,actor.z-player.z);
+  if(rig.ready&&skinner&&distance<viewDist&&selected.has(actor)){
+   const drawn=skinner.append(m,rig.model,actor,team,game.elapsed);
+   if(art?.fieldEquipment)art.fieldEquipment(m,actor,team);
+   skinnedActors++;skinnedTriangles+=drawn.triangles;
+  }else if(art)art.soldier(m,actor,team,game.elapsed,actor.moveSpeed||0);
+  else{
+   const color=team==="ally"?COLORS.blue:COLORS.dark;
+   m.box(actor.x,1.4,actor.z,.7,1.5,.5,color);
+   m.box(actor.x,2.2,actor.z,.5,.48,.5,COLORS.helmet);
   }
-  for(const a of game.allies){
-   if(a.hp<=0)continue;
-   art.soldier(m,a,"ally",game.elapsed,a.moveSpeed||0);
-  }
- }else{
-  // Original player-visible fallbacks survive missing optional presentation script.
-  for(const e of game.enemies){
-   if(e.hp<=0)continue;
-   m.box(e.x,1.4,e.z,.7,1.5,.5,COLORS.dark);
-   m.box(e.x,2.2,e.z,.5,.48,.5,COLORS.helmet);
-  }
-  for(const a of game.allies){
-   if(a.hp<=0)continue;
-   m.box(a.x,1.4,a.z,.7,1.5,.5,COLORS.blue);
-   m.box(a.x,2.2,a.z,.5,.48,.5,COLORS.helmet);
-  }
- }
+ };
+ for(const e of game.enemies)if(e.hp>0)present(e,"axis");
+ for(const a of game.allies)if(a.hp>0)present(a,"ally");
+ rig.skinnedLastFrame=skinnedActors;
+ rig.skinnedTriangles=skinnedTriangles;
  for(const t of game.tracers){
   const dx=t.bx-t.ax,dz=t.bz-t.az,len=Math.hypot(dx,dz);
   if(len<.1)continue;
@@ -846,7 +889,11 @@ function render(){
  gl.uniformMatrix4fv(vpLocation,false,mul(proj,view));
  gl.uniform3fv(eyeLocation,new Float32Array(eye));
  // Uniform detail tier keeps shader variants consistent; mobile low skips noise.
- if(gl.uniform1f)gl.uniform1f(detailLocation,game.quality==="low"?0:game.quality==="medium"?.58:1);
+ if(gl.uniform1f){
+  gl.uniform1f(detailLocation,game.quality==="low"?0:game.quality==="medium"?.58:1);
+  gl.uniform1f(useAtlasLocation,materialTextures?1:0);
+ }
+ if(materialTextures&&atlasKit)atlasKit.bind(gl,{diffuse:diffuseLocation,normal:bumpLocation},materialTextures);
  draw(staticMesh);
  upload(liveMesh,dynamicGeometry());
  draw(liveMesh);
@@ -974,14 +1021,15 @@ $("sound-toggle").addEventListener("click",()=>{
 });
 $("quality").value=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent||"")?"low":"medium";
 game.quality=$("quality").value;
-spawnEnemies();resize();hud();loadLicensedScenery();
+spawnEnemies();resize();hud();loadLicensedScenery();loadSkinnedCharacters();
 // Lightweight read-only testability hooks (not used for normal gameplay).
 window.WP3DDiagnostics=()=>({
  sector:game.sector,alive:game.enemies.filter(e=>e.hp>0).length,
  playerHp:player.hp,weapon:player.weapon,renderSize:[canvas.width,canvas.height],
  renderer:"WebGL2",geometryTriangles:staticMesh.count/3,
   assetInstances:scenery.instances,assetTriangles:scenery.triangles,assetsLoaded:scenery.loaded,
-  assetError:scenery.error,buildingsLoaded:scenery.buildings||0,
+  assetError:scenery.error,texturesLoaded:!!materialTextures,rigLoaded:rig.ready,rigError:rig.error,
+  skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,buildingsLoaded:scenery.buildings||0,
   farmError:scenery.farmError||"",
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
