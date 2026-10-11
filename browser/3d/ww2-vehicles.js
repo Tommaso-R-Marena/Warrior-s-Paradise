@@ -118,12 +118,20 @@ function tick(dt,player,hasLOS,onPlayerHit,onBlast){
  if(onBlast)onBlast(player.x+1.5,player.z-1,"frag");
  if(onPlayerHit)onPlayerHit(damage);
 }
-function drawArmor(g,v,quality){
+function drawArmor(g,v,quality,aimYaw){
  const high=quality==="high",med=quality==="medium";
  const allied=v.team==="ally";
  const hull=allied?[.31,.36,.25]:[.37,.38,.30],track=[.16,.17,.15],
   accent=allied?[.23,.27,.19]:[.31,.32,.27],metal=[.21,.23,.20];
- const yaw=v.yaw,cs=Math.cos(yaw),sn=Math.sin(yaw);
+ // Match physics: positive vehicle yaw moves toward negative world X.
+ const yaw=-v.yaw,cs=Math.cos(yaw),sn=Math.sin(yaw);
+ const pivotZ=v.team==="ally"?-.55:-.4;
+ function gunBox(dx,y,dz,w,h,d,c){
+  const cyaw=Number.isFinite(aimYaw)?-aimYaw:yaw;
+  const cp=Math.cos(cyaw),sp=Math.sin(cyaw),rel=dz-pivotZ;
+  const ox=v.x+sn*pivotZ,oz=v.z+cs*pivotZ;
+  g.box(ox+cp*dx+sp*rel,y,oz-sp*dx+cp*rel,w,h,d,c,cyaw);n+=12;
+ }
  let n=0;
  function box(dx,y,dz,w,h,d,c=hull,angle=0){
   g.box(v.x+cs*dx+sn*dz,y,v.z-sn*dx+cs*dz,w,h,d,c,yaw+angle);n+=12;
@@ -146,12 +154,12 @@ function drawArmor(g,v,quality){
  }
  if(allied){
   // Cast rounded turret approximation, mantlet, M4 sloping glacis.
-  box(0,2.05,-.55,1.67,.55,1.92,hull);
-  box(0,2.29,-.50,1.35,.26,1.47,accent);
+  gunBox(0,2.05,-.55,1.67,.55,1.92,hull);
+  gunBox(0,2.29,-.50,1.35,.26,1.47,accent);
   box(0,1.31,2.20,2.1,.43,.53,accent);
-  box(0,2.68,-.98,.61,.27,.62,metal);
-  box(0,2.30,.58,.22,.13,3.02,track);
-  box(0,2.42,2.04,.35,.36,.38,metal);
+  gunBox(0,2.68,-.98,.61,.27,.62,metal);
+  gunBox(0,2.30,.58,.22,.13,3.02,track);
+  gunBox(0,2.42,2.04,.35,.36,.38,metal);
   if(high){
    for(const side of [-1,1]){
     box(side*.75,1.81,-1.05,.15,.14,.84,accent);
@@ -160,11 +168,11 @@ function drawArmor(g,v,quality){
   }
  }else{
   // Panzer IV flat-front turret and side skirt/Schürzen profile.
-  box(0,2.12,-.40,1.68,.82,1.77,hull);
-  box(0,2.60,-.41,1.60,.12,1.82,accent);
-  box(0,2.18,.66,.20,.13,2.87,track);
-  box(0,2.16,2.11,.34,.29,.39,metal);
-  box(0,2.77,-.95,.56,.25,.54,metal);
+  gunBox(0,2.12,-.40,1.68,.82,1.77,hull);
+  gunBox(0,2.60,-.41,1.60,.12,1.82,accent);
+  gunBox(0,2.18,.66,.20,.13,2.87,track);
+  gunBox(0,2.16,2.11,.34,.29,.39,metal);
+  gunBox(0,2.77,-.95,.56,.25,.54,metal);
   if(med||high)for(const side of [-1,1]){
    box(side*1.61,1.08,-.05,.08,.62,3.87,hull);
    if(high)box(side*1.62,.75,0,.10,.10,3.95,track);
@@ -193,18 +201,18 @@ function draw(g,kit,quality,player,time){
    const scale=v.width/dim;
    const midpointX=(model.min[0]+model.max[0])*.5*scale;
    const midpointZ=(model.min[2]+model.max[2])*.5*scale;
-   const cs=Math.cos(v.yaw),sn=Math.sin(v.yaw);
+   const modelYaw=-v.yaw,cs=Math.cos(modelYaw),sn=Math.sin(modelYaw);
    const originX=v.x-midpointX*cs-midpointZ*sn;
    const originZ=v.z+midpointX*sn-midpointZ*cs;
-   triangles+=kit.appendInstances(g,model,[[originX,y,originZ,scale,v.yaw]]);
+   triangles+=kit.appendInstances(g,model,[[originX,y,originZ,scale,modelYaw]]);
    imported++;
   }else if(v.id!=="jeep"&&quality!=="low"){
-   triangles+=drawArmor(g,v,quality);
+   triangles+=drawArmor(g,v,quality,v.id==="armor"&&occupied==="armor"?player.yaw:null);
   }else{
    // Functional always-present silhouette for phone and absent imported art.
    const c=v.team==="axis"?[.34,.37,.30]:[.30,.36,.27];
-   g.box(v.x,1.0,v.z,v.width,1.0,v.length,c,v.yaw);
-   g.box(v.x,1.65,v.z-.45,v.width*.77,.60,v.length*.52,c,v.yaw);
+   g.box(v.x,1.0,v.z,v.width,1.0,v.length,c,-v.yaw);
+   g.box(v.x,1.65,v.z-.45,v.width*.77,.60,v.length*.52,c,-v.yaw);
    if(v.id!=="jeep"){
     g.box(v.x,2.13,v.z,.95,.45,1.40,[.25,.30,.24],v.yaw);
     g.box(v.x-Math.sin(v.yaw)*1.6,2.07,v.z+Math.cos(v.yaw)*1.6,.14,.14,2.3,[.15,.17,.15],-v.yaw);
