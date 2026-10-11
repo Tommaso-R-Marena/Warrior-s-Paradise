@@ -12,6 +12,8 @@ if(!gl){
   $("menu-copy").textContent="3D rendering is unavailable on this device. Use Field Edition instead.";
   return;
 }
+const gpuProfiler=window.WPDeviceGpuProfiler?.create(gl)||null;
+window.WPDeviceGpuCaptureController=gpuProfiler;
 const VS=[
  "#version 300 es","precision highp float;",
  "layout(location=0) in vec3 aPos;layout(location=1) in vec3 aNormal;",
@@ -601,6 +603,7 @@ function reset(){
  ]));
  if(window.WPBattleSound)window.WPBattleSound.boot();
  if(window.WP3DProbe)window.WP3DProbe.reset();
+ gpuProfiler?.reset();
  $("menu").hidden=true;input.fire=false;
  const fine=typeof window.matchMedia==="function"&&window.matchMedia("(pointer: fine)").matches;
  if(fine&&canvas.requestPointerLock)try{canvas.requestPointerLock();}catch{}
@@ -1098,6 +1101,7 @@ function resize(){
 }
 function render(){
  if(!lastWidth||!lastHeight)return;
+ gpuProfiler?.begin();
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  const stepBob=Math.sin(player.stepPhase||0)*(player.stepStrength||0)*
   (player.aim?.008:.023);
@@ -1128,6 +1132,7 @@ function render(){
  draw(staticMesh,game.quality==="low"?lowVertexCount:game.quality==="medium"?mediumVertexCount:staticMesh.count);
  upload(liveMesh,dynamicGeometry());
  draw(liveMesh);
+ gpuProfiler?.end();
 }
 let previous=0,adaptTime=0;
 const nowClock=()=>typeof performance!=="undefined"&&performance.now?performance.now():Date.now();
@@ -1255,6 +1260,7 @@ button("orders",orderSquad);button("support",callArtillery);
  button("vehicle",enterVehicle);
 button("crouch",()=>{player.crouch=!player.crouch;});
 $("performance-download").addEventListener("click",()=>window.WP3DProbe?.exportReport());
+$("performance-capture").addEventListener("click",()=>window.WP3DProbe?.startCapture());
 $("performance-close").addEventListener("click",()=>window.WP3DProbe?.toggle());
 // Register the root offline cache from the 3D subdirectory too. The
 // existing PWA service worker will cache these assets after first use.
@@ -1305,6 +1311,7 @@ window.WP3DDiagnostics=()=>({
   position:{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch},
   playing:game.playing,elapsedSeconds:game.elapsed,framesPerSecond:game.fps,
   performance:window.WP3DProbe?window.WP3DProbe.report().performance:null,
+  gpu:gpuProfiler?.report()||null,
   input:{keys:Object.keys(input.keys).filter(k=>input.keys[k]),joyX:input.joyX,joyY:input.joyY}
 });
 // Isolated headless test entrypoint. Only available when explicitly requested.
