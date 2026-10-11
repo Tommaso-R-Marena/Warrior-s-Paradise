@@ -4,8 +4,8 @@
   "upstream_creator": "Lennart Demes / ambientCG",
   "license_url": "https://docs.ambientcg.com/license/",
   "source_repository": "https://github.com/petroulacl/fps-buildings-env-kit",
-  "processing": "Re-encoded with Chromium screenshot to 256x256 JPEG at quality 58; no rights beyond original CC0 are asserted",
-  "warning": "These are two genuine photographic diffuse/albedo surfaces. Fine normal and roughness values are approximated in the shader; they are not measured calibrated PBR originals.",
+  "processing": "Original CC0 ambientCG JPEGs are downloaded directly from the source repository, independently verified by SHA-256, and downsampled with Pillow 11.3.0 to 512x512 optimized JPEGs. Avoid browser screenshots.",
+  "warning": "Albedo, OpenGL tangent normal, and scalar roughness are original source-derived maps. The browser lighting approximation is not a calibrated metallic/roughness PBR implementation.",
   "assets": [
     {
       "name": "grass",
