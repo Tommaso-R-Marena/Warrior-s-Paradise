@@ -27,6 +27,8 @@ REQUIRED = [
     "browser/3d/material-atlas.js",
     "browser/3d/telemetry.js",
     "browser/3d/tactical-navigation.js",
+    "browser/3d/battle-atmosphere.js",
+    "tools/tests/browser_battle_atmosphere_smoke.js",
     "tools/tests/browser_tactical_navigation_smoke.js",
     "browser/3d/assets/materials/grass_photo.jpg.b64",
     "browser/3d/assets/materials/mud_photo.jpg.b64",
