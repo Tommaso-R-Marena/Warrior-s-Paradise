@@ -96,7 +96,7 @@ async function enhance(gl,textures){
   if(binary[0]!==255||binary[1]!==216||binary[binary.length-2]!==255||
     binary[binary.length-1]!==217)throw Error("Bad JPEG markers: "+name);
   const bitmap=await createImageBitmap(new Blob([binary],{type:"image/jpeg"}));
-  if(bitmap.width!==512||bitmap.height!==512)throw Error("Unexpected tile dimension");
+  if(bitmap.width!==256||bitmap.height!==256)throw Error("Unexpected tile dimension");
   images.push(bitmap);
  }
  const size=256,width=size*4,generated=generate();
