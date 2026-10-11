@@ -37,14 +37,16 @@ function cylinderInterval(ox,oz,dx,dz,x,z,r,maxRange){
 function hitEnemy(eye,dx,dz,pitch,velocity,e,maxRange){
  const crouch=!!e.crouch||e.suppression>1.2,drop=crouch?.42:0;
  const zones=[
-  {name:"head",r:.285,low:1.91-drop,high:2.44-drop},
-  {name:"torso",r:.42,low:.94-drop,high:1.91-drop},
-  {name:"arm",r:.55,low:1.03-drop,high:1.77-drop},
-  {name:"leg",r:.37,low:.12-drop*.40,high:.97-drop*.55}
+  {name:"head",dx:0,r:.285,low:1.91-drop,high:2.44-drop},
+  {name:"torso",dx:0,r:.42,low:.94-drop,high:1.91-drop},
+  {name:"arm",dx:-.49,r:.21,low:1.03-drop,high:1.77-drop},
+  {name:"arm",dx:.49,r:.21,low:1.03-drop,high:1.77-drop},
+  {name:"leg",dx:-.20,r:.19,low:.12-drop*.40,high:.97-drop*.55},
+  {name:"leg",dx:.20,r:.19,low:.12-drop*.40,high:.97-drop*.55}
  ];
  let best=null;
  for(const z of zones){
-  const interval=cylinderInterval(eye.x,eye.z,dx,dz,e.x,e.z,z.r,maxRange);
+  const interval=cylinderInterval(eye.x,eye.z,dx,dz,e.x+z.dx,e.z,z.r,maxRange);
   if(!interval)continue;
   // Intersect small arcing bullet trajectory with upright region, including
   // characters facing away. Take closest true 3D sample (not center distance).
