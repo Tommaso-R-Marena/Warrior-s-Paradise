@@ -14,14 +14,17 @@ const skinning=fs.readFileSync(path.join(root,"skinning.js"),"utf8");
 const materials=fs.readFileSync(path.join(root,"material-atlas.js"),"utf8");
 const spatialAudio=fs.readFileSync(path.join(root,"battle-audio.js"),"utf8");
 const decoration=fs.readFileSync(path.join(root,"normandy-dressing.js"),"utf8");
+const vehicles=fs.readFileSync(path.join(root,"ww2-vehicles.js"),"utf8");
 const kenney=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
 const quaternius=["barn","chicken_coop","windmill","well"];
 const normandy=["log-stacklarge","fence-gate","log-large","rock-largeb","stump-old","grass-large"];
 const character="character_medium";
+const historical=["axis_ww2","gaz67_jeep","panzer_study"];
 const models=Object.fromEntries([
  ...kenney.concat(normandy).map(name=>["kenney/"+name,fs.readFileSync(path.join(root,"assets/kenney",name+".glb.b64"),"utf8")]),
  ["kenney/"+character,fs.readFileSync(path.join(root,"assets/kenney",character+".glb.b64"),"utf8")],
- ...quaternius.map(name=>["quaternius/"+name,fs.readFileSync(path.join(root,"assets/quaternius",name+".glb.b64"),"utf8")])
+ ...quaternius.map(name=>["quaternius/"+name,fs.readFileSync(path.join(root,"assets/quaternius",name+".glb.b64"),"utf8")]),
+ ...historical.map(name=>["oga/"+name,fs.readFileSync(path.join(root,"assets/oga",name+".glb.b64"),"utf8")])
 ]);
 
 async function scenario(shouldLoad,farms=true){
@@ -65,7 +68,7 @@ async function scenario(shouldLoad,farms=true){
  const sources=[];
  const fetchMock=async url=>{
   sources.push(url);
-  const match=/^\.\/assets\/(kenney|quaternius)\/([a-z0-9_-]+)\.glb\.b64$/.exec(url);
+  const match=/^\.\/assets\/(kenney|quaternius|oga)\/([a-z0-9_-]+)\.glb\.b64$/.exec(url);
   if(!shouldLoad||!match||(match[1]==="quaternius"&&!farms)||
     !models[match[1]+"/"+match[2]])return {ok:false,status:404};
   return {ok:true,text:async()=>models[match[1]+"/"+match[2]]};
@@ -81,6 +84,7 @@ async function scenario(shouldLoad,farms=true){
  vm.runInContext(infantry,sandbox,{filename:"battle-art.js",timeout:15000});
  vm.runInContext(spatialAudio,sandbox,{filename:"battle-audio.js",timeout:15000});
  vm.runInContext(decoration,sandbox,{filename:"normandy-dressing.js",timeout:15000});
+ vm.runInContext(vehicles,sandbox,{filename:"ww2-vehicles.js",timeout:15000});
  assert(win.WPBattleArt&&win.WPBattleSound&&win.WPMaterialAtlas,
   "Full presentation modules failed to initialize");
  vm.runInContext(gameplay,sandbox,{filename:"game.js",timeout:15000});
@@ -88,16 +92,18 @@ async function scenario(shouldLoad,farms=true){
  for(let i=0;i<240;i++){
   await Promise.resolve();
   const state=win.WP3DDiagnostics();
-  if(shouldLoad?(state.assetsLoaded&&state.rigLoaded&&state.dressingReady):state.assetError)break;
+  if(shouldLoad?(state.assetsLoaded&&state.rigLoaded&&state.dressingReady&&state.armor?.ready):state.assetError)break;
  }
  const before=win.WP3DDiagnostics();
  assert.equal(before.texturesLoaded,true,"Material textures failed to upload");
  assert.equal(stats.textures,2,"Expected albedo/roughness and bump textures");
  assert.equal(before.assetsLoaded,shouldLoad,JSON.stringify(before));
- assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length+normandy.length+3:kenney.length+3);
+ assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length+normandy.length+5:kenney.length+5);
  assert(sources.every(url=>/^\.\/assets\/(kenney|quaternius|oga)\//.test(url)));
  if(shouldLoad){
   assert(before.rigLoaded,"Licensed character rig failed to load");
+  assert.equal(before.ww2Rigs.axis,true,"Actual rigged German soldier not parsed: "+JSON.stringify(before.ww2Rigs));
+  assert.equal(before.armor.loaded,2,"Actual CC0 jeep and tank models not parsed: "+JSON.stringify(before.armor.errors));
   assert(before.assetInstances>=157&&before.assetTriangles>15000);
   assert(before.geometryTriangles>24000);
   assert.equal(before.buildingsLoaded,farms?4:0);
@@ -116,6 +122,7 @@ async function scenario(shouldLoad,farms=true){
   }
  }else{
   assert(before.assetError.includes("404"));
+  assert.equal(before.armor.loaded,0,"Unavailable OGA files must remain visual fallbacks");
   assert.equal(before.assetInstances,0);
   assert.equal(before.rigLoaded,false);
   assert(before.geometryTriangles>5000);
