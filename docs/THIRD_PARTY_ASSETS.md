@@ -1,10 +1,10 @@
 # Third-Party / Free Asset Register
 
-## Follow-up: rapid FPS adaptation and CC0 building photographs (October 2026)
+## Verified CC0 building photographs (October 2026)
 
-Production browser measurements on the previous build confirmed actual WASD movement but average 12.98 FPS on a constrained Cloudflare screenshot browser; CI software-rendered Chromium measured 15.06 FPS (desktop-low), 33.89 FPS (mobile emulation-low) and 15.31 FPS (desktop balanced), under non-comparable emulated renderer conditions. These were real frame samples, not synthetic guessed numbers. The player-position tests use actual keys/touch coupled to the real game simulation, with an explicit `?qa=1` test-only fixed-step path so software GPU starvation does not get mistaken for a control failure.
+An independent public CI performance comparison showed that an attempted 0.85-second rapid dynamic-resolution adaptation caused worse software-browser frame pacing than the stable 3-second adaptive scaler. **That change was reverted before production**. Physics and movement tests passed in both configurations, but FPS averages fell under the experimental scaler, demonstrating the importance of measuring rather than presuming an optimization helps.
 
-The next optimization lowers the adaptive-resolution response interval from 3 seconds to 0.85 seconds and drops rendering scale more aggressively if measured FPS is deficient; all quality selection remains available and stronger GPUs retain their resolution. The material atlas additionally draws a locally-bundled CC0 photographic `ambientCG Bricks066` masonry tile alongside `Grass004` and `Ground037`. Exact license and source path are in `browser/3d/assets/materials/MANIFEST.json`; diffuse color is photographic while bump/roughness are approximate, and limestone remains authored/generated. This is realism improvement, **not** photorealistic AAA or a verified 60 FPS target.
+The retained art-only change adds CC0 `ambientCG Bricks066` photographic masonry beside `Grass004` and `Ground037`, with fixed-size locally hosted images and exact attribution in `browser/3d/assets/materials/MANIFEST.json`. Diffuse color is photographic; bump and roughness are approximate, and limestone remains procedurally generated. **This is a small realism improvement, not photorealistic AAA artwork or 60 FPS.**
 
 
 ## Browser realism, movement and measured playtesting (October 2026)
