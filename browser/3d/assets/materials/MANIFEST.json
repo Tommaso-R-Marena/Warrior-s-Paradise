@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "license": "CC0-1.0",
+  "upstream_creator": "Lennart Demes / ambientCG",
+  "license_url": "https://docs.ambientcg.com/license/",
+  "source_repository": "https://github.com/petroulacl/fps-buildings-env-kit",
+  "processing": "Re-encoded with Chromium screenshot to 256x256 JPEG at quality 58; no rights beyond original CC0 are asserted",
+  "warning": "These are two genuine photographic diffuse/albedo surfaces. Fine normal and roughness values are approximated in the shader; they are not measured calibrated PBR originals.",
+  "assets": [
+    {
+      "name": "grass",
+      "original_id": "Grass004",
+      "original_url": "https://ambientcg.com/view?id=Grass004",
+      "source_path": "environment/ground-textures/ambientcg/Grass004_2K-JPG/Grass004_2K-JPG_Color.jpg",
+      "asset": "grass_photo.jpg.b64",
+      "size": [
+        256,
+        256
+      ]
+    },
+    {
+      "name": "mud",
+      "original_id": "Ground037",
+      "original_url": "https://ambientcg.com/view?id=Ground037",
+      "source_path": "environment/ground-textures/ambientcg/Ground037_2K-JPG/Ground037_2K-JPG_Color.jpg",
+      "asset": "mud_photo.jpg.b64",
+      "size": [
+        256,
+        256
+      ]
+    }
+  ]
+}
