@@ -95,7 +95,7 @@ const highSource=FS.replace(
   " else shadedN=normalize(vec3(mapN.x,mapN.y,sign(n.z)*mapN.z));",
   "}",
   "float bumpSun=max(0.,dot(shadedN,normalize(vec3(.53,.88,-.36))));"
- ].join("\\n")
+ ].join("\n")
 ).replace(
  "float highlight=pow(max(0.,dot(n,halfDir)),mix(92.,8.,roughness));",
  "float highlight=pow(max(0.,dot(shadedN,halfDir)),mix(92.,8.,roughness));"
