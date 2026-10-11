@@ -19,6 +19,16 @@ const VS=[
  "uniform mat4 uVP;out vec3 vColor;out vec3 vPos;out vec3 vNorm;",
  "void main(){vColor=aColor;vPos=aPos;vNorm=aNormal;gl_Position=uVP*vec4(aPos,1.);}"
 ].join("\n");
+// Only High gets a moving foliage vertex shader. Low/Medium remain untouched.
+const highVS=VS.replace(
+ "void main(){vColor=aColor;vPos=aPos;vNorm=aNormal;gl_Position=uVP*vec4(aPos,1.);}",
+ "uniform float uWindTime;"+
+ "void main(){"+
+ "float leaf=step(aColor.r+.055,aColor.g)*step(aColor.b,aColor.g+.10);"+
+ "float strength=leaf*smoothstep(1.7,5.5,aPos.y)*.09;"+
+ "vec3 p=aPos+vec3(sin(uWindTime*.82+aPos.x*.25+aPos.z*.31),0.,cos(uWindTime*.68+aPos.z*.32))*strength;"+
+ "vColor=aColor;vPos=p;vNorm=aNormal;gl_Position=uVP*vec4(p,1.);}"
+);
 const FS=[
  "#version 300 es","precision highp float;",
  "in vec3 vColor;in vec3 vPos;in vec3 vNorm;",
@@ -127,11 +137,11 @@ function ensureHighProgram(){
    throw Error("High quality normal shader template mismatch");
   const glsl=shader(gl.FRAGMENT_SHADER,highSource);
   highProgram=gl.createProgram();
-  gl.attachShader(highProgram,shader(gl.VERTEX_SHADER,VS));
+  gl.attachShader(highProgram,shader(gl.VERTEX_SHADER,highVS));
   gl.attachShader(highProgram,glsl);
   gl.linkProgram(highProgram);
   if(!gl.getProgramParameter(highProgram,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(highProgram));
-  highUniforms=Object.fromEntries(["uVP","uEye","uDetailLevel","uUseAtlas","uDiffuse","uBump"]
+  highUniforms=Object.fromEntries(["uVP","uEye","uDetailLevel","uUseAtlas","uDiffuse","uBump","uWindTime"]
    .map(name=>[name,gl.getUniformLocation(highProgram,name)]));
  }catch(error){highProgram=null;highUniforms=null;}
  // Shader setup must not affect Low/Medium scene measurements.
@@ -528,7 +538,7 @@ function reset(){
  const weapon=WEAPONS[type];
  Object.assign(player,{x:-36,z:-33,yaw:-.78,pitch:0,hp:100,maxHp:100,
    ammo:weapon.capacity,reserve:weapon.reserve,weapon:type,cd:0,reload:0,aim:false,
-  frags:2,med:2,hurt:0,crouch:false});
+  frags:2,med:2,hurt:0,crouch:false,stepPhase:0,stepStrength:0,concussion:0});
  Object.assign(game,{playing:true,finished:false,sector:0,capture:0,kills:0,elapsed:0,
   grenades:[],tracers:[],strikes:[],support:1,order:"follow",flash:0,
    difficulty:$("difficulty").value,quality:$("quality").value,scaler:1,adapt:0});
@@ -536,6 +546,7 @@ function reset(){
  requestPhotographicMaterials(game.quality);
  spawnEnemies();spawnAllies();
  if(window.WPTacticalNav)window.WPTacticalNav.reset();
+ if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.reset();
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
   name,{ammo:w.capacity,reserve:w.reserve}
  ]));
@@ -713,6 +724,9 @@ function updateCombinedArms(dt){
   strike.life-=dt;
   if(strike.life<=0&&!strike.detonated){
    strike.detonated=true;
+   if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.blast(strike.x,strike.z,"artillery");
+   player.concussion=Math.max(player.concussion||0,
+    Math.max(0,1-Math.hypot(player.x-strike.x,player.z-strike.z)/24)*.9);
    for(const e of game.enemies){
     if(e.hp<=0)continue;
     const d=Math.hypot(e.x-strike.x,e.z-strike.z);
@@ -770,6 +784,8 @@ function updateCombinedArms(dt){
 function simulate(dt){
  if(!game.playing)return;
  game.elapsed+=dt;
+ if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.update(dt);
+ player.concussion=Math.max(0,(player.concussion||0)-dt*.7);
  player.cd=Math.max(0,player.cd-dt);player.hurt=Math.max(0,player.hurt-dt*2);
  game.flash=Math.max(0,game.flash-dt);
  if(game.notice>0){game.notice-=dt;if(game.notice<=0)$("status").textContent="ADVANCE · CLEAR · CAPTURE";}
@@ -788,6 +804,10 @@ function simulate(dt){
  const z=Math.cos(player.yaw)*forward-Math.sin(player.yaw)*strafe;
  const oldX=player.x,oldZ=player.z;
  [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
+ const traveled=Math.hypot(player.x-oldX,player.z-oldZ);
+ player.stepPhase=(player.stepPhase||0)+traveled*9;
+ player.stepStrength=Math.max(0,Math.min(1,
+  (player.stepStrength||0)+(traveled>.002?dt*6:-dt*7)));
  if(window.WP3DProbe)window.WP3DProbe.movement(player.x,player.z,mag,pace,dt);
  if(window.WPBattleSound){
   const speed=Math.hypot(player.x-oldX,player.z-oldZ)/Math.max(.001,dt);
@@ -813,6 +833,9 @@ function simulate(dt){
   g.life-=dt;
   if(g.life<=0&&!g.detonated){
    g.detonated=true;
+   if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.blast(g.x,g.z,"frag");
+   player.concussion=Math.max(player.concussion||0,
+    Math.max(0,1-Math.hypot(player.x-g.x,player.z-g.z)/11)*.5);
    for(const e of game.enemies){
     if(e.hp<=0)continue;
     const d=Math.hypot(g.x-e.x,g.z-e.z);
@@ -948,6 +971,8 @@ function dynamicGeometry(){
    m.cone(g.x,.03,g.z,1.4,3,COLORS.red,12);
   }else m.box(g.x,g.y,g.z,.22,.22,.22,COLORS.metal);
  }
+ if(window.WPBattleAtmosphere)
+  window.WPBattleAtmosphere.render(m,game.quality,player.x,player.z);
  // Model-specific Lee-Enfield, Sten and Bren view models (or compatibility gun).
  if(art)art.weapon(m,player,game);
  else{
@@ -993,7 +1018,11 @@ function resize(){
 function render(){
  if(!lastWidth||!lastHeight)return;
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
- const eye=[player.x,player.crouch?1.02:1.67,player.z],forward=[
+ const stepBob=Math.sin(player.stepPhase||0)*(player.stepStrength||0)*
+  (player.aim?.008:.023);
+ const shake=(player.concussion||0)*.024;
+ const eye=[player.x,(player.crouch?1.02:1.67)+stepBob+
+  Math.sin(game.elapsed*37)*shake,player.z],forward=[
   -Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),
   Math.cos(player.yaw)*Math.cos(player.pitch)];
  const proj=perspective((player.aim?42:73)*Math.PI/180,lastWidth/lastHeight,.065,120);
@@ -1007,6 +1036,7 @@ function render(){
  gl.uniformMatrix4fv(uniforms.uVP,false,mul(proj,view));
  gl.uniform3fv(uniforms.uEye,new Float32Array(eye));
  if(gl.uniform1f){
+  if(isHigh&&uniforms.uWindTime)gl.uniform1f(uniforms.uWindTime,game.elapsed);
   gl.uniform1f(uniforms.uDetailLevel,game.quality==="low"?0:game.quality==="medium"?.58:1);
   gl.uniform1f(uniforms.uUseAtlas,materialTextures?1:0);
  }
@@ -1172,6 +1202,8 @@ window.WP3DDiagnostics=()=>({
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
   navigation:window.WPTacticalNav?window.WPTacticalNav.stats():null,
+  atmosphere:window.WPBattleAtmosphere?window.WPBattleAtmosphere.stats():null,
+  concussion:player.concussion||0,stepStrength:player.stepStrength||0,
   grenades:game.grenades.map(g=>({x:g.x,z:g.z,y:g.y,life:g.life})),
   position:{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch},
   playing:game.playing,elapsedSeconds:game.elapsed,framesPerSecond:game.fps,

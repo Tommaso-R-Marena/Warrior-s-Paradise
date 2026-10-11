@@ -55,10 +55,12 @@ function run(width,height,webgl=true){
  const win={devicePixelRatio:width<height?2:1,addEventListener(type,fn){
   (callbacks["win:"+type]??=[]).push(fn);
  }};
+ const atmosphere=fs.readFileSync(path.join(root,"battle-atmosphere.js"),"utf8");
  const sandbox={window:win,document:doc,
   navigator:{userAgent:width<height?"Android Chrome":"Desktop Chrome"},
   requestAnimationFrame(fn){raf.push(fn)},console,Math,Float32Array,Error};
  vm.createContext(sandbox);
+ vm.runInContext(atmosphere,sandbox,{filename:"browser/3d/battle-atmosphere.js",timeout:15000});
  vm.runInContext(js,sandbox,{filename:"browser/3d/game.js",timeout:15000});
  if(!webgl){
   assert.equal(el("fallback").hidden,false);
@@ -95,6 +97,9 @@ function run(width,height,webgl=true){
  for(let i=0;i<80;i++)frame(i);
  for(const fn of callbacks.keyup||[])fn({code:"KeyW",key:"w",preventDefault(){}});
  const moved=win.WP3DDiagnostics().position;
+ assert(win.WP3DDiagnostics().stepStrength>.05,"Walking should create head/weapon motion");
+ assert(win.WP3DDiagnostics().atmosphere.spawned>=1,
+  "Nearby artillery impacts should leave battlefield aftermath");
  assert(Math.hypot(moved.x-start.x,moved.z-start.z)>1.25,
   "WASD player must physically traverse the 3D scene");
  assert(win.WP3DDiagnostics().elapsedSeconds>2.0,"Simulation must advance in real time");
@@ -120,6 +125,8 @@ function run(width,height,webgl=true){
  for(let i=186;i<250;i++)frame(i);
  assert.equal(win.WP3DDiagnostics().grenades.length,0,
   "Detonated frag and its temporary effect must be removed from memory");
+ assert(win.WP3DDiagnostics().atmosphere.spawned>=2,
+  "Frag explosions should also leave transient ground aftermath");
  assert.match(el("frags").textContent,/× 1/);
  assert.equal(win.WP3DDiagnostics().weapon,"smg");
  const beforeArrow=win.WP3DDiagnostics().position;
