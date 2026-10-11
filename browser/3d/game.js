@@ -498,6 +498,15 @@ function loadLicensedScenery(){
     currentWorldData=result.data;
     upload(staticMesh,currentWorldData);
     mediumVertexCount=lowVertexCount+result.mediumTriangles*3;
+    // Additional wartime dressing is High-only. It is decorative: neither AI
+    // nor players acquire invisible cover on less capable graphics tiers.
+    if(window.WPWW2Environment){
+     const environment=new Geometry();environment.data=currentWorldData.slice();
+     const env=window.WPWW2Environment.append(environment,blocked,flags);
+     currentWorldData=environment.data;upload(staticMesh,currentWorldData);
+     scenery.ww2EnvironmentTriangles=env.triangles;
+     scenery.ww2EnvironmentProps=env.props;
+    }
     artStructures.push(...result.colliders);
     scenery.instances+=result.placements.length;
     scenery.triangles+=result.triangles;
@@ -1284,6 +1293,8 @@ window.WP3DDiagnostics=()=>({
   dressingInstances:scenery.dressings,dressingTriangles:scenery.dressingTriangles,
   dressingCover:scenery.dressingCover||0,
   mediumDressingTriangles:scenery.mediumDressingTriangles||0,
+  ww2EnvironmentTriangles:scenery.ww2EnvironmentTriangles||0,
+  ww2EnvironmentProps:scenery.ww2EnvironmentProps||0,
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
