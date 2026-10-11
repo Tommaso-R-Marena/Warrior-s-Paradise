@@ -1018,7 +1018,7 @@ function dynamicGeometry(){
  const art=window.WPBattleArt,skinner=window.WPSkinning;
  let skinnedActors=0,skinnedTriangles=0;
  // Save low-end phones: limit both shading work and CPU-skinned scene actors.
- const limit=game.quality==="high"?4:game.quality==="medium"?2:0;
+ const limit=game.quality==="high"?4:0;
  const maxActors=game.fps<24?Math.min(limit,1):game.fps<35?Math.min(limit,2):limit;
  const viewDist=game.quality==="low"?14:game.quality==="medium"?23:28;
  const candidates=[
