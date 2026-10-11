@@ -40,7 +40,7 @@ def main():
         assert len(raw) >= 28 and raw[:4] == b"glTF", f"{name}: invalid GLB magic"
         version, declared_length = struct.unpack_from("<II", raw, 4)
         assert version == 2 and declared_length == len(raw), f"{name}: invalid GLB header"
-        encoded = base64.b64encode(raw).decode("ascii") + "\\n"
+        encoded = base64.b64encode(raw).decode("ascii") + "\n"
         dest = TARGET / (name + ".glb.b64")
         dest.write_text(encoded, encoding="ascii")
         assets.append({
