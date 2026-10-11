@@ -30,6 +30,10 @@ async function run(name,viewport,quality,mobile){
    },null,{timeout:30000});
   }
   const initial=await page.evaluate(()=>window.WP3DDiagnostics());
+  assert(initial.dressingDrawn===(quality!=="low"),
+   name+": expected quality tier to select correct static mesh");
+  if(quality==="low")assert(initial.renderedStaticTriangles<initial.geometryTriangles,
+   name+": Low tier should omit extra licensed mesh work");
   if(quality!=="low")assert(initial.photoMaterialsLoaded,
    name+": photographic maps did not load: "+initial.photoMaterialsError);
   if(quality==="medium")assert(initial.materialMode==="medium",
