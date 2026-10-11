@@ -36,14 +36,14 @@ const FS=[
  "float nearby=1.-smoothstep(25.,85.,distanceToEye);",
  "vec2 surface=abs(n.y)>.61?vPos.xz:(abs(n.x)>abs(n.z)?vPos.zy:vPos.xy);",
  "float large=.5,fine=.5;",
- "if(uDetailLevel>.02){large=valnoise(surface*1.3);fine=valnoise(surface*13.);}",
+ "if(uDetailLevel>.02&&uUseAtlas<.5){large=valnoise(surface*1.3);fine=valnoise(surface*13.);}",
  "float mottled=(large-.5)*.23+(fine-.5)*.13;",
  "float grass=step(vColor.r+.035,vColor.g)*step(vColor.b,vColor.g+.08);",
  "float earth=1.-grass;",
  "vec3 rgb=vColor*exposure;",
  "rgb*=1.+mottled*nearby*uDetailLevel;",
  "float grassFibers=.5;",
- "if(uDetailLevel>.02)grassFibers=hash21(floor(surface*19.));",
+ "if(uDetailLevel>.02&&uUseAtlas<.5)grassFibers=hash21(floor(surface*19.));",
  "rgb*=1.+grass*nearby*(grassFibers-.5)*.16*uDetailLevel;",
  "float vertical=1.-step(.65,abs(n.y));",
  "float bricky=vertical*step(.075,vColor.r-vColor.g)*(1.-grass);",
@@ -52,7 +52,7 @@ const FS=[
  "float mortar=1.-step(.075,min(min(joint.x,1.-joint.x),min(joint.y,1.-joint.y)));",
  "rgb*=1.-.23*bricky*mortar*nearby;",
  "float rough=.5;",
- "if(uDetailLevel>.02)rough=earth*vertical*hash21(floor(surface*23.));",
+ "if(uDetailLevel>.02&&uUseAtlas<.5)rough=earth*vertical*hash21(floor(surface*23.));",
  "rgb*=1.+.07*(rough-.5)*nearby*uDetailLevel;",
  "if(uUseAtlas>.5&&uDetailLevel>.02){",
  "float terrain=step(.65,n.y)*(1.-smoothstep(.25,.9,vPos.y));",
@@ -806,8 +806,8 @@ function dynamicGeometry(){
  const art=window.WPBattleArt,skinner=window.WPSkinning;
  let skinnedActors=0,skinnedTriangles=0;
  // Save low-end phones: limit both shading work and CPU-skinned scene actors.
- const limit=game.quality==="high"?8:game.quality==="medium"?5:2;
- const maxActors=game.fps<24?1:game.fps<35?Math.min(limit,3):limit;
+ const limit=game.quality==="high"?4:game.quality==="medium"?2:0;
+ const maxActors=game.fps<24?Math.min(limit,1):game.fps<35?Math.min(limit,2):limit;
  const viewDist=game.quality==="low"?14:game.quality==="medium"?23:28;
  const candidates=[
   ...game.allies.filter(a=>a.hp>0),
@@ -930,8 +930,12 @@ function frame(now){
   for(let i=0;i<ticks&&game.playing;i++)simulate(step);
  }
  const cpuAfterSimulation=nowClock();
- render();
+ if(game.playing)render(); // The deployment dialog needs no 3D frame rendering.
  const renderMs=nowClock()-cpuAfterSimulation;
+ if(renderMs>175&&game.scaler>.55){
+  game.scaler=Math.max(.55,game.scaler-.16);
+  resize();
+ }
  if(rawMs>0){
   const fps=1000/rawMs;
   game.fps=game.fps*.90+fps*.10;
