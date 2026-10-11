@@ -1,0 +1,42 @@
+[
+  {
+    "id": "axis_ww2",
+    "file": "lowpolysoldier.zip",
+    "url": "https://opengameart.org/sites/default/files/lowpolysoldier.zip",
+    "license": "CC0-1.0",
+    "creator": "nisu",
+    "source_page": "https://opengameart.org/content/rigged-lowpoly-ww2-soldier",
+    "category": "character",
+    "max_source_bytes": 1500000
+  },
+  {
+    "id": "allied_ww2",
+    "file": "Paratrooper.zip",
+    "url": "https://opengameart.org/sites/default/files/Paratrooper.zip",
+    "license": "CC-BY-3.0",
+    "creator": "knik1985",
+    "source_page": "https://opengameart.org/content/character-us-soldier",
+    "category": "character",
+    "max_source_bytes": 6000000
+  },
+  {
+    "id": "gaz67_jeep",
+    "file": "gaz-67_lowpoly.zip",
+    "url": "https://opengameart.org/sites/default/files/gaz-67_lowpoly_1.zip",
+    "license": "CC0-1.0",
+    "creator": "artie31",
+    "source_page": "https://opengameart.org/content/lowpoly-soviet-jeep",
+    "category": "vehicle",
+    "max_source_bytes": 1500000
+  },
+  {
+    "id": "panzer_study",
+    "file": "tank.blend",
+    "url": "https://opengameart.org/sites/default/files/tank.blend",
+    "license": "CC0-1.0",
+    "creator": "hubahuba",
+    "source_page": "https://opengameart.org/content/tank1",
+    "category": "vehicle",
+    "max_source_bytes": 1500000
+  }
+]

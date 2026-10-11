@@ -5,7 +5,7 @@
  * quaternion poses, and LINEAR/STEP glTF animation translation/rotation tracks.
  */
 (function(root){"use strict";
-const MAX=3*1024*1024, MAX_JOINTS=96, MAX_VERTICES=16000;
+const MAX=4*1024*1024, MAX_JOINTS=96, MAX_VERTICES=16000;
 const fail=m=>{throw Error("WP rig: "+m)};
 const check=(b,m)=>{if(!b)fail(m)};
 const identity=()=>[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
@@ -110,7 +110,9 @@ function parse(buffer){
   }
   return {name:anim.name||"Animation",channels,duration:Math.max(0,...channels.map(c=>c.times[c.times.length-1]||0))};
  });
- return {nodes,roots,parent,skins:skin,joints:skin.joints,
+ const heights=renderables.flatMap(m=>Array.from(m.positions).filter((_,i)=>i%3===1));
+ const standingHeight=heights.length?Math.max(...heights)-Math.min(...heights):0;
+ return {nodes,roots,parent,skins:skin,joints:skin.joints,standingHeight,
   bindMatrices:Array.from({length:jointCount},(_,i)=>Array.from(ibm.out.slice(16*i,16*i+16))),
   mesh:renderables,animations,triangleCount:renderables.reduce((n,p)=>n+p.indices.length/3,0),names};
 }
@@ -168,8 +170,12 @@ function append(g,model,actor,team="axis",time=0,lod=1){
  const velocity=actor.moveSpeed||0;
  const mode=actor.crouch?"crouch":velocity>3.5?"run":velocity>.22?"walk":"aim";
  const palette=team==="ally"?[.34,.39,.29]:[.32,.34,.29],
- scale=.56,angle=actor.facing||0,cos=Math.cos(angle),sin=Math.sin(angle);
- const bones=pose(model,time+(actor.phase||0),mode);
+ scale=model.isHistorical&&model.standingHeight>0?Math.min(2.5,2.12/model.standingHeight):.56,
+ angle=actor.facing||0,cos=Math.cos(angle),sin=Math.sin(angle);
+ const action=mode==="run"?/run|sprint/i:mode==="walk"?/walk|patrol|run/i:
+  mode==="crouch"?/crawl|crouch/i:/idle|aim|stand/i;
+ const clip=model.isHistorical?model.animations.findIndex(a=>action.test(a.name)):-1;
+ const bones=pose(model,time+(actor.phase||0),mode,clip);
  const tint=team==="ally"?.90:.77;
  let added=0;
  for(const mesh of model.mesh){
@@ -206,12 +212,13 @@ function append(g,model,actor,team="axis",time=0,lod=1){
 }
 async function load(name="character_medium"){
  check(/^[a-z0-9_-]+$/.test(name),"invalid name");
- const res=await fetch("./assets/kenney/"+name+".glb.b64",{cache:"force-cache"});
+ const folder=/^(axis_ww2|allied_ww2)$/.test(name)?"oga":"kenney";
+ const res=await fetch("./assets/"+folder+"/"+name+".glb.b64",{cache:"force-cache"});
  check(res.ok,"skin asset not available: "+res.status);
  const txt=(await res.text()).replace(/\s/g,"");
  check(txt.length<MAX*1.35&&/^[a-zA-Z0-9+/]*={0,2}$/.test(txt),"skin asset too large or invalid");
  const bytes=Uint8Array.from(atob(txt),c=>c.charCodeAt(0));
- return parse(bytes.buffer);
+ const result=parse(bytes.buffer);result.isHistorical=folder==="oga";return result;
 }
 root.WPSkinning=Object.freeze({load,parse,pose,append});
 })(window);

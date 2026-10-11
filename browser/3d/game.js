@@ -393,10 +393,17 @@ let lowVertexCount=staticMesh.count,mediumVertexCount=staticMesh.count;
 let currentWorldData=fallbackWorld;
 const scenery={loaded:false,instances:0,triangles:0,error:"",
  dressings:0,dressingTriangles:0,dressingError:"",dressingReady:false};
-const rig={model:null,ready:false,error:"",skinnedLastFrame:0,skinnedTriangles:0};
+const rig={model:null,ready:false,error:"",historical:{},skinnedLastFrame:0,skinnedTriangles:0};
 function loadSkinnedCharacters(){
  const runtime=window.WPSkinning;
  if(!runtime)return;
+ for(const [team,name] of [["ally","allied_ww2"],["axis","axis_ww2"]]){
+  runtime.load(name).then(model=>{
+   rig.historical[team]=model;
+   if($("rigstatus"))$("rigstatus").textContent=
+    "WWII SOLDIER MESHES "+Object.keys(rig.historical).length+"/2 READY";
+  }).catch(error=>{rig[team+"Error"]=String(error);});
+ }
  runtime.load("character_medium").then(model=>{
   rig.model=model;rig.ready=true;
   if($("rigstatus"))$("rigstatus").textContent="58-JOINT CC0 CHARACTER RIG READY";
@@ -491,6 +498,15 @@ function loadLicensedScenery(){
     currentWorldData=result.data;
     upload(staticMesh,currentWorldData);
     mediumVertexCount=lowVertexCount+result.mediumTriangles*3;
+    // Additional wartime dressing is High-only. It is decorative: neither AI
+    // nor players acquire invisible cover on less capable graphics tiers.
+    if(window.WPWW2Environment){
+     const environment=new Geometry();environment.data=currentWorldData.slice();
+     const env=window.WPWW2Environment.append(environment,blocked,flags);
+     currentWorldData=environment.data;upload(staticMesh,currentWorldData);
+     scenery.ww2EnvironmentTriangles=env.triangles;
+     scenery.ww2EnvironmentProps=env.props;
+    }
     artStructures.push(...result.colliders);
     scenery.instances+=result.placements.length;
     scenery.triangles+=result.triangles;
@@ -579,6 +595,7 @@ function reset(){
  spawnEnemies();spawnAllies();
  if(window.WPTacticalNav)window.WPTacticalNav.reset();
  if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.reset();
+ if(window.WPArmoredFleet)window.WPArmoredFleet.reset();
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
   name,{ammo:w.capacity,reserve:w.reserve}
  ]));
@@ -602,6 +619,12 @@ function hud(){
  $("info").textContent=WEAPONS[player.weapon].name+" · "+(player.crouch?"CROUCHED":player.aim?"ADS":"HIP FIRE")+" · "+game.kills+" KILLS";
  $("squadstate").textContent="FIRETEAM "+game.allies.filter(a=>a.hp>0).length+"/2 · "+game.order.toUpperCase();
  $("supportstate").textContent="ARTILLERY × "+game.support;
+ if($("vehicle-state")){
+  const driving=window.WPArmoredFleet?.current();
+  $("vehicle-state").textContent=driving?
+   "DRIVING "+driving.name+" · "+Math.round(Math.abs(driving.speed)*3.6)+" KM/H":
+   "E / VEHICLE: ENTER NEARBY TRANSPORT";
+ }
  $("capture-fill").style.width=Math.floor(game.capture*100)+"%";
  if(flag){
   const distance=Math.round(Math.hypot(player.x-flag.x,player.z-flag.z));
@@ -642,7 +665,18 @@ function lineHit(ax,az,bx,bz){
  return openLOS(ax,az,bx,bz);
 }
 function shoot(){
- if(!game.playing||player.reload>0||player.cd>0)return;
+ if(!game.playing)return;
+ const fleet=window.WPArmoredFleet;
+ if(fleet?.isDriving()){
+  if(fleet.current()?.id==="armor"){
+   const fired=fleet.fire(player,game.enemies,lineHit,victim=>{
+    if(victim.hp<=0){game.kills++;msg("ARMOR: TARGET DOWN",1);}
+   },addTracer,(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type));
+   if(fired)window.WPBattleSound?.explosion(player.x,player.z,player);
+  }
+  return;
+ }
+ if(player.reload>0||player.cd>0)return;
  const w=WEAPONS[player.weapon];
  if(player.ammo<=0){reload();return;}
  player.cd=w.delay;player.ammo--;game.flash=.13;
@@ -740,6 +774,13 @@ function heal(){
  if(!game.playing||!player.med||player.hp>=100)return;
  player.med--;player.hp=Math.min(100,player.hp+36);msg("FIELD DRESSING APPLIED",1.1);
 }
+function enterVehicle(){
+ if(!game.playing||!window.WPArmoredFleet)return;
+ if(window.WPArmoredFleet.toggle(player,blocked)){
+  const v=window.WPArmoredFleet.current();
+  msg(v?"DRIVING "+v.name+" · E TO DISEMBARK":"DISEMBARKED · FIRETEAM ON FOOT",1.6);
+ }else msg("NO SAFE VEHICLE ENTRY / EXIT NEARBY",1);
+}
 function swap(){
  if(!game.playing)return;
  const names=Object.keys(WEAPONS),idx=names.indexOf(player.weapon);
@@ -817,6 +858,10 @@ function simulate(dt){
  if(!game.playing)return;
  game.elapsed+=dt;
  if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.update(dt);
+ if(window.WPArmoredFleet)window.WPArmoredFleet.tick(dt,player,lineHit,damage=>{
+  player.hurt=.7;msg("ENEMY ARMOR · SEEK COVER",1);
+  if(player.hp<=0)end(false);
+ },(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type));
  player.concussion=Math.max(0,(player.concussion||0)-dt*.7);
  player.cd=Math.max(0,player.cd-dt);player.hurt=Math.max(0,player.hurt-dt*2);
  game.flash=Math.max(0,game.flash-dt);
@@ -835,7 +880,9 @@ function simulate(dt){
  const x=-Math.sin(player.yaw)*forward-Math.cos(player.yaw)*strafe;
  const z=Math.cos(player.yaw)*forward-Math.sin(player.yaw)*strafe;
  const oldX=player.x,oldZ=player.z;
- [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
+ if(!window.WPArmoredFleet?.isDriving())
+  [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
+ else window.WPArmoredFleet.move(dt,input,player,blocked);
  const traveled=Math.hypot(player.x-oldX,player.z-oldZ);
  player.stepPhase=(player.stepPhase||0)+traveled*9;
  player.stepStrength=Math.max(0,Math.min(1,
@@ -968,8 +1015,9 @@ function dynamicGeometry(){
  const present=(actor,team)=>{
   const distance=Math.hypot(actor.x-player.x,actor.z-player.z);
   if(rig.ready&&skinner&&distance<viewDist&&selected.has(actor)){
-   const drawn=skinner.append(m,rig.model,actor,team,game.elapsed);
-   if(art?.fieldEquipment)art.fieldEquipment(m,actor,team);
+   const chosen=rig.historical[team]||rig.model;
+   const drawn=skinner.append(m,chosen,actor,team,game.elapsed);
+   if(!rig.historical[team]&&art?.fieldEquipment)art.fieldEquipment(m,actor,team);
    skinnedActors++;skinnedTriangles+=drawn.triangles;
   }else if(art)art.soldier(m,actor,team,game.elapsed,actor.moveSpeed||0);
   else{
@@ -1005,8 +1053,9 @@ function dynamicGeometry(){
  }
  if(window.WPBattleAtmosphere)
   window.WPBattleAtmosphere.render(m,game.quality,player.x,player.z);
+ if(window.WPArmoredFleet)window.WPArmoredFleet.draw(m,window.WPAssetKit,game.quality,player,game.elapsed);
  // Model-specific Lee-Enfield, Sten and Bren view models (or compatibility gun).
- if(art)art.weapon(m,player,game);
+ if(art&&!window.WPArmoredFleet?.isDriving())art.weapon(m,player,game);
  else{
   const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw),yaw=-player.yaw;
   const py=(player.crouch?1.02:1.67)-.4;
@@ -1053,7 +1102,9 @@ function render(){
  const stepBob=Math.sin(player.stepPhase||0)*(player.stepStrength||0)*
   (player.aim?.008:.023);
  const shake=(player.concussion||0)*.024;
- const eye=[player.x,(player.crouch?1.02:1.67)+stepBob+
+ const driving=window.WPArmoredFleet?.current();
+ const eyeHeight=driving?(driving.id==="armor"?3.15:2.35):(player.crouch?1.02:1.67);
+ const eye=[player.x,eyeHeight+stepBob+
   Math.sin(game.elapsed*37)*shake,player.z],forward=[
   -Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),
   Math.cos(player.yaw)*Math.cos(player.pitch)];
@@ -1123,6 +1174,7 @@ document.addEventListener("keydown",e=>{
  if(e.repeat)return;
  if(e.code==="KeyR")reload();
  if(e.code==="KeyV")heal();
+ if(e.code==="KeyE")enterVehicle();
  if(e.code==="KeyG")grenade();
  if(e.code==="KeyQ")swap();
  if(e.code==="KeyX")orderSquad();
@@ -1200,6 +1252,7 @@ button("fire",()=>{input.fire=true;},()=>{input.fire=false;});
 button("aim",()=>setAim(true),()=>setAim(false));
 button("reload",reload);button("grenade",grenade);button("heal",heal);button("swap",swap);
 button("orders",orderSquad);button("support",callArtillery);
+ button("vehicle",enterVehicle);
 button("crouch",()=>{player.crouch=!player.crouch;});
 $("performance-download").addEventListener("click",()=>window.WP3DProbe?.exportReport());
 $("performance-close").addEventListener("click",()=>window.WP3DProbe?.toggle());
@@ -1220,6 +1273,7 @@ $("sound-toggle").addEventListener("click",()=>{
 $("quality").value=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent||"")?"low":"medium";
 game.quality=$("quality").value;
 spawnEnemies();resize();hud();loadLicensedScenery();loadSkinnedCharacters();
+ if(window.WPArmoredFleet)window.WPArmoredFleet.load(window.WPAssetKit);
 // Lightweight read-only testability hooks (not used for normal gameplay).
 window.WP3DDiagnostics=()=>({
  sector:game.sector,alive:game.enemies.filter(e=>e.hp>0).length,
@@ -1231,12 +1285,16 @@ window.WP3DDiagnostics=()=>({
   assetError:scenery.error,texturesLoaded:!!materialTextures,photoMaterialsLoaded:photographicMaterials.loaded,
   photoMaterialsError:photographicMaterials.error,realPBRMaps:!!materialTextures?.realNormalRoughness,
   highShaderReady:!!highProgram,materialMode:photographicMaterials.mode,rigLoaded:rig.ready,rigError:rig.error,
+  ww2Rigs:{ally:!!rig.historical.ally,axis:!!rig.historical.axis},
+  armor:window.WPArmoredFleet?.info()||null,
   skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,buildingsLoaded:scenery.buildings||0,
   farmError:scenery.farmError||"",
   dressingReady:scenery.dressingReady,dressingError:scenery.dressingError,
   dressingInstances:scenery.dressings,dressingTriangles:scenery.dressingTriangles,
   dressingCover:scenery.dressingCover||0,
   mediumDressingTriangles:scenery.mediumDressingTriangles||0,
+  ww2EnvironmentTriangles:scenery.ww2EnvironmentTriangles||0,
+  ww2EnvironmentProps:scenery.ww2EnvironmentProps||0,
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
