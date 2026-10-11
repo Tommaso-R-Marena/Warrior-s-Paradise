@@ -13,7 +13,7 @@ GAME3D = BROWSER / "3d"
 
 class WebGL3DTests(unittest.TestCase):
     def test_cloudflare_fully_static_with_low_end_fallback(self):
-        for name in ("index.html", "style.css", "game.js", "asset-loader.js", "battle-art.js", "battle-audio.js", "skinning.js", "material-atlas.js", "telemetry.js", "tactical-navigation.js", "battle-atmosphere.js", "normandy-dressing.js", "ww2-vehicles.js", "ww2-environment.js", "device-gpu-profiler.js", "ww2-terrain.js"):
+        for name in ("index.html", "style.css", "game.js", "asset-loader.js", "battle-art.js", "battle-audio.js", "skinning.js", "material-atlas.js", "telemetry.js", "tactical-navigation.js", "infantry-ballistics.js", "battle-atmosphere.js", "normandy-dressing.js", "ww2-vehicles.js", "ww2-environment.js", "device-gpu-profiler.js", "ww2-terrain.js"):
             self.assertTrue((GAME3D / name).is_file(), name)
         html = (GAME3D / "index.html").read_text(encoding="utf-8")
         script = (GAME3D / "game.js").read_text(encoding="utf-8")
@@ -70,6 +70,8 @@ class WebGL3DTests(unittest.TestCase):
                      ROOT / "tools/tests/browser_telemetry_smoke.js",
                      ROOT / "tools/tests/browser_photo_material_smoke.js",
                      GAME3D / "telemetry.js", GAME3D / "tactical-navigation.js",
+                     GAME3D / "infantry-ballistics.js",
+                     ROOT / "tools/tests/browser_infantry_ballistics_smoke.js",
                      GAME3D / "battle-atmosphere.js",
                      GAME3D / "normandy-dressing.js",
                      GAME3D / "ww2-vehicles.js",
@@ -92,6 +94,9 @@ class WebGL3DTests(unittest.TestCase):
         terrain = subprocess.run([node, str(ROOT / "tools/tests/browser_ww2_terrain_smoke.js")],
                                  capture_output=True,text=True,timeout=20,check=False)
         self.assertEqual(terrain.returncode,0,terrain.stdout+terrain.stderr)
+        ballistics = subprocess.run([node, str(ROOT / "tools/tests/browser_infantry_ballistics_smoke.js")],
+                                    capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(ballistics.returncode,0,ballistics.stdout+ballistics.stderr)
         gpu = subprocess.run([node, str(ROOT / "tools/tests/browser_gpu_profiler_smoke.js")],
                              capture_output=True,text=True,timeout=20,check=False)
         self.assertEqual(gpu.returncode,0,gpu.stdout+gpu.stderr)
