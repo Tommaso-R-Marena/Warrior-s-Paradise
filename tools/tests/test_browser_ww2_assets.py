@@ -8,8 +8,8 @@ EXPECTED={
  "axis_ww2":("CC0-1.0","nisu","a8e2f5a5777d1c9d4c18f76922d9737b88be717a455a65336a8772deb53729cb"),
  "gaz67_jeep":("CC0-1.0","artie31","e2993b7cc36f663ceb5c9f9b563ddbb09293571f5bdaae3aec1bdcc7fe4a4110"),
  "panzer_study":("CC0-1.0","hubahuba","4437922d50043d53a8c4a104a240da0adc11fecf229961ab3a5ccf7eea906c5c"),
- "willys_mb":("CC-BY-SA-3.0","Aligned Games",None),
- "allied_ww2":("CC-BY-3.0","knik1985",None)
+ "willys_mb":("CC-BY-SA-3.0","Aligned Games","50590e95e7a26c5bdbce2278fa06c3c2746f2b6f6bb29d23c90ef25a4f58645a"),
+ "allied_ww2":("CC-BY-3.0","knik1985","5e86af3e8759cae0fbbc2c5f4409e6c02c5c6fc80760980da8e9bc437ae785bb")
 }
 class HistoricalWW2Models(unittest.TestCase):
  def test_hashes_licenses_and_valid_gltf(self):
