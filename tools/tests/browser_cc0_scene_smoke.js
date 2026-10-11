@@ -122,6 +122,12 @@ async function scenario(shouldLoad,farms=true){
  }
  el("deploy").fire("click");
  assert.equal(win.WP3DDiagnostics().alliesAlive,2);
+ if(shouldLoad){
+  const low=win.WP3DDiagnostics();
+  assert.equal(low.dressingDrawn,false,"Low tier must not render extra geometry");
+  assert(low.renderedStaticTriangles<low.geometryTriangles,
+   "Low geometry must remain cheaper than high-detail scene");
+ }
  for(let i=0;i<50;i++){
   assert(raf.length>0,"Frame loop stopped");
   raf.shift()((i+1)*34);
