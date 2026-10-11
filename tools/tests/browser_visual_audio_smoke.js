@@ -32,7 +32,11 @@ for(const weapon of ["rifle","smg","lmg"]){
 assert.notEqual(viewCounts.rifle,viewCounts.smg,"All weapons appear identical");
 const param=()=>({value:0,setValueAtTime(){},linearRampToValueAtTime(){},
  exponentialRampToValueAtTime(){}});
-const node=()=>({gain:param(),frequency:param(),pan:{value:0},connect(){},start(){},stop(){}});
+const pan=new Proxy({value:0},{set(target,key,value){
+ if(key==="value")assert(Number.isFinite(value),"Non-finite WebAudio stereo pan");
+ target[key]=value;return true;
+}});
+const node=()=>({gain:param(),frequency:param(),pan,connect(){},start(){},stop(){}});
 class AudioCtx{
  constructor(){this.sampleRate=22050;this.currentTime=0;this.state="running";this.destination=node();}
  createGain(){return node();}
@@ -52,6 +56,7 @@ snd.shot("smg",2,3,{x:0,z:0,yaw:0});
 snd.explosion(10,12,{x:0,z:0,yaw:0});
 snd.footsteps(.4,4,false);
 snd.distant(8.01);
+snd.shot("rifle",NaN,Infinity,{x:NaN,z:3,yaw:undefined});
 assert.equal(snd.state().shotCount,2);
 assert(snd.setMuted(true));
 snd.shot("lmg");
