@@ -36,5 +36,9 @@ jobs:
           git add browser/3d/assets/oga/
           if ! git diff --cached --quiet; then
             git commit -m "assets(ww2): vendor converted, attributed soldier and military vehicle meshes"
+            # Source/asset conversion is deterministic. Replay on newest branch
+            # head rather than overwriting concurrent gameplay implementation.
+            git fetch origin feat/ww2-characters-vehicles-20261011
+            git rebase origin/feat/ww2-characters-vehicles-20261011
             git push origin HEAD:feat/ww2-characters-vehicles-20261011
           fi
