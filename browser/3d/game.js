@@ -786,7 +786,8 @@ function simulate(dt){
  }
  if(input.fire)shoot();
  for(const g of game.grenades){
-  if(g.life<=0)continue;
+  // Explosions remain visible briefly but cannot accumulate forever.
+  if(g.life<=0){g.life-=dt;continue;}
   // Low-cost fixed-step gravity, ground friction and wall collision.
   const nextX=g.x+g.vx*dt;
   if(blocked(nextX,g.z,.16))g.vx=-g.vx*.3;

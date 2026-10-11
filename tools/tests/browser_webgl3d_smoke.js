@@ -118,6 +118,8 @@ function run(width,height,webgl=true){
   "Frag must actually travel through battlefield collision");
  assert(flying.y>launched.y,"Frag should initially rise under its ballistic impulse");
  for(let i=186;i<250;i++)frame(i);
+ assert.equal(win.WP3DDiagnostics().grenades.length,0,
+  "Detonated frag and its temporary effect must be removed from memory");
  assert.match(el("frags").textContent,/× 1/);
  assert.equal(win.WP3DDiagnostics().weapon,"smg");
  const beforeArrow=win.WP3DDiagnostics().position;
