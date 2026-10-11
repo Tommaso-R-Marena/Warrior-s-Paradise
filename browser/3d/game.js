@@ -1074,5 +1074,19 @@ window.WP3DDiagnostics=()=>({
   performance:window.WP3DProbe?window.WP3DProbe.report().performance:null,
   input:{keys:Object.keys(input.keys).filter(k=>input.keys[k]),joyX:input.joyX,joyY:input.joyY}
 });
+// Isolated headless test entrypoint. Only available when explicitly requested.
+// Executes the *same* player, collision, ballistics and AI simulation without
+// depending on a GPU's frame scheduler. Never exposed by ordinary play URLs.
+if(typeof location!=="undefined"&&typeof location.search==="string"&&
+   /(?:\\?|&)qa=1(?:&|$)/.test(location.search)){
+ window.WP3DQA=Object.freeze({
+  step(ticks=60){
+   if(!Number.isInteger(ticks)||ticks<1||ticks>600)throw Error("QA ticks must be 1..600");
+   for(let i=0;i<ticks&&game.playing;i++)simulate(1/60);
+   return {x:player.x,z:player.z,elapsed:game.elapsed,playing:game.playing,
+     input:{...input.keys},shots:window.WP3DProbe?.report().gameplay.shots||0};
+  }
+ });
+}
 requestAnimationFrame(frame);
 })();
