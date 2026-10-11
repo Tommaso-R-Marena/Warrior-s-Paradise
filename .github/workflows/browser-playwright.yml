@@ -6,6 +6,7 @@ on:
     paths:
       - "browser/**"
       - "tools/tests/browser_playwright_benchmark.mjs"
+      - "tools/tests/browser_playwright_ballistics.mjs"
       - "tools/tests/browser_playwright_paired.mjs"
       - ".github/workflows/browser-playwright.yml"
   push:
@@ -13,6 +14,7 @@ on:
     paths:
       - "browser/**"
       - "tools/tests/browser_playwright_benchmark.mjs"
+      - "tools/tests/browser_playwright_ballistics.mjs"
       - ".github/workflows/browser-playwright.yml"
   workflow_dispatch:
 
@@ -56,6 +58,10 @@ jobs:
         run: node tools/tests/browser_playwright_benchmark.mjs
         env:
           CI: "true"
+          WP_TEST_URL: http://127.0.0.1:8765/3d/
+      - name: Real browser bullet damage, surprise targets, headshots and farmhouse cover
+        run: node tools/tests/browser_playwright_ballistics.mjs
+        env:
           WP_TEST_URL: http://127.0.0.1:8765/3d/
       - name: Compare Low/Medium FPS with production in same software browser
         if: github.event_name == 'pull_request'
