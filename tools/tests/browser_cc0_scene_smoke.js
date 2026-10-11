@@ -16,11 +16,12 @@ const spatialAudio=fs.readFileSync(path.join(root,"battle-audio.js"),"utf8");
 const decoration=fs.readFileSync(path.join(root,"normandy-dressing.js"),"utf8");
 const vehicles=fs.readFileSync(path.join(root,"ww2-vehicles.js"),"utf8");
 const ww2Environment=fs.readFileSync(path.join(root,"ww2-environment.js"),"utf8");
+const terrainScript=fs.readFileSync(path.join(root,"ww2-terrain.js"),"utf8");
 const kenney=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
 const quaternius=["barn","chicken_coop","windmill","well"];
 const normandy=["log-stacklarge","fence-gate","log-large","rock-largeb","stump-old","grass-large"];
 const character="character_medium";
-const historical=["axis_ww2","gaz67_jeep","panzer_study"];
+const historical=["axis_ww2","allied_ww2","willys_mb","gaz67_jeep","panzer_study"];
 const models=Object.fromEntries([
  ...kenney.concat(normandy).map(name=>["kenney/"+name,fs.readFileSync(path.join(root,"assets/kenney",name+".glb.b64"),"utf8")]),
  ["kenney/"+character,fs.readFileSync(path.join(root,"assets/kenney",character+".glb.b64"),"utf8")],
@@ -87,6 +88,7 @@ async function scenario(shouldLoad,farms=true){
  vm.runInContext(decoration,sandbox,{filename:"normandy-dressing.js",timeout:15000});
  vm.runInContext(vehicles,sandbox,{filename:"ww2-vehicles.js",timeout:15000});
  vm.runInContext(ww2Environment,sandbox,{filename:"ww2-environment.js",timeout:15000});
+ vm.runInContext(terrainScript,sandbox,{filename:"ww2-terrain.js",timeout:15000});
  assert(win.WPBattleArt&&win.WPBattleSound&&win.WPMaterialAtlas,
   "Full presentation modules failed to initialize");
  vm.runInContext(gameplay,sandbox,{filename:"game.js",timeout:15000});
@@ -100,12 +102,13 @@ async function scenario(shouldLoad,farms=true){
  assert.equal(before.texturesLoaded,true,"Material textures failed to upload");
  assert.equal(stats.textures,2,"Expected albedo/roughness and bump textures");
  assert.equal(before.assetsLoaded,shouldLoad,JSON.stringify(before));
- assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length+normandy.length+5:kenney.length+5);
+ assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length+normandy.length+6:kenney.length+6);
  assert(sources.every(url=>/^\.\/assets\/(kenney|quaternius|oga)\//.test(url)));
  if(shouldLoad){
   assert(before.rigLoaded,"Licensed character rig failed to load");
   assert.equal(before.ww2Rigs.axis,true,"Actual rigged German soldier not parsed: "+JSON.stringify(before.ww2Rigs));
-  assert.equal(before.armor.loaded,2,"Actual CC0 jeep and tank models not parsed: "+JSON.stringify(before.armor.errors));
+  assert.equal(before.ww2Rigs.ally,true,"US paratrooper bone rig did not decode in actual WebGL runtime");
+  assert.equal(before.armor.loaded,3,"Audited Willys Jeep + existing fallback vehicles missing: "+JSON.stringify(before.armor.errors));
   assert(before.assetInstances>=157&&before.assetTriangles>15000);
   assert(before.geometryTriangles>24000);
   assert.equal(before.buildingsLoaded,farms?4:0);
@@ -116,6 +119,8 @@ async function scenario(shouldLoad,farms=true){
    assert(before.dressingTriangles>0&&before.dressingTriangles<=4800,
     "Dressing exceeds hard triangle budget");
    assert(before.dressingCover>0,"Tactical barriers need world collision");
+  assert(before.terrainTriangles>1500&&before.terrainTriangles<=2888,
+    "Landscape ground mesh missing or unbounded");
   assert(before.ww2EnvironmentTriangles>0&&before.ww2EnvironmentTriangles<=1400,
    "Actual wartime details are missing or exceed static triangle budget");
    assert.match(el("assetstatus").textContent,/WORLD OBJECTS/);
@@ -138,8 +143,11 @@ async function scenario(shouldLoad,farms=true){
   assert.equal(medium.dressingDrawn,true,"Desktop default must show the full CC0 scenery");
   assert(medium.renderedStaticTriangles<medium.geometryTriangles,
    "Medium must use bounded CC0 LOD, not the full High mesh");
-  assert(medium.renderedStaticTriangles>medium.geometryTriangles-medium.dressingTriangles,
-   "Medium must still render actual additional licensed models");
+  const withoutQualityOnlyArt=medium.geometryTriangles-medium.dressingTriangles-
+   medium.ww2EnvironmentTriangles-medium.terrainTriangles;
+  assert.equal(medium.renderedStaticTriangles,
+   withoutQualityOnlyArt+medium.mediumDressingTriangles,
+   "Medium must contain only the licensed Medium props, not High-only terrain or rubble");
   assert(medium.mediumDressingTriangles<=1800,"Medium triangle budget exceeded");
  }
  for(let i=0;i<50;i++){
@@ -147,7 +155,8 @@ async function scenario(shouldLoad,farms=true){
   raf.shift()((i+1)*34);
  }
  assert(stats.draws>=100,"No geometry drawn");
- if(shouldLoad)assert(win.WP3DDiagnostics().skinActors>0,"Skinning not present in actual gameplay draw");
+ if(shouldLoad)assert.equal(win.WP3DDiagnostics().skinActors,0,
+  "Medium must not CPU-skin full-res Allied infantry on weak graphics devices");
  if(shouldLoad){
   el("quality").value="low";
   el("deploy").fire("click");

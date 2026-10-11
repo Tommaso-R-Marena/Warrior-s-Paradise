@@ -38,5 +38,16 @@
     "source_page": "https://opengameart.org/content/tank1",
     "category": "vehicle",
     "max_source_bytes": 1500000
+  },
+  {
+    "id": "willys_mb",
+    "file": "Willys_Jeep.zip",
+    "url": "https://opengameart.org/sites/default/files/Willy%27s%20Jeep.zip",
+    "license": "CC-BY-SA-3.0",
+    "creator": "Aligned Games",
+    "source_page": "https://opengameart.org/content/willys-jeep-asset",
+    "category": "vehicle",
+    "max_source_bytes": 25000000,
+    "redistribution_note": "Converted Willys asset and adaptations stay CC-BY-SA-3.0; original creator attribution retained."
   }
 ]

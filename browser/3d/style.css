@@ -72,3 +72,8 @@
 
 .vehicle-state{font-size:10px;font-weight:800;color:#e8d4a3;margin-top:5px;letter-spacing:.05em;text-shadow:0 1px 2px #000}
 @media(pointer:coarse){#vehicle{grid-column:4;grid-row:3;font-size:9px;padding:2px;background:#384536e6}}
+
+#performance-open{background:#26322b;color:#e4ecdd;border:1px solid #82907d;border-radius:5px;padding:4px 8px;font-size:10px;min-width:42px;cursor:pointer;touch-action:manipulation}
+#performance-open:focus-visible{outline:2px solid #f9d37c;outline-offset:2px}
+@media(max-width:650px){#performance-open{padding:6px;min-height:34px;font-size:10px}}
+.perf-actions{flex-wrap:wrap}

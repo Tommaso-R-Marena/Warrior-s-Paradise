@@ -12,6 +12,8 @@ if(!gl){
   $("menu-copy").textContent="3D rendering is unavailable on this device. Use Field Edition instead.";
   return;
 }
+const gpuProfiler=window.WPDeviceGpuProfiler?.create(gl)||null;
+window.WPDeviceGpuCaptureController=gpuProfiler;
 const VS=[
  "#version 300 es","precision highp float;",
  "layout(location=0) in vec3 aPos;layout(location=1) in vec3 aNormal;",
@@ -109,6 +111,9 @@ const highSource=FS.replace(
 ).replace(
  "float highlight=pow(max(0.,dot(n,halfDir)),mix(92.,8.,roughness));",
  "float highlight=pow(max(0.,dot(shadedN,halfDir)),mix(92.,8.,roughness));"
+).replace(
+ "vec3 rgb=vColor*exposure;",
+ "vec3 rgb=vColor*exposure*mix(vec3(.76,.85,.96),vec3(1.13,1.05,.89),smoothstep(.08,.88,sun));"
 );
 function shader(type,source){
  const o=gl.createShader(type);gl.shaderSource(o,source);gl.compileShader(o);
@@ -507,6 +512,14 @@ function loadLicensedScenery(){
      scenery.ww2EnvironmentTriangles=env.triangles;
      scenery.ww2EnvironmentProps=env.props;
     }
+    // High-only sculpted rural ground; near all roads/foundations kept level.
+    if(window.WPWW2Terrain){
+     const hills=new Geometry();hills.data=currentWorldData.slice();
+     const terrain=window.WPWW2Terrain.append(hills,flags,boxes);
+     currentWorldData=hills.data;upload(staticMesh,currentWorldData);
+     scenery.terrainTriangles=terrain.triangles;
+     scenery.shadowedTerrainCells=terrain.shadowedCells;
+    }
     artStructures.push(...result.colliders);
     scenery.instances+=result.placements.length;
     scenery.triangles+=result.triangles;
@@ -601,6 +614,7 @@ function reset(){
  ]));
  if(window.WPBattleSound)window.WPBattleSound.boot();
  if(window.WP3DProbe)window.WP3DProbe.reset();
+ gpuProfiler?.reset();
  $("menu").hidden=true;input.fire=false;
  const fine=typeof window.matchMedia==="function"&&window.matchMedia("(pointer: fine)").matches;
  if(fine&&canvas.requestPointerLock)try{canvas.requestPointerLock();}catch{}
@@ -1004,7 +1018,7 @@ function dynamicGeometry(){
  const art=window.WPBattleArt,skinner=window.WPSkinning;
  let skinnedActors=0,skinnedTriangles=0;
  // Save low-end phones: limit both shading work and CPU-skinned scene actors.
- const limit=game.quality==="high"?4:game.quality==="medium"?2:0;
+ const limit=game.quality==="high"?4:0;
  const maxActors=game.fps<24?Math.min(limit,1):game.fps<35?Math.min(limit,2):limit;
  const viewDist=game.quality==="low"?14:game.quality==="medium"?23:28;
  const candidates=[
@@ -1056,7 +1070,7 @@ function dynamicGeometry(){
  if(window.WPArmoredFleet)window.WPArmoredFleet.draw(m,window.WPAssetKit,game.quality,player,game.elapsed);
  // Model-specific Lee-Enfield, Sten and Bren view models (or compatibility gun).
  if(art&&!window.WPArmoredFleet?.isDriving())art.weapon(m,player,game);
- else{
+ else if(!window.WPArmoredFleet?.isDriving()){
   const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw),yaw=-player.yaw;
   const py=(player.crouch?1.02:1.67)-.4;
   m.box(player.x+dx*.85,py,player.z+dz*.85,.2,.17,.85,COLORS.metal,yaw);
@@ -1095,9 +1109,11 @@ function resize(){
  canvas.width=Math.floor(w*limiter);canvas.height=Math.floor(h*limiter);
  lastWidth=canvas.width;lastHeight=canvas.height;
  gl.viewport(0,0,lastWidth,lastHeight);
+ window.WP3DProbe?.configure?.({quality:game.quality,width:lastWidth,height:lastHeight,scaler:game.scaler});
 }
 function render(){
  if(!lastWidth||!lastHeight)return;
+ gpuProfiler?.begin();
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  const stepBob=Math.sin(player.stepPhase||0)*(player.stepStrength||0)*
   (player.aim?.008:.023);
@@ -1128,6 +1144,7 @@ function render(){
  draw(staticMesh,game.quality==="low"?lowVertexCount:game.quality==="medium"?mediumVertexCount:staticMesh.count);
  upload(liveMesh,dynamicGeometry());
  draw(liveMesh);
+ gpuProfiler?.end();
 }
 let previous=0,adaptTime=0;
 const nowClock=()=>typeof performance!=="undefined"&&performance.now?performance.now():Date.now();
@@ -1255,7 +1272,9 @@ button("orders",orderSquad);button("support",callArtillery);
  button("vehicle",enterVehicle);
 button("crouch",()=>{player.crouch=!player.crouch;});
 $("performance-download").addEventListener("click",()=>window.WP3DProbe?.exportReport());
+$("performance-capture").addEventListener("click",()=>window.WP3DProbe?.startCapture());
 $("performance-close").addEventListener("click",()=>window.WP3DProbe?.toggle());
+$("performance-open").addEventListener("click",()=>window.WP3DProbe?.toggle());
 // Register the root offline cache from the 3D subdirectory too. The
 // existing PWA service worker will cache these assets after first use.
 if("serviceWorker" in navigator && location.protocol!=="file:"){
@@ -1295,6 +1314,8 @@ window.WP3DDiagnostics=()=>({
   mediumDressingTriangles:scenery.mediumDressingTriangles||0,
   ww2EnvironmentTriangles:scenery.ww2EnvironmentTriangles||0,
   ww2EnvironmentProps:scenery.ww2EnvironmentProps||0,
+  terrainTriangles:scenery.terrainTriangles||0,
+  shadowedTerrainCells:scenery.shadowedTerrainCells||0,
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
@@ -1305,6 +1326,7 @@ window.WP3DDiagnostics=()=>({
   position:{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch},
   playing:game.playing,elapsedSeconds:game.elapsed,framesPerSecond:game.fps,
   performance:window.WP3DProbe?window.WP3DProbe.report().performance:null,
+  gpu:gpuProfiler?.report()||null,
   input:{keys:Object.keys(input.keys).filter(k=>input.keys[k]),joyX:input.joyX,joyY:input.joyY}
 });
 // Isolated headless test entrypoint. Only available when explicitly requested.

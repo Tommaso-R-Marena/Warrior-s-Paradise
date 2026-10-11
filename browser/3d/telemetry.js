@@ -2,6 +2,7 @@
    Never uploads usage data. All reports may be exported to JSON by the player. */
 (function(root){"use strict";
  const maxSamples=1200, frames=[],renders=[],cpu=[],events=[];
+ let activeCapture=false,captureStarted=0,lastCaptureMs=0,renderConfiguration={};
  let distance=0,blockedSeconds=0,attemptSeconds=0,shots=0,hits=0,kills=0,
     objectives=0,medkits=0,restarts=0,frameCounter=0,sessionStart=Date.now(),
     posStart=null,lastPos=null,visible=false;
@@ -38,8 +39,23 @@
   events.push({elapsedMs:Math.round(at()),type});
  }
  function frame(ms,renderMs,cpuMs){
+  if(activeCapture&&Date.now()-captureStarted>=30000){
+   activeCapture=false;lastCaptureMs=Date.now()-captureStarted;
+  }
   push(frames,ms);push(renders,renderMs);push(cpu,cpuMs);frameCounter++;
   if(visible&&frameCounter%20===0)refresh();
+ }
+ function configure(settings){
+  if(!settings||typeof settings!=="object")return;
+  const {quality,width,height,scaler}=settings;
+  if(!["low","medium","high"].includes(quality)||!Number.isFinite(width)||!Number.isFinite(height))return;
+  renderConfiguration={quality,width:Math.round(width),height:Math.round(height),
+   pixels:Math.round(width*height),adaptiveScale:Number.isFinite(scaler)?n(scaler):null};
+ }
+ function startCapture(){
+  frames.length=0;renders.length=0;cpu.length=0;frameCounter=0;
+  root.WPDeviceGpuCaptureController?.reset?.();
+  captureStarted=Date.now();lastCaptureMs=0;activeCapture=true;refresh();
  }
  function report(){
   const avgFrame=avg(frames),p99=pct(frames,.99);
@@ -54,6 +70,11 @@
       attemptedMovementSeconds:n(attemptSeconds),shots,hits,accuracyPercent:n(shots?100*hits/shots:0),
       kills,objectivesCaptured:objectives,medkitsUsed:medkits,restarts,
       startPosition:posStart,latestPosition:lastPos},
+    gpu:root.WPDeviceGpuCaptureController?.report?.()||{supported:false,reason:"WebGL2 GPU timer unavailable"},
+    renderConfiguration:{...renderConfiguration},
+    capture:{active:activeCapture,requestedSeconds:30,elapsedSeconds:n(activeCapture?
+      (Date.now()-captureStarted)/1000:lastCaptureMs/1000),sampledFrames:frames.length,
+      deviceRun:true,autoUploaded:false},
     hardware:{userAgent:typeof navigator!=="undefined"?navigator.userAgent:"unknown",
       devicePixelRatio:root.devicePixelRatio||1,cores:typeof navigator!=="undefined"?navigator.hardwareConcurrency||null:null},
     recentEvents:events.slice(-15)};
@@ -69,6 +90,10 @@
     "Samples: "+r.sampling.frames+" · Moved: "+g.metersTraveled+" m",
     "Movement blocked: "+g.blockedSeconds+" s of "+g.attemptedMovementSeconds+" s",
     "Shots "+g.shots+" · Hits "+g.hits+" · Eliminations "+g.kills+" · Captures "+g.objectivesCaptured,
+    "GPU: "+(r.gpu.supported?(r.gpu.meanGpuMs??"pending")+"ms mean, "+
+      (r.gpu.p95GpuMs??"pending")+"ms p95 ("+r.gpu.queries+" samples)":"GPU timer unsupported"),
+    "Device capture: "+(r.capture.active?"RECORDING "+r.capture.elapsedSeconds+"s / 30s":
+      r.capture.elapsedSeconds?"COMPLETE ("+r.capture.elapsedSeconds+"s)":"not yet captured"),
     "Local-only benchmark · No telemetry uploaded"
   ].join("\n");
  }
@@ -84,5 +109,5 @@
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
  }
- root.WP3DProbe=Object.freeze({frame,movement,event,report,reset,toggle,refresh,exportReport,now:at});
+ root.WP3DProbe=Object.freeze({frame,movement,event,report,reset,toggle,configure,startCapture,refresh,exportReport,now:at});
 })(window);

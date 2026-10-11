@@ -20,6 +20,23 @@
       "model_file": "browser/3d/assets/oga/axis_ww2.glb.b64"
     },
     {
+      "id": "allied_ww2",
+      "url": "https://opengameart.org/sites/default/files/Paratrooper.zip",
+      "license": "CC-BY-3.0",
+      "creator": "knik1985",
+      "source_page": "https://opengameart.org/content/character-us-soldier",
+      "category": "character",
+      "source_file": "Paratrooper.zip",
+      "chosen_file": "Char.blend",
+      "source_bytes": 3274069,
+      "original_package_sha256": "5e86af3e8759cae0fbbc2c5f4409e6c02c5c6fc80760980da8e9bc437ae785bb",
+      "derived_glb_bytes": 433664,
+      "derived_sha256": "c7840239de1ce193bb28412eebb1ff1c6ba3bc1b7d50aa7ca994630e1f88232a",
+      "animations": 7,
+      "skins": 1,
+      "model_file": "browser/3d/assets/oga/allied_ww2.glb.b64"
+    },
+    {
       "id": "gaz67_jeep",
       "url": "https://opengameart.org/sites/default/files/gaz-67_lowpoly_1.zip",
       "license": "CC0-1.0",
@@ -31,7 +48,7 @@
       "source_bytes": 372877,
       "original_package_sha256": "e2993b7cc36f663ceb5c9f9b563ddbb09293571f5bdaae3aec1bdcc7fe4a4110",
       "derived_glb_bytes": 105904,
-      "derived_sha256": "b09aafadfed5a5753da44342952b9460c9fa39b05ce925b750fbd8f332903059",
+      "derived_sha256": "95aaab30706fcccbb711837d5d087fd6d64d8e7573d6401dfec51d4739f695c5",
       "animations": 0,
       "skins": 0,
       "model_file": "browser/3d/assets/oga/gaz67_jeep.glb.b64"
@@ -52,6 +69,23 @@
       "animations": 0,
       "skins": 0,
       "model_file": "browser/3d/assets/oga/panzer_study.glb.b64"
+    },
+    {
+      "id": "willys_mb",
+      "url": "https://opengameart.org/sites/default/files/Willy%27s%20Jeep.zip",
+      "license": "CC-BY-SA-3.0",
+      "creator": "Aligned Games",
+      "source_page": "https://opengameart.org/content/willys-jeep-asset",
+      "category": "vehicle",
+      "source_file": "Willys_Jeep.zip",
+      "chosen_file": "willy's_jeep.fbx",
+      "source_bytes": 18136586,
+      "original_package_sha256": "50590e95e7a26c5bdbce2278fa06c3c2746f2b6f6bb29d23c90ef25a4f58645a",
+      "derived_glb_bytes": 93948,
+      "derived_sha256": "4335aa2b6363fd49ccb504e1b8f84e57a554fd19eda9a751b5c78a029f62b9dc",
+      "animations": 0,
+      "skins": 0,
+      "model_file": "browser/3d/assets/oga/willys_mb.glb.b64"
     }
   ]
 }
