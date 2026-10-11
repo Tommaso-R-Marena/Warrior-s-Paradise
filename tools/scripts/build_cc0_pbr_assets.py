@@ -75,6 +75,16 @@ def main() -> None:
     manifest["source"] = "ambientCG CC0 assets, bundled from petroulacl/fps-buildings-env-kit"
     manifest["license"] = "CC0-1.0"
     manifest["texture_resolution"] = [RESOLUTION, RESOLUTION]
+    manifest["processing"] = (
+        "Original CC0 ambientCG JPEGs are downloaded directly from the source "
+        "repository, independently verified by SHA-256, and downsampled with "
+        "Pillow 11.3.0 to 512x512 optimized JPEGs. Avoid browser screenshots."
+    )
+    manifest["warning"] = (
+        "Albedo, OpenGL tangent normal, and scalar roughness are original "
+        "source-derived maps. The browser lighting approximation is not "
+        "a calibrated metallic/roughness PBR implementation."
+    )
     manifest["pbr_notes"] = (
         "Real artist-authored OpenGL normal and roughness maps accompany each "
         "albedo image. Shader uses approximate non-tangent frame; this is not "
@@ -89,6 +99,10 @@ def main() -> None:
         for kind, suffix in KINDS.items():
             remote = f"{BASE}/{pack}/{pack}_{suffix}.jpg"
             raw = fetch_url(remote)
+            previously = entry.get("maps", {}).get(kind, {})
+            prior_hash = previously.get("source_sha256")
+            if prior_hash and sha256(raw) != prior_hash:
+                raise ValueError(f"Upstream CC0 source changed unexpectedly: {remote}")
             optimized = optimize(raw, kind)
             dest_name = f"{name}_{kind}.jpg.b64"
             (TARGET / dest_name).write_text(
