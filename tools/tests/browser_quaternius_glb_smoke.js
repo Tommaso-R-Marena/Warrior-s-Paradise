@@ -23,7 +23,7 @@ for(const item of manifest.assets){
  const ab=buf.buffer.slice(buf.byteOffset,buf.byteOffset+buf.length);
  const mesh=kit.parseGLB(ab);
  assert(mesh.count>300&&mesh.count<5000,"Unexpected GLB complexity "+item.name);
- assert(mesh.min.every(Number.isFinite)&&mesh.max.every(Number.is));
+ assert(mesh.min.every(Number.isFinite)&&mesh.max.every(Number.isFinite));
  const geo={n:0,tri(){this.n++}};
  assert.equal(kit.appendInstances(geo,mesh,[[1,0,1,1,0]]),mesh.count);
  assert.equal(geo.n,mesh.count);
