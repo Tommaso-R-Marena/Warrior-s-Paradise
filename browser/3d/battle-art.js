@@ -25,8 +25,9 @@ function soldier(g,actor,team,t,distMoved=0){
  const gait=Math.sin(cadence)*.27*stride;
  const crouched=!!actor.crouch||(actor.suppression||0)>1.0;
  const duck=crouched?.42:0;
- const damaged=(actor.hit||0)>.05,coat=damaged?[.50,.24,.21]:colors.coat;
- const bob=Math.sin(cadence*2)*.027*stride;
+ const hitFlinch=Math.min(1,(actor.reaction||0)*2.4);
+ const damaged=(actor.hit||0)>.05,coat=damaged?[.39,.30,.25]:colors.coat;
+ const bob=Math.sin(cadence*2)*.027*stride-hitFlinch*.11;
  // Layered trousers, boots, calf gaiters, soldier tunic and belt.
  for(const side of [-1,1]){
   const fore=side*gait;
@@ -93,7 +94,7 @@ function fieldEquipment(g,actor,team){
 }
 function weapon(g,player,game){
  const F=[-Math.sin(player.yaw),Math.cos(player.yaw)],R=[-Math.cos(player.yaw),-Math.sin(player.yaw)];
- const recoil=(game.flash||0)>0?Math.min(.11,game.flash*.6):0;
+ const recoil=Math.max((game.flash||0)>0?Math.min(.11,game.flash*.6):0,game.recoilVisual||0);
  const bob=Math.sin(player.stepPhase||0)*(player.stepStrength||0)*
   (player.aim?.004:.014);
  const reloadDuration=player.weapon==="rifle"?1.9:player.weapon==="smg"?1.6:2.7;
