@@ -875,7 +875,8 @@ function updateCombinedArms(dt){
    addTracer(a.x,a.z,victim.x,victim.z,"friendly");
   if(window.WPBattleSound)window.WPBattleSound.shot("rifle",a.x,a.z,player);
    if(rnd()<(.49-near*.006)){
-    victim.hp-=19+rnd()*10;victim.hit=.18;victim.suppression=1.2;
+    victim.hp-=window.WPInfantryBallistics.damageAt("rifle",near,"torso")*
+     (.28+rnd()*.18);victim.hit=.18;victim.suppression=1.2;
     if(victim.hp<=0){game.kills++;msg("FIRETEAM: TARGET DOWN",.9);}
    }
   }
@@ -978,7 +979,10 @@ function simulate(dt){
   for(const candidate of [player,...game.allies]){
    if(candidate.hp<=0)continue;
    const range=Math.hypot(candidate.x-e.x,candidate.z-e.z);
-   if(range<d&&lineHit(e.x,e.z,candidate.x,candidate.z)){victim=candidate;d=range;}
+   const seen=(e.alert||0)>.02?
+    (range<26&&lineHit(e.x,e.z,candidate.x,candidate.z)):
+    window.WPInfantryBallistics.canSee(e,candidate,lineHit,26);
+   if(range<d&&seen){victim=candidate;d=range;}
   }
   const visible=!!victim;
   if(visible){e.alert=2.1;e.lastX=victim.x;e.lastZ=victim.z;}
@@ -999,7 +1003,8 @@ function simulate(dt){
    addTracer(e.x,e.z,victim.x,victim.z,"hostile");
    if(window.WPBattleSound)window.WPBattleSound.shot("rifle",e.x,e.z,player);
    if(rnd()<hit){
-    const damage=(6+rnd()*7)*(game.difficulty==="veteran"?1.2:game.difficulty==="recruit"?.7:1);
+    const damage=window.WPInfantryBallistics.damageAt("rifle",d,"torso")*
+     .15*(.75+rnd()*.5)*(game.difficulty==="veteran"?1.2:game.difficulty==="recruit"?.7:1);
     victim.hp-=damage;
     if(victim===player){
      player.hurt=.9;msg("UNDER FIRE · FIND COVER",.8);
@@ -1058,11 +1063,11 @@ function dynamicGeometry(){
  rig.skinnedLastFrame=skinnedActors;
  rig.skinnedTriangles=skinnedTriangles;
  for(const t of game.tracers){
-  const dx=t.bx-t.ax,dz=t.bz-t.az,len=Math.hypot(dx,dz);
-  if(len<.1)continue;
-  const x=(t.ax+t.bx)/2,z=(t.az+t.bz)/2;
-  m.box(x,1.46,z,.025,.023,Math.min(len,12),
-   t.team==="hostile"?COLORS.red:COLORS.gold,Math.atan2(dx,dz));
+  if(Math.hypot(t.bx-t.ax,t.bz-t.az)<.1)continue;
+  const color=t.team==="hostile"?COLORS.red:COLORS.gold;
+  const low=[t.ax,t.ay??1.46,t.az],hi=[t.bx,t.by??1.46,t.bz];
+  m.quad(low,hi,[hi[0],hi[1]+.025,hi[2]],
+   [low[0],low[1]+.025,low[2]],color);
  }
  for(const strike of game.strikes){
   if(!strike.detonated){
@@ -1332,6 +1337,9 @@ window.WP3DDiagnostics=()=>({
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
+  lastShot:game.lastShot,stealthHits:game.stealthHits,headshots:game.headshots,
+  weaponProfile:window.WPInfantryBallistics?.profiles[player.weapon]||null,
+  defenders:game.enemies.map(e=>({x:e.x,z:e.z,hp:e.hp,alert:e.alert,facing:e.facing})),
   navigation:window.WPTacticalNav?window.WPTacticalNav.stats():null,
   atmosphere:window.WPBattleAtmosphere?window.WPBattleAtmosphere.stats():null,
   concussion:player.concussion||0,stepStrength:player.stepStrength||0,
