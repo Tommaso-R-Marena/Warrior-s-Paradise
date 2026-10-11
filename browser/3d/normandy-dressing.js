@@ -11,7 +11,7 @@ const specs=[
  {name:"stump-old",count:17,scale:[2.8,3.8],cover:false,nearObjective:false},
  {name:"grass-large",count:30,scale:[3.0,4.2],cover:false,nearObjective:false}
 ];
-const LIMIT_TRIANGLES=4800,LIMIT_INSTANCES=86;
+const LIMIT_TRIANGLES=4800,LIMIT_INSTANCES=86,MEDIUM_TRIANGLES=1800;
 function footprint(model,x,z,scale,yaw){
  const cx=(model.min[0]+model.max[0])*.5*scale;
  const cz=(model.min[2]+model.max[2])*.5*scale;
@@ -71,14 +71,19 @@ async function load(kit,Geometry,base,blocked,flags){
  const batch=plan(models,blocked,flags);
  const geo=new Geometry();
  geo.data=base.slice();
- let actual=0;
+ let actual=0,mediumTriangles=0,mediumDone=false;
  for(const item of batch.placements){
+  const count=models[item.name].count;
+  if(!mediumDone){
+   if(mediumTriangles+count<=MEDIUM_TRIANGLES)mediumTriangles+=count;
+   else mediumDone=true;
+  }
   actual+=kit.appendInstances(geo,models[item.name],[item.instance]);
  }
  if(actual!==batch.triangles)throw Error("Set dressing budget accounting mismatch");
- return {...batch,data:geo.data,sourceModels:specs.length};
+ return {...batch,mediumTriangles,data:geo.data,sourceModels:specs.length};
 }
 root.WPNormandyDressing=Object.freeze({load,plan,footprint,
  specs:specs.map(s=>({...s})),limits:Object.freeze({
- triangles:LIMIT_TRIANGLES,instances:LIMIT_INSTANCES})});
+ triangles:LIMIT_TRIANGLES,mediumTriangles:MEDIUM_TRIANGLES,instances:LIMIT_INSTANCES})});
 })(window);
