@@ -1,5 +1,12 @@
 # Third-Party / Free Asset Register
 
+## Follow-up: rapid FPS adaptation and CC0 building photographs (October 2026)
+
+Production browser measurements on the previous build confirmed actual WASD movement but average 12.98 FPS on a constrained Cloudflare screenshot browser; CI software-rendered Chromium measured 15.06 FPS (desktop-low), 33.89 FPS (mobile emulation-low) and 15.31 FPS (desktop balanced), under non-comparable emulated renderer conditions. These were real frame samples, not synthetic guessed numbers. The player-position tests use actual keys/touch coupled to the real game simulation, with an explicit `?qa=1` test-only fixed-step path so software GPU starvation does not get mistaken for a control failure.
+
+The next optimization lowers the adaptive-resolution response interval from 3 seconds to 0.85 seconds and drops rendering scale more aggressively if measured FPS is deficient; all quality selection remains available and stronger GPUs retain their resolution. The material atlas additionally draws a locally-bundled CC0 photographic `ambientCG Bricks066` masonry tile alongside `Grass004` and `Ground037`. Exact license and source path are in `browser/3d/assets/materials/MANIFEST.json`; diffuse color is photographic while bump/roughness are approximate, and limestone remains authored/generated. This is realism improvement, **not** photorealistic AAA or a verified 60 FPS target.
+
+
 ## Browser realism, movement and measured playtesting (October 2026)
 
 **Actually implemented:** The 3D browser edition supports WASD, arrow keys, mouse aim/fire, pointer-lock on deploy, mobile dual-touch sticks, crouch and sprint. A former 45-millisecond-per-rendered-frame simulation cap meant slow GPUs slowed in-game time; it now uses bounded wall-clock substeps. The new `telemetry.js` reports actual frame timings (average FPS, 1%-low, frame p50/p95/p99, CPU render time), player meters traveled/stuck time, firing/accuracy, captures and kills. Press **F3** during gameplay to view measurements and export JSON; nothing is uploaded.
