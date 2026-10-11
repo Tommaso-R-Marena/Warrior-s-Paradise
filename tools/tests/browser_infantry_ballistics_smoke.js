@@ -44,7 +44,7 @@ assert.equal(covered.blockedBy,"masonry");
 const sandbag=fire("rifle",[enemy(12)],{obstacles:{
  buildings:[],covers:[[0,6,3,2]],structures:[],trunks:[]}});
 assert(sandbag.hit,"Chest-high bullet should pass above low sandbags");
-const crouched=fire("rifle",[{...enemy(12),crouch:true}]);
+const crouched=fire("rifle",[{...enemy(12),crouch:true}],{pitch:.041});
 assert.equal(crouched.hit,null,"A crouched soldier should lower visible head/body");
 const closest=enemy(9),behind=enemy(20);
 assert.equal(fire("rifle",[behind,closest]).hit,closest,"Hit should stop at first soldier");
