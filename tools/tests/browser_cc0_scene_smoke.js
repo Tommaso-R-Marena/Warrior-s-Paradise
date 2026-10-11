@@ -155,7 +155,8 @@ async function scenario(shouldLoad,farms=true){
   raf.shift()((i+1)*34);
  }
  assert(stats.draws>=100,"No geometry drawn");
- if(shouldLoad)assert(win.WP3DDiagnostics().skinActors>0,"Skinning not present in actual gameplay draw");
+ if(shouldLoad)assert.equal(win.WP3DDiagnostics().skinActors,0,
+  "Medium must not CPU-skin full-res Allied infantry on weak graphics devices");
  if(shouldLoad){
   el("quality").value="low";
   el("deploy").fire("click");
