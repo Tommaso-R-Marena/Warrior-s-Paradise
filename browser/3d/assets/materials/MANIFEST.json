@@ -41,6 +41,13 @@
           "optimized_sha256": "6f142b863e3ee5df976064005caa0b5b19859f68f57a0c5d3ff481a71c8e2a14",
           "optimized_bytes": 80896
         }
+      },
+      "medium_map": {
+        "asset": "grass_medium.jpg.b64",
+        "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Grass004_2K-JPG/Grass004_2K-JPG_Color.jpg",
+        "source_sha256": "735b141c8f1972e70a45879424f1238fea9f887324173097785f4ac36e67e9a3",
+        "optimized_sha256": "9176b6ae74a47ee69ceba1999d601d0bbf35adeb9fd2f24d17fa0de487d0a3c4",
+        "optimized_bytes": 20878
       }
     },
     {
@@ -77,6 +84,13 @@
           "optimized_sha256": "e571bd39ac3f13623657d5defa0aee1784746dc40e0ee19dc942c3d4a0b1aaee",
           "optimized_bytes": 52220
         }
+      },
+      "medium_map": {
+        "asset": "mud_medium.jpg.b64",
+        "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Ground037_2K-JPG/Ground037_2K-JPG_Color.jpg",
+        "source_sha256": "86af35a54593548543a291a54bddfd3568fd90268f8f65d0f8e743b37d714782",
+        "optimized_sha256": "231f035fff0eb983683a7a74cee1dbfa1dac372736d12c55bcac27ebe7ce2f1c",
+        "optimized_bytes": 17781
       }
     },
     {
@@ -113,6 +127,13 @@
           "optimized_sha256": "be993ba0bd3cbdd34399489ab2e94d2372a64f32085c5a1b5e7104c63adf9525",
           "optimized_bytes": 17704
         }
+      },
+      "medium_map": {
+        "asset": "brick_medium.jpg.b64",
+        "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Bricks066_2K-JPG/Bricks066_2K-JPG_Color.jpg",
+        "source_sha256": "af119d3f8d50d834b47e22bcbc68235f55f03fe36cb3bf8d336d9bd5d379bc1a",
+        "optimized_sha256": "793ba4733eeca978b2d0115ebe232390886c4eecc4edbeababaf58f1161d2d61",
+        "optimized_bytes": 9822
       }
     }
   ],
@@ -121,5 +142,9 @@
     512,
     512
   ],
-  "pbr_notes": "Real artist-authored OpenGL normal and roughness maps accompany each albedo image. Shader uses approximate non-tangent frame; this is not a calibrated full metallic/roughness lighting implementation."
+  "pbr_notes": "Real artist-authored OpenGL normal and roughness maps accompany each albedo image. Shader uses approximate non-tangent frame; this is not a calibrated full metallic/roughness lighting implementation.",
+  "medium_texture_resolution": [
+    256,
+    256
+  ]
 }
