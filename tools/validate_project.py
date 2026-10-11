@@ -27,6 +27,8 @@ REQUIRED = [
     "browser/3d/material-atlas.js",
     "browser/3d/telemetry.js",
     "browser/3d/tactical-navigation.js",
+    "browser/3d/infantry-ballistics.js",
+    "tools/tests/browser_infantry_ballistics_smoke.js",
     "browser/3d/normandy-dressing.js",
     "browser/3d/ww2-vehicles.js",
     "browser/3d/device-gpu-profiler.js",
