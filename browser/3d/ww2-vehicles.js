@@ -4,11 +4,11 @@
  */
 (function(root){"use strict";
 const defs=[
- {id:"jeep",name:"GAZ-67 4×4",asset:"gaz67_jeep",team:"ally",x:-41,z:-31,yaw:1.0,
+ {id:"jeep",name:"Willys MB 4×4",asset:"willys_mb",team:"ally",x:-41,z:-31,yaw:1.0,
   width:1.7,length:3.35,height:1.8,max:12,hp:120},
- {id:"armor",name:"FIELD TANK",asset:"panzer_study",team:"ally",x:-40,z:-23,yaw:.5,
+ {id:"armor",name:"M4 Sherman (75 mm)",asset:"m4_sherman_shape",team:"ally",x:-40,z:-23,yaw:.5,
   width:3.0,length:5.6,height:2.5,max:6.1,hp:320},
- {id:"enemy",name:"ENEMY ARMOR",asset:"panzer_study",team:"axis",x:34,z:16,yaw:-1.9,
+ {id:"enemy",name:"Panzer IV (H)",asset:"panzer_iv_shape",team:"axis",x:34,z:16,yaw:-1.9,
   width:3.0,length:5.6,height:2.5,max:0,hp:300}
 ];
 const records=[],models={},status={ready:false,loaded:0,errors:{},trianglesLast:0};
@@ -21,7 +21,7 @@ function reset(){
 reset();
 async function load(kit){
  if(!kit){status.ready=true;return;}
- const candidates=["gaz67_jeep","panzer_study"];
+ const candidates=["willys_mb","gaz67_jeep","panzer_study"];
  await Promise.all(candidates.map(async name=>{
   try{
    const m=await kit.loadModels([{name,url:"./assets/oga/"+name+".glb.b64"}]);
@@ -118,6 +118,66 @@ function tick(dt,player,hasLOS,onPlayerHit,onBlast){
  if(onBlast)onBlast(player.x+1.5,player.z-1,"frag");
  if(onPlayerHit)onPlayerHit(damage);
 }
+function drawArmor(g,v,quality){
+ const high=quality==="high",med=quality==="medium";
+ const allied=v.team==="ally";
+ const hull=allied?[.31,.36,.25]:[.37,.38,.30],track=[.16,.17,.15],
+  accent=allied?[.23,.27,.19]:[.31,.32,.27],metal=[.21,.23,.20];
+ const yaw=v.yaw,cs=Math.cos(yaw),sn=Math.sin(yaw);
+ let n=0;
+ function box(dx,y,dz,w,h,d,c=hull,angle=0){
+  g.box(v.x+cs*dx+sn*dz,y,v.z-sn*dx+cs*dz,w,h,d,c,yaw+angle);n+=12;
+ }
+ // Hull, mantlet, tracks and roadwheel arrangement follow distinct
+ // Allied rounded Sherman versus German boxy Panzer IV silhouettes.
+ box(0,.87,0,2.50,1.18,4.86,hull);
+ box(0,1.50,.18,2.24,.57,3.68,hull);
+ box(0,1.78,allied?-.30:.12,2.20,.32,2.65,accent);
+ for(const side of [-1,1]){
+  box(side*1.40,.55,0,.48,.95,5.22,track);
+  box(side*1.40,.13,0,.57,.27,5.28,metal);
+  if(med||high){
+   const count=high?6:3;
+   for(let j=0;j<count;j++){
+    const z=-2.05+(j+.5)*(4.10/count);
+    box(side*1.68,.52,z,.11,.55,.50,accent);
+   }
+  }
+ }
+ if(allied){
+  // Cast rounded turret approximation, mantlet, M4 sloping glacis.
+  box(0,2.05,-.55,1.67,.55,1.92,hull);
+  box(0,2.29,-.50,1.35,.26,1.47,accent);
+  box(0,1.31,2.20,2.1,.43,.53,accent);
+  box(0,2.68,-.98,.61,.27,.62,metal);
+  box(0,2.30,.58,.22,.13,3.02,track);
+  box(0,2.42,2.04,.35,.36,.38,metal);
+  if(high){
+   for(const side of [-1,1]){
+    box(side*.75,1.81,-1.05,.15,.14,.84,accent);
+    box(side*.75,1.57,2.07,.22,.21,.22,metal);
+   }
+  }
+ }else{
+  // Panzer IV flat-front turret and side skirt/Schürzen profile.
+  box(0,2.12,-.40,1.68,.82,1.77,hull);
+  box(0,2.60,-.41,1.60,.12,1.82,accent);
+  box(0,2.18,.66,.20,.13,2.87,track);
+  box(0,2.16,2.11,.34,.29,.39,metal);
+  box(0,2.77,-.95,.56,.25,.54,metal);
+  if(med||high)for(const side of [-1,1]){
+   box(side*1.61,1.08,-.05,.08,.62,3.87,hull);
+   if(high)box(side*1.62,.75,0,.10,.10,3.95,track);
+  }
+ }
+ if(high){
+  // Distinct separate road-wheel and track track-shoe features.
+  for(const side of [-1,1])for(let j=0;j<11;j++){
+   box(side*1.43,.82,-2.40+j*.47,.49,.12,.15,accent);
+  }
+ }
+ return n;
+}
 function draw(g,kit,quality,player,time){
  if(!g)return 0;
  let triangles=0,imported=0;
@@ -125,7 +185,7 @@ function draw(g,kit,quality,player,time){
   if(!v.alive)continue;
   const dist=distance(v,player);
   if(dist>70)continue;
-  const y=0.02;const model=models[v.asset];
+  const y=0.02;const model=models[v.asset]||(v.id==="jeep"?models.gaz67_jeep:null);
   const rich=quality!=="low"&&model&&dist<(quality==="high"?35:19)&&
    imported<(quality==="high"?2:1)&&model.count<=2400;
   if(rich){
@@ -138,6 +198,8 @@ function draw(g,kit,quality,player,time){
    const originZ=v.z+midpointX*sn-midpointZ*cs;
    triangles+=kit.appendInstances(g,model,[[originX,y,originZ,scale,v.yaw]]);
    imported++;
+  }else if(v.id!=="jeep"&&quality!=="low"){
+   triangles+=drawArmor(g,v,quality);
   }else{
    // Functional always-present silhouette for phone and absent imported art.
    const c=v.team==="axis"?[.34,.37,.30]:[.30,.36,.27];
@@ -158,7 +220,7 @@ function draw(g,kit,quality,player,time){
 }
 function info(){return {ready:status.ready,loaded:status.loaded,errors:{...status.errors},
  driving:occupied,vehicle:current()?.name||"",enemyAlive:records.find(v=>v.id==="enemy")?.alive,
- vehicles:records.map(v=>({id:v.id,x:v.x,z:v.z,hp:v.hp,speed:v.speed,alive:v.alive})),
+ vehicles:records.map(v=>({id:v.id,name:v.name,x:v.x,z:v.z,hp:v.hp,speed:v.speed,alive:v.alive})),
  shots:fired,hits:hit,renderedTriangles:status.trianglesLast};}
 root.WPArmoredFleet=Object.freeze({reset,load,toggle,isDriving,current,near,move,fire,tick,draw,info});
 })(window);
