@@ -940,12 +940,16 @@ function frame(now){
   const fps=1000/rawMs;
   game.fps=game.fps*.90+fps*.10;
   adaptTime+=rawMs/1000;
-  if(adaptTime>3){
+  if(adaptTime>.85){
    adaptTime=0;
    const target=game.quality==="low"?28:game.quality==="medium"?42:57;
-   const next=game.fps<target*.77?Math.max(.55,game.scaler-.10):
-    game.fps>target*.97?Math.min(1,game.scaler+.05):game.scaler;
-   if(Math.abs(next-game.scaler)>.015){game.scaler=next;resize();}
+   // Deliberately respond in under a second to low frame rates. Slow browsers
+   // previously waited 3 seconds and dropped only 0.1 scale per interval,
+   // leaving moving and aiming unpleasant for far too long.
+   const next=game.fps<target*.55?Math.max(.54,game.scaler-.23):
+    game.fps<target*.77?Math.max(.54,game.scaler-.12):
+    game.fps>target*1.12?Math.min(1,game.scaler+.055):game.scaler;
+   if(Math.abs(next-game.scaler)>.012){game.scaler=next;resize();}
   }
   if(window.WP3DProbe)window.WP3DProbe.frame(rawMs,renderMs,nowClock()-wallStart);
  }
@@ -1068,7 +1072,7 @@ window.WP3DDiagnostics=()=>({
   farmError:scenery.farmError||"",
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
-  activeTracers:game.tracers.length,
+  activeTracers:game.tracers.length,renderScaler:game.scaler,
   position:{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch},
   playing:game.playing,elapsedSeconds:game.elapsed,framesPerSecond:game.fps,
   performance:window.WP3DProbe?window.WP3DProbe.report().performance:null,
