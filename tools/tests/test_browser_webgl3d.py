@@ -13,7 +13,7 @@ GAME3D = BROWSER / "3d"
 
 class WebGL3DTests(unittest.TestCase):
     def test_cloudflare_fully_static_with_low_end_fallback(self):
-        for name in ("index.html", "style.css", "game.js", "asset-loader.js", "battle-art.js", "battle-audio.js", "skinning.js", "material-atlas.js"):
+        for name in ("index.html", "style.css", "game.js", "asset-loader.js", "battle-art.js", "battle-audio.js", "skinning.js", "material-atlas.js", "telemetry.js"):
             self.assertTrue((GAME3D / name).is_file(), name)
         html = (GAME3D / "index.html").read_text(encoding="utf-8")
         script = (GAME3D / "game.js").read_text(encoding="utf-8")
@@ -65,7 +65,10 @@ class WebGL3DTests(unittest.TestCase):
                      GAME3D / "skinning.js", GAME3D / "material-atlas.js",
                      ROOT / "tools/tests/browser_skinning_smoke.js",
                      ROOT / "tools/tests/browser_material_atlas_smoke.js",
-                     ROOT / "tools/tests/browser_recorded_audio_smoke.js"):
+                     ROOT / "tools/tests/browser_recorded_audio_smoke.js",
+                     ROOT / "tools/tests/browser_telemetry_smoke.js",
+                     ROOT / "tools/tests/browser_photo_material_smoke.js",
+                     GAME3D / "telemetry.js"):
             p = subprocess.run([node, "--check", str(file)], capture_output=True,
                                text=True, timeout=15, check=False)
             self.assertEqual(p.returncode, 0, p.stdout+p.stderr)
@@ -87,6 +90,8 @@ class WebGL3DTests(unittest.TestCase):
             ("browser_skinning_smoke.js", "PASS genuine CC0 58-bone glTF skinning:"),
             ("browser_material_atlas_smoke.js", "PASS tiled PBR material atlas:"),
             ("browser_recorded_audio_smoke.js", "PASS CC0 recorded battlefield audio:"),
+            ("browser_telemetry_smoke.js", "PASS local frame and gameplay telemetry:"),
+            ("browser_photo_material_smoke.js", "PASS real CC0 terrain photo bundle:"),
         ]:
             p = subprocess.run([node, str(ROOT / "tools/tests" / path)],
                                capture_output=True, text=True, timeout=50, check=False)
