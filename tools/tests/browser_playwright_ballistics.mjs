@@ -44,6 +44,29 @@ try{
  const covered=await doShot({obstacle:true});
  assert(!covered.shot.hit&&covered.after.hp===80&&covered.shot.blockedBy==="masonry",
   "A farm house between shooter and opponent must block the bullet");
+ // Exercise the actual game loop: downed infantry persist, weapon kick
+ // visibly increases accuracy bloom, then recovers without permanent drift.
+ const firing=await page.evaluate(()=>{
+  window.WP3DQA.combatScenario({x:0,z:0,yaw:0,pitch:0,aim:true,weapon:"rifle",
+   clearDecoration:true,enemies:[{x:0,z:12,hp:55,alert:0,facing:Math.PI}]});
+  const shot=window.WP3DQA.shootOnce();
+  const immediate=window.WP3DDiagnostics();
+  window.WP3DQA.step(1);
+  const fallen=window.WP3DDiagnostics();
+  window.WP3DQA.step(120);
+  const recovered=window.WP3DDiagnostics();
+  return {shot,immediateBloom:immediate.recoilBloom,
+   immediateReturn:immediate.recoilReturn,fallenBodies:fallen.corpses,
+   renderBodies:fallen.corpsesDrawn,finishedBloom:recovered.recoilBloom,
+   finishedReturn:recovered.recoilReturn};
+ });
+ assert(firing.shot.hit&&firing.fallenBodies>=1,
+  "Shot casualties should remain in the actual rendered battlefield");
+ assert(firing.immediateBloom>0&&firing.immediateReturn>0,
+  "Weapon recoil and inaccuracy bloom should be measurable after the shot");
+ assert(firing.finishedBloom<firing.immediateBloom*.05&&
+   firing.finishedReturn<firing.immediateReturn*.05,
+  "Weapon kick and bloom must recover after not firing");
  assert(!errors.length,"Chromium console errors: "+JSON.stringify(errors));
  console.log("PASS ACTUAL CHROMIUM FIRE",JSON.stringify({
   surpriseDamage:surprise.shot.damage,headshot:head.shot.damage,
