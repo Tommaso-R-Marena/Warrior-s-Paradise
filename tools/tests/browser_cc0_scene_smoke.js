@@ -123,10 +123,9 @@ async function scenario(shouldLoad,farms=true){
  el("deploy").fire("click");
  assert.equal(win.WP3DDiagnostics().alliesAlive,2);
  if(shouldLoad){
-  const low=win.WP3DDiagnostics();
-  assert.equal(low.dressingDrawn,false,"Low tier must not render extra geometry");
-  assert(low.renderedStaticTriangles<low.geometryTriangles,
-   "Low geometry must remain cheaper than high-detail scene");
+  const medium=win.WP3DDiagnostics();
+  assert.equal(medium.dressingDrawn,true,"Desktop default must show the full CC0 scenery");
+  assert.equal(medium.renderedStaticTriangles,medium.geometryTriangles);
  }
  for(let i=0;i<50;i++){
   assert(raf.length>0,"Frame loop stopped");
@@ -134,6 +133,14 @@ async function scenario(shouldLoad,farms=true){
  }
  assert(stats.draws>=100,"No geometry drawn");
  if(shouldLoad)assert(win.WP3DDiagnostics().skinActors>0,"Skinning not present in actual gameplay draw");
+ if(shouldLoad){
+  el("quality").value="low";
+  el("deploy").fire("click");
+  const low=win.WP3DDiagnostics();
+  assert.equal(low.dressingDrawn,false,"Low tier must skip the extra asset geometry");
+  assert(low.renderedStaticTriangles<low.geometryTriangles,
+   "Low tier should render fewer static triangles than Medium/High");
+ }
  assert(stats.uploads>=50,"Rendering stopped");
  return {loaded:before.assetsLoaded,triangles:before.geometryTriangles,
   props:before.assetInstances,draws:stats.draws};
