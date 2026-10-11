@@ -16,6 +16,7 @@ const spatialAudio=fs.readFileSync(path.join(root,"battle-audio.js"),"utf8");
 const decoration=fs.readFileSync(path.join(root,"normandy-dressing.js"),"utf8");
 const vehicles=fs.readFileSync(path.join(root,"ww2-vehicles.js"),"utf8");
 const ww2Environment=fs.readFileSync(path.join(root,"ww2-environment.js"),"utf8");
+const terrainScript=fs.readFileSync(path.join(root,"ww2-terrain.js"),"utf8");
 const kenney=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
 const quaternius=["barn","chicken_coop","windmill","well"];
 const normandy=["log-stacklarge","fence-gate","log-large","rock-largeb","stump-old","grass-large"];
@@ -87,6 +88,7 @@ async function scenario(shouldLoad,farms=true){
  vm.runInContext(decoration,sandbox,{filename:"normandy-dressing.js",timeout:15000});
  vm.runInContext(vehicles,sandbox,{filename:"ww2-vehicles.js",timeout:15000});
  vm.runInContext(ww2Environment,sandbox,{filename:"ww2-environment.js",timeout:15000});
+ vm.runInContext(terrainScript,sandbox,{filename:"ww2-terrain.js",timeout:15000});
  assert(win.WPBattleArt&&win.WPBattleSound&&win.WPMaterialAtlas,
   "Full presentation modules failed to initialize");
  vm.runInContext(gameplay,sandbox,{filename:"game.js",timeout:15000});
@@ -116,6 +118,8 @@ async function scenario(shouldLoad,farms=true){
    assert(before.dressingTriangles>0&&before.dressingTriangles<=4800,
     "Dressing exceeds hard triangle budget");
    assert(before.dressingCover>0,"Tactical barriers need world collision");
+  assert(before.terrainTriangles>1500&&before.terrainTriangles<=2888,
+    "Landscape ground mesh missing or unbounded");
   assert(before.ww2EnvironmentTriangles>0&&before.ww2EnvironmentTriangles<=1400,
    "Actual wartime details are missing or exceed static triangle budget");
    assert.match(el("assetstatus").textContent,/WORLD OBJECTS/);
