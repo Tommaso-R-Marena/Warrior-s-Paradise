@@ -34,6 +34,12 @@ async function run(name,viewport,quality,mobile){
    name+": expected quality tier to select correct static mesh");
   if(quality==="low")assert(initial.renderedStaticTriangles<initial.geometryTriangles,
    name+": Low tier should omit extra licensed mesh work");
+  if(quality==="medium"){
+   assert(initial.mediumDressingTriangles>0&&initial.mediumDressingTriangles<=1800,
+    name+": medium LOD content/budget incorrect");
+   assert(initial.renderedStaticTriangles<initial.geometryTriangles,
+    name+": Medium must draw fewer triangles than High");
+  }
   if(quality!=="low")assert(initial.photoMaterialsLoaded,
    name+": photographic maps did not load: "+initial.photoMaterialsError);
   if(quality==="medium")assert(initial.materialMode==="medium",
