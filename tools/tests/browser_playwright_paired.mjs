@@ -20,6 +20,12 @@ async function sample(which,quality,repeat){
   await page.locator("#quality").selectOption(quality);
   await page.locator("#deploy").click();
   await page.waitForFunction(()=>window.WP3DDiagnostics().assetsLoaded,{timeout:30000});
+  if(which==="candidate"){
+   await page.waitForFunction(()=>window.WP3DDiagnostics().dressingReady,{timeout:20000});
+   const d=await page.evaluate(()=>window.WP3DDiagnostics());
+   if(d.dressingInstances<1||d.dressingTriangles>4800)
+    throw Error("CC0 dressing not ready for paired FPS test: "+d.dressingError);
+  }
   await page.waitForTimeout(400);
   await page.evaluate(()=>window.WP3DProbe.reset());
   const start=Date.now();
