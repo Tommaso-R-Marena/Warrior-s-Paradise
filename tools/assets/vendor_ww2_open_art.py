@@ -77,10 +77,10 @@ for spec in SPECS:
   transport=OUT/(name+".glb.b64")
   transport.write_text(base64.b64encode(content).decode("ascii")+"\n",encoding="ascii")
   record={key:spec[key] for key in ("id","url","license","creator","source_page","category")}
-  record.update(source_file:file,chosen_file:original,source_bytes:len(raw),
-    original_package_sha256:digest,derived_glb_bytes:len(content),
-    derived_sha256:hashlib.sha256(content).hexdigest(),
-    animations:len(scene.get("animations",[])),skins:len(scene.get("skins",[])),
+  record.update(source_file=file,chosen_file=original,source_bytes=len(raw),
+    original_package_sha256=digest,derived_glb_bytes=len(content),
+    derived_sha256=hashlib.sha256(content).hexdigest(),
+    animations=len(scene.get("animations",[])),skins=len(scene.get("skins",[])),
     model_file=transport.relative_to(ROOT).as_posix())
   records.append(record)
   print("VENDORED_WW2",name,record["derived_glb_bytes"],record["animations"],flush=True)
