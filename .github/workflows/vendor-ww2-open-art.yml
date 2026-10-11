@@ -2,7 +2,7 @@ name: Vendor open-licensed WWII character and vehicle GLBs
 
 on:
   push:
-    branches: [feat/ww2-characters-vehicles-20261011]
+    branches: [feat/authentic-rig-vehicles-terrain-gpu-20261011]
     paths:
       - "tools/assets/vendor_ww2_open_art.py"
       - "tools/assets/blender_export_ww2.py"
@@ -38,7 +38,7 @@ jobs:
             git commit -m "assets(ww2): vendor converted, attributed soldier and military vehicle meshes"
             # Source/asset conversion is deterministic. Replay on newest branch
             # head rather than overwriting concurrent gameplay implementation.
-            git fetch origin feat/ww2-characters-vehicles-20261011
-            git rebase origin/feat/ww2-characters-vehicles-20261011
-            git push origin HEAD:feat/ww2-characters-vehicles-20261011
+            git fetch origin feat/authentic-rig-vehicles-terrain-gpu-20261011
+            git rebase origin/feat/authentic-rig-vehicles-terrain-gpu-20261011
+            git push origin HEAD:feat/authentic-rig-vehicles-terrain-gpu-20261011
           fi
