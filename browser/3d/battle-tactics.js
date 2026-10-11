@@ -28,7 +28,8 @@ function chooseCover(actor,threat,obstacles,blocked,lineHit){
  }
  if(winner){
   // Pick one reachable firing notch to either side of the obstacle.
-  // A true firing notch must clear the near-edge silhouette from the shooter.\n  const span=Math.max(2.7,Math.min(5,Math.hypot(winner.x-winner.objectX,winner.z-winner.objectZ)*1.35+1.6));
+  // A true firing notch must clear the near-edge silhouette from the shooter.
+  const span=Math.max(2.7,Math.min(5,Math.hypot(winner.x-winner.objectX,winner.z-winner.objectZ)*1.35+1.6));
   const vx=(winner.objectZ-threat.z),vz=-(winner.objectX-threat.x);
   const vl=Math.hypot(vx,vz)||1;
   for(const side of [actor.strafe||1,-(actor.strafe||1)]){
