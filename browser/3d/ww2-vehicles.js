@@ -1,0 +1,163 @@
+/* Warrior's Paradise — real locally-hosted period-inspired vehicle meshes,
+ * bounded drivable physics and enemy armor. No server, external runtime scripts,
+ * multiplayer, or claim that every source is historically exact.
+ */
+(function(root){"use strict";
+const defs=[
+ {id:"jeep",name:"GAZ-67 4×4",asset:"gaz67_jeep",team:"ally",x:-41,z:-31,yaw:1.0,
+  width:1.7,length:3.35,height:1.8,max:12,hp:120},
+ {id:"armor",name:"FIELD TANK",asset:"panzer_study",team:"ally",x:-40,z:-23,yaw:.5,
+  width:3.0,length:5.6,height:2.5,max:6.1,hp:320},
+ {id:"enemy",name:"ENEMY ARMOR",asset:"panzer_study",team:"axis",x:34,z:16,yaw:-1.9,
+  width:3.0,length:5.6,height:2.5,max:0,hp:300}
+];
+const records=[],models={},status={ready:false,loaded:0,errors:{},trianglesLast:0};
+let occupied=null,fired=0,hit=0;
+const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
+function reset(){
+ records.length=0;for(const d of defs)records.push({...d,speed:0,reload:0,shotFlash:0,alive:true});
+ occupied=null;fired=0;hit=0;status.trianglesLast=0;
+}
+reset();
+async function load(kit){
+ if(!kit){status.ready=true;return;}
+ const candidates=["gaz67_jeep","panzer_study"];
+ await Promise.all(candidates.map(async name=>{
+  try{
+   const m=await kit.loadModels([{name,url:"./assets/oga/"+name+".glb.b64"}]);
+   if(m[name]&&m[name].count<=6000){models[name]=m[name];status.loaded++;}
+   else throw Error("excessive vehicle mesh complexity");
+  }catch(e){status.errors[name]=String(e)}
+ }));
+ status.ready=true;
+}
+function isDriving(){return occupied!==null}
+function current(){return records.find(r=>r.id===occupied)||null}
+function near(player){
+ let best=null,d=4.3;
+ for(const v of records)if(v.alive&&v.team==="ally"){
+  const away=distance(v,player);if(away<d){best=v;d=away;}
+ }return best;
+}
+function toggle(player,blocked){
+ if(occupied){
+  const v=current();if(!v){occupied=null;return false;}
+  const cos=Math.cos(v.yaw),sin=Math.sin(v.yaw);
+  for(const side of [-1,1]){
+   const ex=v.x+cos*(v.width*.5+1)*side,ez=v.z-sin*(v.width*.5+1)*side;
+   if(!blocked(ex,ez,.43)){
+    player.x=ex;player.z=ez;occupied=null;return true;
+   }
+  }
+  return false; // No exit allowed through a wall.
+ }
+ const v=near(player);
+ if(!v)return false;
+ occupied=v.id;player.x=v.x;player.z=v.z;player.yaw=v.yaw;
+ return true;
+}
+function move(dt,input,player,blocked){
+ const v=current();if(!v||!v.alive)return false;
+ const forward=((input.keys.KeyW||input.keys.ArrowUp)?1:0)-
+  ((input.keys.KeyS||input.keys.ArrowDown)?1:0)-(input.joyY||0);
+ const turn=((input.keys.KeyD||input.keys.ArrowRight)?1:0)-
+  ((input.keys.KeyA||input.keys.ArrowLeft)?1:0)+(input.joyX||0);
+ const accel=v.id==="jeep"?7.0:2.9;
+ const target=Math.max(-v.max*.38,Math.min(v.max,forward*v.max));
+ const change=Math.min(1,dt*(Math.abs(forward)>.1?accel/Math.max(1,v.max):1.6));
+ v.speed+=(target-v.speed)*change;
+ if(Math.abs(v.speed)<.035)v.speed=0;
+ // Steering radius increases with speed; stationary vehicles cannot spin freely.
+ v.yaw+=turn*dt*(v.id==="jeep"?.70:.32)*Math.min(1,Math.abs(v.speed)/2)*
+  Math.sign(v.speed||1);
+ const nx=v.x-Math.sin(v.yaw)*v.speed*dt,nz=v.z+Math.cos(v.yaw)*v.speed*dt;
+ const footprint=Math.max(v.width*.48,.65);
+ const other=records.some(o=>o!==v&&o.alive&&Math.hypot(o.x-nx,o.z-nz)<
+  Math.max(v.width,o.width)*.72);
+ if(!other&&!blocked(nx,nz,footprint)){v.x=nx;v.z=nz;}
+ else v.speed=0;
+ player.x=v.x;player.z=v.z;player.yaw=v.yaw;
+ return true;
+}
+function fire(player,enemies,visible,onHit,onTracer,onBlast){
+ const v=current();
+ if(!v||v.id!=="armor"||!v.alive||v.reload>0)return false;
+ v.reload=3.4;v.shotFlash=.16;fired++;
+ let victim=null,near=42;
+ const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw);
+ for(const e of enemies){
+  if(e.hp<=0)continue;
+  const rx=e.x-v.x,rz=e.z-v.z,t=rx*dx+rz*dz;
+  if(t<3||t>near||Math.abs(rx*dz-rz*dx)>1.3||!visible(v.x,v.z,e.x,e.z))continue;
+  victim=e;near=t;
+ }
+ const impact=victim?{x:victim.x,z:victim.z}:{
+  x:Math.max(-43,Math.min(43,v.x+dx*38)),
+  z:Math.max(-43,Math.min(43,v.z+dz*38))};
+ if(onTracer)onTracer(v.x,v.z,impact.x,impact.z,"friendly");
+ if(onBlast)onBlast(impact.x,impact.z,"artillery");
+ if(victim){victim.hp-=145;victim.hit=.5;victim.suppression=2;hit++;if(onHit)onHit(victim);}
+ return true;
+}
+function tick(dt,player,hasLOS,onPlayerHit,onBlast){
+ for(const v of records){
+  v.reload=Math.max(0,v.reload-dt);v.shotFlash=Math.max(0,v.shotFlash-dt);
+ }
+ // Stationary scripted defensive tank: line-of-sight and distance constrained.
+ const enemy=records.find(v=>v.id==="enemy");
+ if(!enemy?.alive||enemy.reload>0||!player||player.hp<=0)return;
+ const d=distance(enemy,player);
+ if(d>23||d<7||!hasLOS(enemy.x,enemy.z,player.x,player.z))return;
+ enemy.reload=5.1;
+ const damage=isDriving()&&current()?.id==="armor"?5:10;
+ if(isDriving()&&current()){
+  const target=current();target.hp-=damage;
+  if(target.hp<=0){target.alive=false;occupied=null;player.hp-=35;}
+ }else player.hp-=damage;
+ if(onBlast)onBlast(player.x+1.5,player.z-1,"frag");
+ if(onPlayerHit)onPlayerHit(damage);
+}
+function draw(g,kit,quality,player,time){
+ if(!g)return 0;
+ let triangles=0,imported=0;
+ for(const v of records){
+  if(!v.alive)continue;
+  const dist=distance(v,player);
+  if(dist>70)continue;
+  const y=0.02;const model=models[v.asset];
+  const rich=quality!=="low"&&model&&dist<(quality==="high"?35:19)&&
+   imported<(quality==="high"?2:1)&&model.count<=2400;
+  if(rich){
+   const dim=Math.max(.001,model.max[0]-model.min[0]);
+   const scale=v.width/dim;
+   const midpointX=(model.min[0]+model.max[0])*.5*scale;
+   const midpointZ=(model.min[2]+model.max[2])*.5*scale;
+   const cs=Math.cos(v.yaw),sn=Math.sin(v.yaw);
+   const originX=v.x-midpointX*cs-midpointZ*sn;
+   const originZ=v.z+midpointX*sn-midpointZ*cs;
+   triangles+=kit.appendInstances(g,model,[[originX,y,originZ,scale,v.yaw]]);
+   imported++;
+  }else{
+   // Functional always-present silhouette for phone and absent imported art.
+   const c=v.team==="axis"?[.34,.37,.30]:[.30,.36,.27];
+   g.box(v.x,1.0,v.z,v.width,1.0,v.length,c,v.yaw);
+   g.box(v.x,1.65,v.z-.45,v.width*.77,.60,v.length*.52,c,v.yaw);
+   if(v.id!=="jeep"){
+    g.box(v.x,2.13,v.z,.95,.45,1.40,[.25,.30,.24],v.yaw);
+    g.box(v.x-Math.sin(v.yaw)*1.6,2.07,v.z+Math.cos(v.yaw)*1.6,.14,.14,2.3,[.15,.17,.15],-v.yaw);
+   }else{
+    g.box(v.x,1.72,v.z-.28,v.width*.93,.08,.12,[.19,.19,.17],v.yaw);
+   }
+   triangles+=72;
+  }
+  if(v.shotFlash>0)g.cone(v.x,2.5,v.z,0.16,.55,[.96,.66,.22],5);
+ }
+ status.trianglesLast=triangles;
+ return triangles;
+}
+function info(){return {ready:status.ready,loaded:status.loaded,errors:{...status.errors},
+ driving:occupied,vehicle:current()?.name||"",enemyAlive:records.find(v=>v.id==="enemy")?.alive,
+ vehicles:records.map(v=>({id:v.id,x:v.x,z:v.z,hp:v.hp,speed:v.speed,alive:v.alive})),
+ shots:fired,hits:hit,renderedTriangles:status.trianglesLast};}
+root.WPArmoredFleet=Object.freeze({reset,load,toggle,isDriving,current,near,move,fire,tick,draw,info});
+})(window);
