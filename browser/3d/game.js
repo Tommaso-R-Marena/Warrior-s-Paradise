@@ -1070,7 +1070,7 @@ function dynamicGeometry(){
  if(window.WPArmoredFleet)window.WPArmoredFleet.draw(m,window.WPAssetKit,game.quality,player,game.elapsed);
  // Model-specific Lee-Enfield, Sten and Bren view models (or compatibility gun).
  if(art&&!window.WPArmoredFleet?.isDriving())art.weapon(m,player,game);
- else{
+ else if(!window.WPArmoredFleet?.isDriving()){
   const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw),yaw=-player.yaw;
   const py=(player.crouch?1.02:1.67)-.4;
   m.box(player.x+dx*.85,py,player.z+dz*.85,.2,.17,.85,COLORS.metal,yaw);
