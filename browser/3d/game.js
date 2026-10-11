@@ -473,7 +473,12 @@ function reset(){
   name,{ammo:w.capacity,reserve:w.reserve}
  ]));
  if(window.WPBattleSound)window.WPBattleSound.boot();
+ if(window.WP3DProbe)window.WP3DProbe.reset();
  $("menu").hidden=true;input.fire=false;
+ const fine=typeof window.matchMedia==="function"&&window.matchMedia("(pointer: fine)").matches;
+ if(fine&&canvas.requestPointerLock)try{canvas.requestPointerLock();}catch{}
+ const hint=$("movement-hint");if(hint){hint.hidden=false;hint.textContent="WASD / ARROWS TO MOVE · MOUSE TO LOOK · SHIFT SPRINT · F3 STATS";}
+ 
  msg("CAPTURE THE FORWARD FARM",2);hud();resize();
 }
 function msg(s,time=1.4){$("status").textContent=s;game.notice=time;}
@@ -521,6 +526,7 @@ function shoot(){
  const w=WEAPONS[player.weapon];
  if(player.ammo<=0){reload();return;}
  player.cd=w.delay;player.ammo--;game.flash=.13;
+ if(window.WP3DProbe)window.WP3DProbe.event("shot");
  const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw);
  const accuracy=player.aim?.32:1;
  const moving=Math.hypot(input.joyX,input.joyY)>.1;
@@ -544,10 +550,11 @@ function shoot(){
  addTracer(player.x,player.z,player.x+sx*range,player.z+sz*range,"friendly");
  if(target){
   target.hp-=w.damage*(.9+rnd()*.2);target.hit=.25;
+  if(window.WP3DProbe)window.WP3DProbe.event("hit");
   target.suppression=1.7;
   $("hitmarker").classList.add("visible");
   game.hitmarker=.12;
-  if(target.hp<=0){game.kills++;msg("TARGET DOWN",.85);}
+  if(target.hp<=0){game.kills++;if(window.WP3DProbe)window.WP3DProbe.event("kill");msg("TARGET DOWN",.85);}
  }
  if(window.WPBattleSound)window.WPBattleSound.shot(player.weapon,player.x,player.z,player);
  else beep(player.weapon==="smg"?165:player.weapon==="lmg"?95:120,.045);
@@ -690,8 +697,8 @@ function simulate(dt){
   if(player.reload<=0){const w=WEAPONS[player.weapon],qty=Math.min(w.capacity-player.ammo,player.reserve);
    player.ammo+=qty;player.reserve-=qty;}
  }
- let forward=(input.keys.KeyW?1:0)-(input.keys.KeyS?1:0)-input.joyY;
- let strafe=(input.keys.KeyD?1:0)-(input.keys.KeyA?1:0)+input.joyX;
+ let forward=(input.keys.KeyW||input.keys.ArrowUp?1:0)-(input.keys.KeyS||input.keys.ArrowDown?1:0)-input.joyY;
+ let strafe=(input.keys.KeyD||input.keys.ArrowRight?1:0)-(input.keys.KeyA||input.keys.ArrowLeft?1:0)+input.joyX;
  const mag=Math.hypot(forward,strafe);
  if(mag>1){forward/=mag;strafe/=mag;}
  const pace=(input.keys.ShiftLeft&&!player.crouch?6.6:4.5)*(player.aim?.72:1)*(player.crouch?.57:1);
@@ -699,6 +706,7 @@ function simulate(dt){
  const z=Math.cos(player.yaw)*forward-Math.sin(player.yaw)*strafe;
  const oldX=player.x,oldZ=player.z;
  [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
+ if(window.WP3DProbe)window.WP3DProbe.movement(player.x,player.z,mag,pace,dt);
  if(window.WPBattleSound){
   const speed=Math.hypot(player.x-oldX,player.z-oldZ)/Math.max(.001,dt);
   window.WPBattleSound.footsteps(game.elapsed,speed,player.crouch);
@@ -776,6 +784,7 @@ function simulate(dt){
    game.capture=Math.min(1,game.capture+dt/2.5);
    if(game.capture>=1){
     game.sector++;game.capture=0;
+   if(window.WP3DProbe)window.WP3DProbe.event("capture");
     player.hp=Math.min(100,player.hp+17);player.reserve+=24;
     player.frags=Math.min(3,player.frags+1);game.support=Math.min(2,game.support+1);
     if(game.sector===flags.length){end(true);return;}
@@ -898,32 +907,44 @@ function render(){
  upload(liveMesh,dynamicGeometry());
  draw(liveMesh);
 }
-let previous=0,frames=0,sum=0,adaptTime=0;
+let previous=0,adaptTime=0;
+const nowClock=()=>typeof performance!=="undefined"&&performance.now?performance.now():Date.now();
+
 function frame(now){
+ const wallStart=nowClock();
  if(!previous)previous=now;
- const dt=Math.min(.045,Math.max(0,(now-previous)/1000));
+ const rawMs=Math.max(0,Math.min(1000,now-previous));
  previous=now;
- if(game.playing)simulate(dt);
+ // Use real elapsed time for movement. A capped single 45ms simulation step
+ // previously made the soldier crawl when the GPU/CPU fell below ~22 FPS.
+ const dt=Math.min(.20,rawMs/1000);
+ if(game.playing&&dt>0){
+  const ticks=Math.max(1,Math.ceil(dt/.034)),step=dt/ticks;
+  for(let i=0;i<ticks&&game.playing;i++)simulate(step);
+ }
+ const cpuAfterSimulation=nowClock();
  render();
- if(dt>0){
-  const instant=1/dt;
-  game.fps=game.fps*.96+instant*.04;
-  adaptTime+=dt;
+ const renderMs=nowClock()-cpuAfterSimulation;
+ if(rawMs>0){
+  const fps=1000/rawMs;
+  game.fps=game.fps*.90+fps*.10;
+  adaptTime+=rawMs/1000;
   if(adaptTime>3){
    adaptTime=0;
    const target=game.quality==="low"?28:game.quality==="medium"?42:57;
-   const next=game.fps<target*.77?Math.max(.6,game.scaler-.09):
+   const next=game.fps<target*.77?Math.max(.55,game.scaler-.10):
     game.fps>target*.97?Math.min(1,game.scaler+.05):game.scaler;
    if(Math.abs(next-game.scaler)>.015){game.scaler=next;resize();}
-   hud();
   }
+  if(window.WP3DProbe)window.WP3DProbe.frame(rawMs,renderMs,nowClock()-wallStart);
  }
  requestAnimationFrame(frame);
 }
 window.addEventListener("resize",resize);
 document.addEventListener("keydown",e=>{
  input.keys[e.code]=true;
- if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code))e.preventDefault();
+ if(game.playing&&["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","KeyW","KeyA","KeyS","KeyD"].includes(e.code))e.preventDefault();
+ if(e.code==="F3"){e.preventDefault();if(window.WP3DProbe)window.WP3DProbe.toggle();return;}
  if(e.repeat)return;
  if(e.code==="KeyR")reload();
  if(e.code==="KeyV")heal();
@@ -1005,6 +1026,8 @@ button("aim",()=>setAim(true),()=>setAim(false));
 button("reload",reload);button("grenade",grenade);button("heal",heal);button("swap",swap);
 button("orders",orderSquad);button("support",callArtillery);
 button("crouch",()=>{player.crouch=!player.crouch;});
+$("performance-download").addEventListener("click",()=>window.WP3DProbe?.exportReport());
+$("performance-close").addEventListener("click",()=>window.WP3DProbe?.toggle());
 // Register the root offline cache from the 3D subdirectory too. The
 // existing PWA service worker will cache these assets after first use.
 if("serviceWorker" in navigator && location.protocol!=="file:"){
@@ -1033,7 +1056,10 @@ window.WP3DDiagnostics=()=>({
   farmError:scenery.farmError||"",
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
-  activeTracers:game.tracers.length
+  activeTracers:game.tracers.length,
+  position:{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch},
+  playing:game.playing,elapsedSeconds:game.elapsed,framesPerSecond:game.fps,
+  performance:window.WP3DProbe?window.WP3DProbe.report().performance:null
 });
 requestAnimationFrame(frame);
 })();
