@@ -1109,6 +1109,7 @@ function resize(){
  canvas.width=Math.floor(w*limiter);canvas.height=Math.floor(h*limiter);
  lastWidth=canvas.width;lastHeight=canvas.height;
  gl.viewport(0,0,lastWidth,lastHeight);
+ window.WP3DProbe?.configure?.({quality:game.quality,width:lastWidth,height:lastHeight,scaler:game.scaler});
 }
 function render(){
  if(!lastWidth||!lastHeight)return;
