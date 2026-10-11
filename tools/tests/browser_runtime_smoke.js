@@ -75,7 +75,7 @@ function testDevice(width,height,map="farm",mode="assault",quality="eco",short=f
    assert(draws>20,"new map did not render textures");
    assert(el("mission").textContent.length>0,"new map has no mission text");
    if(mode==="defense"){
-     assert.match(el("progress").textContent,/WAVE 1 / 5/);
+     assert.match(el("progress").textContent,/WAVE 1 \/ 5/);
      gameState.player.hp=1e7; // Testing only; avoid stochastic defeats.
      for(let wave=1;wave<=5;wave++){
        assert.equal(gameState.wave,wave,"unexpected survival wave");
@@ -86,7 +86,7 @@ function testDevice(width,height,map="farm",mode="assault",quality="eco",short=f
          ctx0.window.__wpTest.update(.055);
      }
      assert.equal(gameState.phase,"won","survival mode did not reach victory");
-   } else assert.match(el("progress").textContent,/SECTOR 1 / 3/);
+   } else assert.match(el("progress").textContent,/SECTOR 1 \/ 3/);
    console.log("PASS",map,mode,quality,"map initialization, touch pitch and battle-mode logic");
    return;
  }
