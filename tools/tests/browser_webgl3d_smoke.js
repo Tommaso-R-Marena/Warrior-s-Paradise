@@ -108,8 +108,18 @@ function run(width,height,webgl=true){
  for(let i=110;i<185;i++)frame(i);
  assert.notEqual(el("mag").textContent,after,"reload never completed");
  el("grenade").send("pointerdown");
+ const launched=win.WP3DDiagnostics().grenades[0];
+ assert(launched&&launched.y>1&&launched.life>1.5,
+  "Frag should spawn near the player's hand with a timed fuse");
  el("swap").send("pointerdown");
- for(let i=185;i<250;i++)frame(i);
+ frame(185);
+ const flying=win.WP3DDiagnostics().grenades[0];
+ assert(flying&&Math.hypot(flying.x-launched.x,flying.z-launched.z)>.05,
+  "Frag must actually travel through battlefield collision");
+ assert(flying.y>launched.y,"Frag should initially rise under its ballistic impulse");
+ for(let i=186;i<250;i++)frame(i);
+ assert.equal(win.WP3DDiagnostics().grenades.length,0,
+  "Detonated frag and its temporary effect must be removed from memory");
  assert.match(el("frags").textContent,/× 1/);
  assert.equal(win.WP3DDiagnostics().weapon,"smg");
  const beforeArrow=win.WP3DDiagnostics().position;
