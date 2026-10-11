@@ -389,7 +389,9 @@ function buildWorld(){
 const staticMesh=mesh(false),liveMesh=mesh(true);
 const fallbackWorld=buildWorld();
 upload(staticMesh,fallbackWorld);
-const scenery={loaded:false,instances:0,triangles:0,error:""};
+let currentWorldData=fallbackWorld;
+const scenery={loaded:false,instances:0,triangles:0,error:"",
+ dressings:0,dressingTriangles:0,dressingError:"",dressingReady:false};
 const rig={model:null,ready:false,error:"",skinnedLastFrame:0,skinnedTriangles:0};
 function loadSkinnedCharacters(){
  const runtime=window.WPSkinning;
@@ -436,7 +438,8 @@ function loadLicensedScenery(){
    added+=kit.appendInstances(world,assets[spec.name],positions,spec.palette);
    copies+=positions.length;
   }
-  upload(staticMesh,world.data);
+  currentWorldData=world.data;
+  upload(staticMesh,currentWorldData);
   scenery.loaded=true;scenery.instances=copies;scenery.triangles=added;
   // Independent CC0 farm import: if a model is missing, keep the Kenney scene.
   const farm=["barn","chicken_coop","windmill","well"];
@@ -461,7 +464,8 @@ function loadLicensedScenery(){
      (max[0]-min[0])*site.scale,(max[2]-min[2])*site.scale
     ]);
    }
-   upload(staticMesh,extras.data);
+   currentWorldData=extras.data;
+   upload(staticMesh,currentWorldData);
    artStructures.push(...colliders);
    scenery.instances+=sites.length;scenery.triangles+=ntri;
    scenery.buildings=sites.length;
@@ -471,6 +475,27 @@ function loadLicensedScenery(){
    scenery.farmError=String(err);
    if($("assetstatus"))$("assetstatus").textContent=
      "KENNEY CC0 SCENERY READY · FARM PACK OPTIONAL";
+  }).finally(()=>{
+   // Sequential staging prevents farm/dressing uploads overwriting each other.
+   const decoration=window.WPNormandyDressing;
+   if(!decoration){
+    scenery.dressingError="Optional CC0 decoration module unavailable";
+    scenery.dressingReady=true;return;
+   }
+   decoration.load(kit,Geometry,currentWorldData,blocked,flags).then(result=>{
+    currentWorldData=result.data;
+    upload(staticMesh,currentWorldData);
+    artStructures.push(...result.colliders);
+    scenery.instances+=result.placements.length;
+    scenery.triangles+=result.triangles;
+    scenery.dressings=result.placements.length;
+    scenery.dressingTriangles=result.triangles;
+    scenery.dressingCover=result.colliders.length;
+    scenery.dressingCounts=result.counts;
+    if($("assetstatus"))$("assetstatus").textContent=
+     "VERIFIED KENNEY + QUATERNIUS CC0 · "+scenery.instances+" WORLD OBJECTS";
+   }).catch(err=>{scenery.dressingError=String(err);})
+    .finally(()=>{scenery.dressingReady=true;});
   });
   
   if($("assetstatus"))$("assetstatus").textContent="KENNEY CC0 SCENERY READY · "+copies+" PLACED ASSETS";
@@ -1198,6 +1223,9 @@ window.WP3DDiagnostics=()=>({
   highShaderReady:!!highProgram,materialMode:photographicMaterials.mode,rigLoaded:rig.ready,rigError:rig.error,
   skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,buildingsLoaded:scenery.buildings||0,
   farmError:scenery.farmError||"",
+  dressingReady:scenery.dressingReady,dressingError:scenery.dressingError,
+  dressingInstances:scenery.dressings,dressingTriangles:scenery.dressingTriangles,
+  dressingCover:scenery.dressingCover||0,
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
