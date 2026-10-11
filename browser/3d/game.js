@@ -1163,6 +1163,7 @@ document.addEventListener("keydown",e=>{
  if(e.repeat)return;
  if(e.code==="KeyR")reload();
  if(e.code==="KeyV")heal();
+ if(e.code==="KeyE")enterVehicle();
  if(e.code==="KeyG")grenade();
  if(e.code==="KeyQ")swap();
  if(e.code==="KeyX")orderSquad();
@@ -1240,6 +1241,7 @@ button("fire",()=>{input.fire=true;},()=>{input.fire=false;});
 button("aim",()=>setAim(true),()=>setAim(false));
 button("reload",reload);button("grenade",grenade);button("heal",heal);button("swap",swap);
 button("orders",orderSquad);button("support",callArtillery);
+ button("vehicle",enterVehicle);
 button("crouch",()=>{player.crouch=!player.crouch;});
 $("performance-download").addEventListener("click",()=>window.WP3DProbe?.exportReport());
 $("performance-close").addEventListener("click",()=>window.WP3DProbe?.toggle());
@@ -1260,6 +1262,7 @@ $("sound-toggle").addEventListener("click",()=>{
 $("quality").value=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent||"")?"low":"medium";
 game.quality=$("quality").value;
 spawnEnemies();resize();hud();loadLicensedScenery();loadSkinnedCharacters();
+ if(window.WPArmoredFleet)window.WPArmoredFleet.load(window.WPAssetKit);
 // Lightweight read-only testability hooks (not used for normal gameplay).
 window.WP3DDiagnostics=()=>({
  sector:game.sector,alive:game.enemies.filter(e=>e.hp>0).length,
@@ -1271,6 +1274,8 @@ window.WP3DDiagnostics=()=>({
   assetError:scenery.error,texturesLoaded:!!materialTextures,photoMaterialsLoaded:photographicMaterials.loaded,
   photoMaterialsError:photographicMaterials.error,realPBRMaps:!!materialTextures?.realNormalRoughness,
   highShaderReady:!!highProgram,materialMode:photographicMaterials.mode,rigLoaded:rig.ready,rigError:rig.error,
+  ww2Rigs:{ally:!!rig.historical.ally,axis:!!rig.historical.axis},
+  armor:window.WPArmoredFleet?.info()||null,
   skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,buildingsLoaded:scenery.buildings||0,
   farmError:scenery.farmError||"",
   dressingReady:scenery.dressingReady,dressingError:scenery.dressingError,
