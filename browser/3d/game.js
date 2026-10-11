@@ -326,29 +326,8 @@ function buildWorld(){
  return m.data;
 }
 const staticMesh=mesh(false),liveMesh=mesh(true);
-const spatial={cells:[],global:null,enabled:false,visibleTriangles:0,
- visibleCells:0,totalCells:0,globalTriangles:0};
-function uploadStaticWorld(data){
- const spatialKit=window.WPSpatialMesh;
- if(!spatialKit){upload(staticMesh,data);spatial.enabled=false;return;}
- const newParts=spatialKit.partition(data,20);
- const former=[...spatial.cells.map(c=>c.mesh),spatial.global?.mesh].filter(Boolean);
- const nextCells=newParts.batches.map(c=>{
-  const gpu=mesh(false);upload(gpu,c.data);
-  return {mesh:gpu,cx:c.cx,cz:c.cz,radius:c.radius,triangles:c.triangles};
- });
- let ground=null;
- if(newParts.global.length){const gpu=mesh(false);upload(gpu,newParts.global);
-  ground={mesh:gpu,triangles:newParts.globalTriangles};}
- spatial.cells=nextCells;spatial.global=ground;spatial.enabled=true;
- spatial.totalCells=nextCells.length;spatial.globalTriangles=newParts.globalTriangles;
- staticMesh.count=data.length/9;
- if(gl.deleteBuffer&&gl.deleteVertexArray)for(const gpu of former){
-  gl.deleteBuffer(gpu.vbo);gl.deleteVertexArray(gpu.vao);
- }
-}
 const fallbackWorld=buildWorld();
-uploadStaticWorld(fallbackWorld);
+upload(staticMesh,fallbackWorld);
 const scenery={loaded:false,instances:0,triangles:0,error:""};
 const rig={model:null,ready:false,error:"",skinnedLastFrame:0,skinnedTriangles:0};
 function loadSkinnedCharacters(){
@@ -396,7 +375,7 @@ function loadLicensedScenery(){
    added+=kit.appendInstances(world,assets[spec.name],positions,spec.palette);
    copies+=positions.length;
   }
-  uploadStaticWorld(world.data);
+  upload(staticMesh,world.data);
   scenery.loaded=true;scenery.instances=copies;scenery.triangles=added;
   // Independent CC0 farm import: if a model is missing, keep the Kenney scene.
   const farm=["barn","chicken_coop","windmill","well"];
@@ -421,7 +400,7 @@ function loadLicensedScenery(){
      (max[0]-min[0])*site.scale,(max[2]-min[2])*site.scale
     ]);
    }
-   uploadStaticWorld(extras.data);
+   upload(staticMesh,extras.data);
    artStructures.push(...colliders);
    scenery.instances+=sites.length;scenery.triangles+=ntri;
    scenery.buildings=sites.length;
@@ -937,19 +916,7 @@ function render(){
   gl.uniform1f(useAtlasLocation,materialTextures?1:0);
  }
  if(materialTextures&&atlasKit)atlasKit.bind(gl,{diffuse:diffuseLocation,normal:bumpLocation},materialTextures);
- if(spatial.enabled){
-  const fov=(player.aim?42:73)*Math.PI/180;
-  const halfHorizontal=Math.atan(Math.tan(fov*.5)*lastWidth/lastHeight);
-  const far=game.quality==="low"?81:game.quality==="medium"?112:135;
-  let count=0,shown=0;
-  if(spatial.global){draw(spatial.global.mesh);count+=spatial.global.triangles;}
-  for(const cell of spatial.cells){
-   if(window.WPSpatialMesh.visible(cell,player.x,player.z,player.yaw,halfHorizontal,far)){
-    draw(cell.mesh);count+=cell.triangles;shown++;
-   }
-  }
-  spatial.visibleTriangles=count;spatial.visibleCells=shown;
- }else{draw(staticMesh);spatial.visibleTriangles=staticMesh.count/3;spatial.visibleCells=1;}
+ draw(staticMesh);
  upload(liveMesh,dynamicGeometry());
  draw(liveMesh);
 }
@@ -1101,9 +1068,7 @@ window.WP3DDiagnostics=()=>({
  playerHp:player.hp,weapon:player.weapon,renderSize:[canvas.width,canvas.height],
  renderer:"WebGL2",geometryTriangles:staticMesh.count/3,
   assetInstances:scenery.instances,assetTriangles:scenery.triangles,assetsLoaded:scenery.loaded,
-  assetError:scenery.error,staticVisibleTriangles:spatial.visibleTriangles,
-  staticVisibleCells:spatial.visibleCells,staticTotalCells:spatial.totalCells,
-  spatialCulling:spatial.enabled,texturesLoaded:!!materialTextures,photoMaterialsLoaded:photographicMaterials.loaded,
+  assetError:scenery.error,texturesLoaded:!!materialTextures,photoMaterialsLoaded:photographicMaterials.loaded,
   photoMaterialsError:photographicMaterials.error,rigLoaded:rig.ready,rigError:rig.error,
   skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,buildingsLoaded:scenery.buildings||0,
   farmError:scenery.farmError||"",
