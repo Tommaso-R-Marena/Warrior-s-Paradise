@@ -102,6 +102,13 @@ const atlasKit=window.WPMaterialAtlas;
 try{if(atlasKit)materialTextures=atlasKit.upload(gl);}catch(error){
  materialTextures=null;
 }
+const photographicMaterials={loaded:false,error:""};
+if(materialTextures&&atlasKit?.enhance){
+ // High/balanced: attempt self-hosted CC0 photographic albedo materials.
+ // Keep original procedurally generated textures when unavailable or on low.
+ atlasKit.enhance(gl,materialTextures).then(ok=>photographicMaterials.loaded=!!ok)
+  .catch(error=>{photographicMaterials.error=String(error);});
+}
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(.58,.68,.73,1);
 function mesh(dynamic=false){
@@ -1051,7 +1058,8 @@ window.WP3DDiagnostics=()=>({
  playerHp:player.hp,weapon:player.weapon,renderSize:[canvas.width,canvas.height],
  renderer:"WebGL2",geometryTriangles:staticMesh.count/3,
   assetInstances:scenery.instances,assetTriangles:scenery.triangles,assetsLoaded:scenery.loaded,
-  assetError:scenery.error,texturesLoaded:!!materialTextures,rigLoaded:rig.ready,rigError:rig.error,
+  assetError:scenery.error,texturesLoaded:!!materialTextures,photoMaterialsLoaded:photographicMaterials.loaded,
+  photoMaterialsError:photographicMaterials.error,rigLoaded:rig.ready,rigError:rig.error,
   skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,buildingsLoaded:scenery.buildings||0,
   farmError:scenery.farmError||"",
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
