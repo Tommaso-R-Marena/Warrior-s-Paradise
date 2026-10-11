@@ -3,7 +3,7 @@
 (function(root){"use strict";
  const maxSamples=1200, frames=[],renders=[],cpu=[],events=[];
  let activeCapture=false,captureStarted=0,lastCaptureMs=0,renderConfiguration={};
- let distance=0,blockedSeconds=0,attemptSeconds=0,shots=0,hits=0,
+ let distance=0,blockedSeconds=0,attemptSeconds=0,shots=0,hits=0,kills=0,
     objectives=0,medkits=0,restarts=0,frameCounter=0,sessionStart=Date.now(),
     posStart=null,lastPos=null,visible=false;
  const at=()=>typeof performance!=="undefined"&&performance.now?performance.now():Date.now();
