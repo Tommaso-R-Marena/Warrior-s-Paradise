@@ -36,14 +36,34 @@ def fail(errors: list[str], path: Path, message: str) -> None:
 
 
 def reflected_declarations(text: str, macro: str) -> list[str]:
-    pattern = re.compile(
-        rf"{macro}\s*\([^)]*\)\s*"
-        r"(?:class|struct)\s+(?:WARRIORPARADISE_API\s+)?"
-        r"([AUF][A-Za-z0-9_]*)\b",
-        re.DOTALL,
-    )
-    return pattern.findall(text)
+    """Read UCLASS/USTRUCT macro with balanced metadata parentheses.
 
+    A naive [^)]* pattern truncated perfectly valid
+    UCLASS(ClassGroup=(Combat), meta=(BlueprintSpawnableComponent)) declarations,
+    making real reflected classes appear missing to the delegate audit.
+    """
+    declarations: list[str] = []
+    for match in re.finditer(rf"\\b{re.escape(macro)}\\s*\\(", text):
+        nesting = 1
+        index = match.end()
+        while index < len(text) and nesting:
+            character = text[index]
+            if character == "(":
+                nesting += 1
+            elif character == ")":
+                nesting -= 1
+            index += 1
+        if nesting:
+            continue
+        declaration = re.match(
+            r"\\s*(?:class|struct)\\s+"
+            r"(?:WARRIORPARADISE_API\\s+)?"
+            r"([AUF][A-Za-z0-9_]*)\\b",
+            text[index:],
+        )
+        if declaration:
+            declarations.append(declaration.group(1))
+    return declarations
 
 def has_reflected_handler(header_text: str, method: str) -> bool:
     pattern = re.compile(
