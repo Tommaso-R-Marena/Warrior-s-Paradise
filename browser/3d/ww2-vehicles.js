@@ -194,7 +194,7 @@ function draw(g,kit,quality,player,time){
   const dist=distance(v,player);
   if(dist>70)continue;
   const y=0.02;const model=models[v.asset]||(v.id==="jeep"?models.gaz67_jeep:null);
-  const rich=quality!=="low"&&model&&dist<(quality==="high"?35:19)&&
+  const rich=quality==="high"&&model&&dist<35&&
    imported<(quality==="high"?2:1)&&model.count<=2400;
   if(rich){
    const dim=Math.max(.001,model.max[0]-model.min[0]);
