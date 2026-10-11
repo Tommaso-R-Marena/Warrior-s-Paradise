@@ -33,6 +33,12 @@ const FS=[
  "float sun=max(dot(n,normalize(vec3(.53,.88,-.36))),0.);",
  "float exposure=.38+.69*sun;",
  "float distanceToEye=distance(vPos,uEye);",
+ "if(uDetailLevel<.02){",
+ "float haze=clamp((distanceToEye-18.)/86.,0.,.73);",
+ "vec3 lit=vColor*(.48+.58*sun);",
+ "outColor=vec4(mix(lit,vec3(.58,.66,.64),haze),1.);",
+ "return;",
+ "}",
  "float nearby=1.-smoothstep(25.,85.,distanceToEye);",
  "vec2 surface=abs(n.y)>.61?vPos.xz:(abs(n.x)>abs(n.z)?vPos.zy:vPos.xy);",
  "float large=.5,fine=.5;",
@@ -110,7 +116,7 @@ if(materialTextures&&atlasKit?.enhance){
   .catch(error=>{photographicMaterials.error=String(error);});
 }
 gl.enable(gl.DEPTH_TEST);
-gl.clearColor(0,0,0,0);
+gl.clearColor(.58,.68,.73,1);
 function mesh(dynamic=false){
  const vao=gl.createVertexArray(),vbo=gl.createBuffer();
  gl.bindVertexArray(vao);gl.bindBuffer(gl.ARRAY_BUFFER,vbo);
@@ -896,6 +902,11 @@ function resize(){
 }
 function render(){
  if(!lastWidth||!lastHeight)return;
+ // Low keeps the opaque fast clear. Cloud/horizon compositor is reserved for
+ // Medium/High where visual appearance takes priority over weak-GPU speed.
+ gl.clearColor(game.quality==="low"?.58:0,
+  game.quality==="low"?.68:0,game.quality==="low"?.73:0,
+  game.quality==="low"?1:0);
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  const eye=[player.x,player.crouch?1.02:1.67,player.z],forward=[
   -Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),
