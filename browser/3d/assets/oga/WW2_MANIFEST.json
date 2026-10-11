@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "summary": "Original sources retain their own license; conversions by Warrior's Paradise. CC-BY must be attributed.",
+  "assets": [
+    {
+      "id": "axis_ww2",
+      "url": "https://opengameart.org/sites/default/files/lowpolysoldier.zip",
+      "license": "CC0-1.0",
+      "creator": "nisu",
+      "source_page": "https://opengameart.org/content/rigged-lowpoly-ww2-soldier",
+      "category": "character",
+      "source_file": "lowpolysoldier.zip",
+      "chosen_file": "LowpolySoldier.fbx",
+      "source_bytes": 407174,
+      "original_package_sha256": "a8e2f5a5777d1c9d4c18f76922d9737b88be717a455a65336a8772deb53729cb",
+      "derived_glb_bytes": 320308,
+      "derived_sha256": "55501ebda350ed27b9a1b66af6286b2073ef0ecffc01321c903c7df444cdf7b7",
+      "animations": 0,
+      "skins": 1,
+      "model_file": "browser/3d/assets/oga/axis_ww2.glb.b64"
+    },
+    {
+      "id": "gaz67_jeep",
+      "url": "https://opengameart.org/sites/default/files/gaz-67_lowpoly_1.zip",
+      "license": "CC0-1.0",
+      "creator": "artie31",
+      "source_page": "https://opengameart.org/content/lowpoly-soviet-jeep",
+      "category": "vehicle",
+      "source_file": "gaz-67_lowpoly.zip",
+      "chosen_file": "GAZ 67.fbx",
+      "source_bytes": 372877,
+      "original_package_sha256": "e2993b7cc36f663ceb5c9f9b563ddbb09293571f5bdaae3aec1bdcc7fe4a4110",
+      "derived_glb_bytes": 1263708,
+      "derived_sha256": "e859187a21423d2d5c7f955fa1450c4b86f4a3514f860653bd9a1d8e48e6c7df",
+      "animations": 0,
+      "skins": 0,
+      "model_file": "browser/3d/assets/oga/gaz67_jeep.glb.b64"
+    },
+    {
+      "id": "panzer_study",
+      "url": "https://opengameart.org/sites/default/files/tank.blend",
+      "license": "CC0-1.0",
+      "creator": "hubahuba",
+      "source_page": "https://opengameart.org/content/tank1",
+      "category": "vehicle",
+      "source_file": "tank.blend",
+      "chosen_file": "tank.blend",
+      "source_bytes": 822720,
+      "original_package_sha256": "4437922d50043d53a8c4a104a240da0adc11fecf229961ab3a5ccf7eea906c5c",
+      "derived_glb_bytes": 367896,
+      "derived_sha256": "2491345803a6988c9bef7d6bff1cf566bccce008ff10ea7d82e8709259a99866",
+      "animations": 0,
+      "skins": 0,
+      "model_file": "browser/3d/assets/oga/panzer_study.glb.b64"
+    }
+  ]
+}
