@@ -39,7 +39,8 @@ class WebGL3DTests(unittest.TestCase):
         ):
             self.assertIn(feature, s)
         self.assertIn('getContext("webgl2"', s)
-        self.assertIn('Math.min(.045', s)
+        self.assertIn('Math.min(.20,rawMs/1000)', s)
+        self.assertIn('Math.ceil(dt/.034)', s)
 
     def test_html_and_script_controls_match(self):
         html = (GAME3D / "index.html").read_text(encoding="utf-8")
