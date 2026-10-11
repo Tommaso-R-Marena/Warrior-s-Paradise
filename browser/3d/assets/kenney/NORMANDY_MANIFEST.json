@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "title": "Kenney CC0 Normandy Battlefield set dressing \u2014 pinned source",
+  "creator": "Kenney",
+  "license": "CC0-1.0",
+  "original_source": "https://kenney.nl/assets/nature-kit",
+  "mirror_source": "https://github.com/Hidencod/tge-assets",
+  "mirror_revision": "08f0c913f6783cc81f9f6105a7cdda8562b1c192",
+  "assets": [
+    {
+      "name": "log-stacklarge",
+      "repository_path": "browser/3d/assets/kenney/log-stacklarge.glb.b64",
+      "source_path": "packs/nature-kit/log-stacklarge.glb",
+      "source_git_blob_sha1": "ac1b84970217dd9d6562ba311030bea247f11b5a",
+      "source_bytes": 17604,
+      "source_sha256": "58dc0ce3321b3b57f7b8c5aea47e1a212a5f462822af57a26f9ba5c4d48e65ab"
+    },
+    {
+      "name": "stump-old",
+      "repository_path": "browser/3d/assets/kenney/stump-old.glb.b64",
+      "source_path": "packs/nature-kit/stump-old.glb",
+      "source_git_blob_sha1": "ad7a8604b4fae186271e00a5c07e854cc4957766",
+      "source_bytes": 9564,
+      "source_sha256": "4c2d2da34804c1662c6a776a9d60fe4449e6f6fdd50914bfec7d5cca3e9ceddb"
+    },
+    {
+      "name": "rock-largeb",
+      "repository_path": "browser/3d/assets/kenney/rock-largeb.glb.b64",
+      "source_path": "packs/nature-kit/rock-largeb.glb",
+      "source_git_blob_sha1": "52cdb4c8f63256a9756e9aced040808439c47e5b",
+      "source_bytes": 8560,
+      "source_sha256": "caa8b025833d4dabf6d98fe2e96cf2fbd886693ac990df0db75f9d827194374b"
+    },
+    {
+      "name": "fence-gate",
+      "repository_path": "browser/3d/assets/kenney/fence-gate.glb.b64",
+      "source_path": "packs/nature-kit/fence-gate.glb",
+      "source_git_blob_sha1": "085ed4e220ace2e1c18a2d5d8436e2217f24ada9",
+      "source_bytes": 27652,
+      "source_sha256": "34d10d5620179b8a211a01eea837caa828c0782422f0b408e1a5838788888436"
+    },
+    {
+      "name": "grass-large",
+      "repository_path": "browser/3d/assets/kenney/grass-large.glb.b64",
+      "source_path": "packs/nature-kit/grass-large.glb",
+      "source_git_blob_sha1": "c7c7557cea4e5877f03ccba676c5340d9bde6ced",
+      "source_bytes": 18504,
+      "source_sha256": "af49a595624abca7249824eeefb944d4baf974abeeb5b16110d175da3563d6cd"
+    },
+    {
+      "name": "log-large",
+      "repository_path": "browser/3d/assets/kenney/log-large.glb.b64",
+      "source_path": "packs/nature-kit/log-large.glb",
+      "source_git_blob_sha1": "52e362e62522cc0b14d7102b5bdd4216935f5d3b",
+      "source_bytes": 7924,
+      "source_sha256": "e7a92369062d491e5a31a163d390e07db04ee573605bbfa84c00660d18896b4c"
+    }
+  ]
+}
