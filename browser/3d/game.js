@@ -672,9 +672,15 @@ function setAim(v){player.aim=game.playing&&!!v;}
 function grenade(){
  if(!game.playing||player.frags<=0)return;
  player.frags--;
- const reach=9.5,dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw);
- const x=player.x+dx*reach,z=player.z+dz*reach;
- game.grenades.push({x,z,life:1.25});msg("FRAG OUT!",1.1);
+ const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw);
+ const nx=player.x+dx*.52,nz=player.z+dz*.52;
+ const safe=!blocked(nx,nz,.16);
+ // Timed grenade flight; never teleport explosives through farm buildings.
+ const angle=Math.max(-.45,Math.min(.45,player.pitch));
+ game.grenades.push({x:safe?nx:player.x,z:safe?nz:player.z,
+  y:player.crouch?1.05:1.48,vx:dx*9.7,vz:dz*9.7,vy:4.9+angle*3.3,
+  life:1.65,detonated:false});
+ msg("FRAG OUT · GET TO COVER",1.1);
 }
 function heal(){
  if(!game.playing||!player.med||player.hp>=100)return;
@@ -781,6 +787,18 @@ function simulate(dt){
  if(input.fire)shoot();
  for(const g of game.grenades){
   if(g.life<=0)continue;
+  // Low-cost fixed-step gravity, ground friction and wall collision.
+  const nextX=g.x+g.vx*dt;
+  if(blocked(nextX,g.z,.16))g.vx=-g.vx*.3;
+  else g.x=nextX;
+  const nextZ=g.z+g.vz*dt;
+  if(blocked(g.x,nextZ,.16))g.vz=-g.vz*.3;
+  else g.z=nextZ;
+  g.vy-=11.8*dt;g.y+=g.vy*dt;
+  if(g.y<.19){
+   g.y=.19;g.vy=g.vy<-.65?-g.vy*.23:0;
+   const drag=Math.max(0,1-4.2*dt);g.vx*=drag;g.vz*=drag;
+  }
   g.life-=dt;
   if(g.life<=0&&!g.detonated){
    g.detonated=true;
@@ -792,9 +810,17 @@ function simulate(dt){
      if(e.hp<=0)game.kills++;
     }
    }
-   if(Math.hypot(g.x-player.x,g.z-player.z)<4){
+   if(Math.hypot(g.x-player.x,g.z-player.z)<4&&lineHit(g.x,g.z,player.x,player.z)){
     player.hp-=Math.max(0,38*(1-Math.hypot(g.x-player.x,g.z-player.z)/4));
     player.hurt=1;
+   }
+   for(const ally of game.allies){
+    if(ally.hp<=0)continue;
+    const d=Math.hypot(ally.x-g.x,ally.z-g.z);
+    if(d<4&&lineHit(g.x,g.z,ally.x,ally.z)){
+     ally.hp-=Math.max(0,53*(1-d/4));
+     if(ally.hp<=0)msg("FRIENDLY CASUALTY · CHECK YOUR FRAG",1.4);
+    }
    }
    if(window.WPBattleSound)window.WPBattleSound.explosion(g.x,g.z,player);
  else beep(62,.25);
@@ -909,7 +935,7 @@ function dynamicGeometry(){
  for(const g of game.grenades){
   if(g.life<=0){
    m.cone(g.x,.03,g.z,1.4,3,COLORS.red,12);
-  }else m.box(g.x,.22,g.z,.25,.4,.25,COLORS.metal);
+  }else m.box(g.x,g.y,g.z,.22,.22,.22,COLORS.metal);
  }
  // Model-specific Lee-Enfield, Sten and Bren view models (or compatibility gun).
  if(art)art.weapon(m,player,game);
@@ -1134,6 +1160,7 @@ window.WP3DDiagnostics=()=>({
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
+  grenades:game.grenades.map(g=>({x:g.x,z:g.z,y:g.y,life:g.life})),
   position:{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch},
   playing:game.playing,elapsedSeconds:game.elapsed,framesPerSecond:game.fps,
   performance:window.WP3DProbe?window.WP3DProbe.report().performance:null,
