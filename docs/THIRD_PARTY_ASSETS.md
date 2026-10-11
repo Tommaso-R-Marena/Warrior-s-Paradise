@@ -1,5 +1,16 @@
 # Third-Party / Free Asset Register
 
+## Verified artist-authored CC0 PBR maps — graphics quality upgrade
+
+Warrior's Paradise now bundles the **real ambientCG OpenGL normal and roughness maps**, not only photographic base colors, for Grass004, Ground037 and Bricks066. The original source repository is `petroulacl/fps-buildings-env-kit`; all 9 source maps retain author-claimed **CC0** licensing and full SHA-256 provenance in `browser/3d/assets/materials/MANIFEST.json`. Source JPEGs are downloaded and downsampled reproducibly by `tools/scripts/build_cc0_pbr_assets.py` using pinned Pillow 11.3.0 on a standard GitHub Actions runner. The outputs are canonical Base64-encoded JPEG assets for the free static Cloudflare hosting tier.
+
+On **High**, the renderer fetches the nine optimized 512×512 textures from its **own** website after deployment. It packs a 2048×512 atlas: RGB photographic albedo + artist-authored roughness alpha and OpenGL tangent normal maps. A separately compiled High-only shader approximates horizontal/vertical tangent-space response; it is **not** a calibrated full PBR pipeline. On **Medium**, three separately optimized 256×256 photographic colors are fetched into a 1024×256 atlas with approximate normal/roughness, preserving the established cheaper shader while avoiding download/decode of 512px High originals. On **Low**, no photographic downloads or High shader compilation occur and the proven lightweight procedural rendering remains. Limestone is procedural on all tiers.
+
+If a download or WebGL decoder fails, the original authored/procedural atlas remains visible. The material-integrity test `node tools/tests/browser_photo_material_smoke.js` checks all nine pinned hashes and verifies that roughness/normal channels are packed to the uploaded texture arrays.
+
+**What remains:** photoreal WWII soldier, weapon, vehicle and building assets; richer physically based lighting and occlusion/shadows; true tangent frames and normal-map rotation; real Android/iOS and desktop GPU benchmarking. A green automated Chromium benchmark does not prove 60 FPS on particular devices.
+
+
 ## Verified CC0 building photographs (October 2026)
 
 An independent public CI performance comparison showed that an attempted 0.85-second rapid dynamic-resolution adaptation caused worse software-browser frame pacing than the stable 3-second adaptive scaler. **That change was reverted before production**. Physics and movement tests passed in both configurations, but FPS averages fell under the experimental scaler, demonstrating the importance of measuring rather than presuming an optimization helps.

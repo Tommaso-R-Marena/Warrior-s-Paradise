@@ -82,6 +82,24 @@ const FS=[
  "outColor=vec4(pow(max(rgb,0.),vec3(.93)),1.);",
  "}"
 ].join("\n");
+// High alone samples artist-authored tangent normals and roughness.
+// Low/Medium retain the proven shader path, without additional program cost.
+const highSource=FS.replace(
+ "float bumpSun=max(0.,dot(normalize(vec3((bump.r-.5)*1.25,.96,(bump.g-.5)*1.25)),normalize(vec3(.53,.88,-.36))));",
+ [
+  "vec3 mapN=normalize(vec3(bump.rg*2.-1.,max(.25,bump.b*2.-1.)));",
+  "vec3 shadedN=n;",
+  "if(terrain>.5)shadedN=normalize(vec3(mapN.x,abs(mapN.z),mapN.y));",
+  "else if(masonry>.5){",
+  " if(abs(n.x)>abs(n.z))shadedN=normalize(vec3(sign(n.x)*mapN.z,mapN.y,mapN.x));",
+  " else shadedN=normalize(vec3(mapN.x,mapN.y,sign(n.z)*mapN.z));",
+  "}",
+  "float bumpSun=max(0.,dot(shadedN,normalize(vec3(.53,.88,-.36))));"
+ ].join("\n")
+).replace(
+ "float highlight=pow(max(0.,dot(n,halfDir)),mix(92.,8.,roughness));",
+ "float highlight=pow(max(0.,dot(shadedN,halfDir)),mix(92.,8.,roughness));"
+);
 function shader(type,source){
  const o=gl.createShader(type);gl.shaderSource(o,source);gl.compileShader(o);
  if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(o));
@@ -97,6 +115,30 @@ try{
  return;
 }
 gl.useProgram(program);
+let highProgram=null;
+let highUniforms=null;
+let highCompileTried=false;
+function ensureHighProgram(){
+ if(highCompileTried)return !!highProgram;
+ highCompileTried=true;
+ try{
+  if(!highSource.includes("vec3 shadedN=n;") ||
+   highSource.includes("float highlight=pow(max(0.,dot(n,halfDir))"))
+   throw Error("High quality normal shader template mismatch");
+  const glsl=shader(gl.FRAGMENT_SHADER,highSource);
+  highProgram=gl.createProgram();
+  gl.attachShader(highProgram,shader(gl.VERTEX_SHADER,VS));
+  gl.attachShader(highProgram,glsl);
+  gl.linkProgram(highProgram);
+  if(!gl.getProgramParameter(highProgram,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(highProgram));
+  highUniforms=Object.fromEntries(["uVP","uEye","uDetailLevel","uUseAtlas","uDiffuse","uBump"]
+   .map(name=>[name,gl.getUniformLocation(highProgram,name)]));
+ }catch(error){highProgram=null;highUniforms=null;}
+ // Shader setup must not affect Low/Medium scene measurements.
+ gl.useProgram(program);
+ return !!highProgram;
+}
+gl.useProgram(program);
 const vpLocation=gl.getUniformLocation(program,"uVP");
 const eyeLocation=gl.getUniformLocation(program,"uEye");
 const detailLocation=gl.getUniformLocation(program,"uDetailLevel");
@@ -108,12 +150,21 @@ const atlasKit=window.WPMaterialAtlas;
 try{if(atlasKit)materialTextures=atlasKit.upload(gl);}catch(error){
  materialTextures=null;
 }
-const photographicMaterials={loaded:false,error:""};
-if(materialTextures&&atlasKit?.enhance){
- // High/balanced: attempt self-hosted CC0 photographic albedo materials.
- // Keep original procedurally generated textures when unavailable or on low.
- atlasKit.enhance(gl,materialTextures).then(ok=>photographicMaterials.loaded=!!ok)
-  .catch(error=>{photographicMaterials.error=String(error);});
+const photographicMaterials={loaded:false,error:"",loading:false,mode:"none"};
+function requestPhotographicMaterials(quality){
+ if(!materialTextures||photographicMaterials.loading||quality==="low")return;
+ const desired=quality==="high"&&highProgram?"detailed":"medium";
+ if(photographicMaterials.loaded&&photographicMaterials.mode===desired)return;
+ if(photographicMaterials.loaded&&photographicMaterials.mode==="detailed"&&desired==="medium")return;
+ const importer=desired==="detailed"?atlasKit?.enhanceDetailed:atlasKit?.enhance;
+ if(!importer)return;
+ photographicMaterials.loading=true;
+ photographicMaterials.error="";
+ importer(gl,materialTextures).then(ok=>{
+  photographicMaterials.loaded=!!ok;
+  if(ok)photographicMaterials.mode=desired;
+ }).catch(error=>{photographicMaterials.error=String(error);})
+ .finally(()=>{photographicMaterials.loading=false;});
 }
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(.58,.68,.73,1);
@@ -481,6 +532,8 @@ function reset(){
  Object.assign(game,{playing:true,finished:false,sector:0,capture:0,kills:0,elapsed:0,
   grenades:[],tracers:[],strikes:[],support:1,order:"follow",flash:0,
    difficulty:$("difficulty").value,quality:$("quality").value,scaler:1,adapt:0});
+ if(game.quality==="high")ensureHighProgram();
+ requestPhotographicMaterials(game.quality);
  spawnEnemies();spawnAllies();
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
   name,{ammo:w.capacity,reserve:w.reserve}
@@ -908,14 +961,19 @@ function render(){
   Math.cos(player.yaw)*Math.cos(player.pitch)];
  const proj=perspective((player.aim?42:73)*Math.PI/180,lastWidth/lastHeight,.065,120);
  const view=lookAt(eye,[eye[0]+forward[0],eye[1]+forward[1],eye[2]+forward[2]]);
- gl.uniformMatrix4fv(vpLocation,false,mul(proj,view));
- gl.uniform3fv(eyeLocation,new Float32Array(eye));
- // Uniform detail tier keeps shader variants consistent; mobile low skips noise.
+ const isHigh=game.quality==="high"&&!!highProgram&&!!highUniforms;
+ gl.useProgram(isHigh?highProgram:program);
+ const uniforms=isHigh?highUniforms:{
+  uVP:vpLocation,uEye:eyeLocation,uDetailLevel:detailLocation,
+  uUseAtlas:useAtlasLocation,uDiffuse:diffuseLocation,uBump:bumpLocation
+ };
+ gl.uniformMatrix4fv(uniforms.uVP,false,mul(proj,view));
+ gl.uniform3fv(uniforms.uEye,new Float32Array(eye));
  if(gl.uniform1f){
-  gl.uniform1f(detailLocation,game.quality==="low"?0:game.quality==="medium"?.58:1);
-  gl.uniform1f(useAtlasLocation,materialTextures?1:0);
+  gl.uniform1f(uniforms.uDetailLevel,game.quality==="low"?0:game.quality==="medium"?.58:1);
+  gl.uniform1f(uniforms.uUseAtlas,materialTextures?1:0);
  }
- if(materialTextures&&atlasKit)atlasKit.bind(gl,{diffuse:diffuseLocation,normal:bumpLocation},materialTextures);
+ if(materialTextures&&atlasKit)atlasKit.bind(gl,{diffuse:uniforms.uDiffuse,normal:uniforms.uBump},materialTextures);
  draw(staticMesh);
  upload(liveMesh,dynamicGeometry());
  draw(liveMesh);
@@ -1069,7 +1127,8 @@ window.WP3DDiagnostics=()=>({
  renderer:"WebGL2",geometryTriangles:staticMesh.count/3,
   assetInstances:scenery.instances,assetTriangles:scenery.triangles,assetsLoaded:scenery.loaded,
   assetError:scenery.error,texturesLoaded:!!materialTextures,photoMaterialsLoaded:photographicMaterials.loaded,
-  photoMaterialsError:photographicMaterials.error,rigLoaded:rig.ready,rigError:rig.error,
+  photoMaterialsError:photographicMaterials.error,realPBRMaps:!!materialTextures?.realNormalRoughness,
+  highShaderReady:!!highProgram,materialMode:photographicMaterials.mode,rigLoaded:rig.ready,rigError:rig.error,
   skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,buildingsLoaded:scenery.buildings||0,
   farmError:scenery.farmError||"",
   alliesAlive:game.allies.filter(a=>a.hp>0).length,

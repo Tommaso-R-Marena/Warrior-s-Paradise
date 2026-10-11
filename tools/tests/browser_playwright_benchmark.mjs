@@ -19,7 +19,22 @@ async function run(name,viewport,quality,mobile){
   await page.locator("#deploy").click();
   await page.waitForFunction(()=>window.WP3DDiagnostics().assetsLoaded&&window.WP3DDiagnostics().rigLoaded,{timeout:20000});
   await page.waitForTimeout(500);
+  if(quality!=="low"){
+   await page.waitForFunction(()=>{
+    const d=window.WP3DDiagnostics();
+    return d.photoMaterialsLoaded||!!d.photoMaterialsError;
+   },null,{timeout:30000});
+  }
   const initial=await page.evaluate(()=>window.WP3DDiagnostics());
+  if(quality!=="low")assert(initial.photoMaterialsLoaded,
+   name+": photographic maps did not load: "+initial.photoMaterialsError);
+  if(quality==="medium")assert(initial.materialMode==="medium",
+   "Medium must use cost-bounded photographic albedo atlas");
+  if(quality==="high"){
+   assert(initial.highShaderReady,"High dedicated normal shader did not compile");
+   assert(initial.realPBRMaps&&initial.materialMode==="detailed",
+    name+": artist-authored normals/roughness missing: "+initial.photoMaterialsError);
+  }
   assert(initial.texturesLoaded&&initial.renderer==="WebGL2",name+": graphics pipeline unavailable");
   await page.evaluate(()=>window.WP3DProbe.reset());
   const start=await page.evaluate(()=>window.WP3DDiagnostics().position);
@@ -84,6 +99,7 @@ try{
  await run("desktop-low",{width:854,height:480},"low",false);
  await run("mobile-low",{width:390,height:844},"low",true);
  await run("desktop-balanced",{width:1280,height:720},"medium",false);
+ await run("desktop-high",{width:960,height:540},"high",false);
 }catch(e){failure=String(e.stack||e);console.error(failure);}
 finally{await browser.close();}
 const md=["# Warrior’s Paradise actual browser benchmark","","Automated Chromium/SwiftShader results are hardware-specific; do not interpret as gaming PC or phone FPS.","",

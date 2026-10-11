@@ -4,8 +4,8 @@
   "upstream_creator": "Lennart Demes / ambientCG",
   "license_url": "https://docs.ambientcg.com/license/",
   "source_repository": "https://github.com/petroulacl/fps-buildings-env-kit",
-  "processing": "Re-encoded with Chromium screenshot to 256x256 JPEG at quality 58; no rights beyond original CC0 are asserted",
-  "warning": "These are two genuine photographic diffuse/albedo surfaces. Fine normal and roughness values are approximated in the shader; they are not measured calibrated PBR originals.",
+  "processing": "Original CC0 ambientCG JPEGs are downloaded directly from the source repository, independently verified by SHA-256, and downsampled with Pillow 11.3.0 to 512x512 optimized JPEGs. Avoid browser screenshots.",
+  "warning": "Albedo, OpenGL tangent normal, and scalar roughness are original source-derived maps. The browser lighting approximation is not a calibrated metallic/roughness PBR implementation.",
   "assets": [
     {
       "name": "grass",
@@ -14,9 +14,41 @@
       "source_path": "environment/ground-textures/ambientcg/Grass004_2K-JPG/Grass004_2K-JPG_Color.jpg",
       "asset": "grass_photo.jpg.b64",
       "size": [
-        256,
-        256
-      ]
+        512,
+        512
+      ],
+      "normal_asset": "grass_normal.jpg.b64",
+      "roughness_asset": "grass_roughness.jpg.b64",
+      "maps": {
+        "photo": {
+          "asset": "grass_photo.jpg.b64",
+          "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Grass004_2K-JPG/Grass004_2K-JPG_Color.jpg",
+          "source_sha256": "735b141c8f1972e70a45879424f1238fea9f887324173097785f4ac36e67e9a3",
+          "optimized_sha256": "9035c015bb4b25ab5703bf806acab33d9c53bb5b528b511e9547e6c86c6d9af4",
+          "optimized_bytes": 92357
+        },
+        "normal": {
+          "asset": "grass_normal.jpg.b64",
+          "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Grass004_2K-JPG/Grass004_2K-JPG_NormalGL.jpg",
+          "source_sha256": "15ccad231764049d6581a52076d02bb6b627df77895cb0508e4017d8a4877fef",
+          "optimized_sha256": "72143820dfe8cbd593d13d8b4b7fb802dbff4889f2eeaa09a5d6d5fda66a0195",
+          "optimized_bytes": 189753
+        },
+        "roughness": {
+          "asset": "grass_roughness.jpg.b64",
+          "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Grass004_2K-JPG/Grass004_2K-JPG_Roughness.jpg",
+          "source_sha256": "c449fdf1e779eb7be5a19c1d58ee28cc155ed0523a141b151f3cbc843c4ae2e3",
+          "optimized_sha256": "6f142b863e3ee5df976064005caa0b5b19859f68f57a0c5d3ff481a71c8e2a14",
+          "optimized_bytes": 80896
+        }
+      },
+      "medium_map": {
+        "asset": "grass_medium.jpg.b64",
+        "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Grass004_2K-JPG/Grass004_2K-JPG_Color.jpg",
+        "source_sha256": "735b141c8f1972e70a45879424f1238fea9f887324173097785f4ac36e67e9a3",
+        "optimized_sha256": "9176b6ae74a47ee69ceba1999d601d0bbf35adeb9fd2f24d17fa0de487d0a3c4",
+        "optimized_bytes": 20878
+      }
     },
     {
       "name": "mud",
@@ -25,9 +57,41 @@
       "source_path": "environment/ground-textures/ambientcg/Ground037_2K-JPG/Ground037_2K-JPG_Color.jpg",
       "asset": "mud_photo.jpg.b64",
       "size": [
-        256,
-        256
-      ]
+        512,
+        512
+      ],
+      "normal_asset": "mud_normal.jpg.b64",
+      "roughness_asset": "mud_roughness.jpg.b64",
+      "maps": {
+        "photo": {
+          "asset": "mud_photo.jpg.b64",
+          "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Ground037_2K-JPG/Ground037_2K-JPG_Color.jpg",
+          "source_sha256": "86af35a54593548543a291a54bddfd3568fd90268f8f65d0f8e743b37d714782",
+          "optimized_sha256": "60e708fbc9449ea0643ff96dab4081578ca312e0522730d2dcbc25088356883b",
+          "optimized_bytes": 91887
+        },
+        "normal": {
+          "asset": "mud_normal.jpg.b64",
+          "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Ground037_2K-JPG/Ground037_2K-JPG_NormalGL.jpg",
+          "source_sha256": "99743f03f5f818d4a0ee3dca289d5c6f125b1e05f1e624a541455e2f7fb29eec",
+          "optimized_sha256": "96e3427bbd7442f6979d287bd93728d3c488317fdda9b2c53154fc813dac6b81",
+          "optimized_bytes": 175012
+        },
+        "roughness": {
+          "asset": "mud_roughness.jpg.b64",
+          "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Ground037_2K-JPG/Ground037_2K-JPG_Roughness.jpg",
+          "source_sha256": "5484c117706e5937afa103c82795cbacb6c3b76d1a056b47942ca91d00efbbb9",
+          "optimized_sha256": "e571bd39ac3f13623657d5defa0aee1784746dc40e0ee19dc942c3d4a0b1aaee",
+          "optimized_bytes": 52220
+        }
+      },
+      "medium_map": {
+        "asset": "mud_medium.jpg.b64",
+        "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Ground037_2K-JPG/Ground037_2K-JPG_Color.jpg",
+        "source_sha256": "86af35a54593548543a291a54bddfd3568fd90268f8f65d0f8e743b37d714782",
+        "optimized_sha256": "231f035fff0eb983683a7a74cee1dbfa1dac372736d12c55bcac27ebe7ce2f1c",
+        "optimized_bytes": 17781
+      }
     },
     {
       "name": "brick",
@@ -36,9 +100,51 @@
       "source_path": "environment/ground-textures/ambientcg/Bricks066_2K-JPG/Bricks066_2K-JPG_Color.jpg",
       "asset": "brick_photo.jpg.b64",
       "size": [
-        256,
-        256
-      ]
+        512,
+        512
+      ],
+      "normal_asset": "brick_normal.jpg.b64",
+      "roughness_asset": "brick_roughness.jpg.b64",
+      "maps": {
+        "photo": {
+          "asset": "brick_photo.jpg.b64",
+          "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Bricks066_2K-JPG/Bricks066_2K-JPG_Color.jpg",
+          "source_sha256": "af119d3f8d50d834b47e22bcbc68235f55f03fe36cb3bf8d336d9bd5d379bc1a",
+          "optimized_sha256": "e76497a74026728f7e88629b2b6672cb3cc782978f3259fdd9dad551f5a00a7a",
+          "optimized_bytes": 40411
+        },
+        "normal": {
+          "asset": "brick_normal.jpg.b64",
+          "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Bricks066_2K-JPG/Bricks066_2K-JPG_NormalGL.jpg",
+          "source_sha256": "854dc628fad3a7d7b14c02030c397480125f77090d2824827fe7a1ef90a9c645",
+          "optimized_sha256": "cf65113501973d4ffb342ccca8431706dab1b4aeae022c2639d885e2325d0690",
+          "optimized_bytes": 60087
+        },
+        "roughness": {
+          "asset": "brick_roughness.jpg.b64",
+          "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Bricks066_2K-JPG/Bricks066_2K-JPG_Roughness.jpg",
+          "source_sha256": "011980269979084dcf171a79bb7dc3983934edc243a3094969a3a8c4205451d4",
+          "optimized_sha256": "be993ba0bd3cbdd34399489ab2e94d2372a64f32085c5a1b5e7104c63adf9525",
+          "optimized_bytes": 17704
+        }
+      },
+      "medium_map": {
+        "asset": "brick_medium.jpg.b64",
+        "source_url": "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/environment/ground-textures/ambientcg/Bricks066_2K-JPG/Bricks066_2K-JPG_Color.jpg",
+        "source_sha256": "af119d3f8d50d834b47e22bcbc68235f55f03fe36cb3bf8d336d9bd5d379bc1a",
+        "optimized_sha256": "793ba4733eeca978b2d0115ebe232390886c4eecc4edbeababaf58f1161d2d61",
+        "optimized_bytes": 9822
+      }
     }
+  ],
+  "source": "ambientCG CC0 assets, bundled from petroulacl/fps-buildings-env-kit",
+  "texture_resolution": [
+    512,
+    512
+  ],
+  "pbr_notes": "Real artist-authored OpenGL normal and roughness maps accompany each albedo image. Shader uses approximate non-tangent frame; this is not a calibrated full metallic/roughness lighting implementation.",
+  "medium_texture_resolution": [
+    256,
+    256
   ]
 }

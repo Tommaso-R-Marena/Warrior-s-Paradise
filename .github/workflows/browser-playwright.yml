@@ -6,6 +6,7 @@ on:
     paths:
       - "browser/**"
       - "tools/tests/browser_playwright_benchmark.mjs"
+      - "tools/tests/browser_playwright_paired.mjs"
       - ".github/workflows/browser-playwright.yml"
   push:
     branches: [main]
@@ -28,6 +29,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout comparison baseline from main
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: baseline-source
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -40,11 +47,19 @@ jobs:
           python3 -m http.server 8765 --bind 127.0.0.1 --directory browser >/tmp/wp-server.log 2>&1 &
           sleep 2
           curl -fsS http://127.0.0.1:8765/3d/ >/dev/null
+          if [ -d baseline-source/browser ]; then
+            python3 -m http.server 8766 --bind 127.0.0.1 --directory baseline-source/browser >/tmp/wp-baseline.log 2>&1 &
+            sleep 2
+            curl -fsS http://127.0.0.1:8766/3d/ >/dev/null
+          fi
       - name: Test movement, firefights, assets, and capture actual frame times
         run: node tools/tests/browser_playwright_benchmark.mjs
         env:
           CI: "true"
           WP_TEST_URL: http://127.0.0.1:8765/3d/
+      - name: Compare Low/Medium FPS with production in same software browser
+        if: github.event_name == 'pull_request'
+        run: node tools/tests/browser_playwright_paired.mjs
       - name: Publish frame-time and gameplay results to workflow summary
         if: always()
         run: |
