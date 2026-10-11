@@ -50,15 +50,15 @@ def fetch_url(url: str) -> bytes:
     return payload
 
 
-def optimize(original: bytes, kind: str) -> bytes:
+def optimize(original: bytes, kind: str, size: int = RESOLUTION) -> bytes:
     with Image.open(io.BytesIO(original)) as image:
         image.load()
-        if image.width < RESOLUTION or image.height < RESOLUTION:
+        if image.width < size or image.height < size:
             raise ValueError("source smaller than target resolution")
         image = ImageOps.exif_transpose(image)
         # Normal maps must preserve RGB channels. Roughness is a scalar.
         image = image.convert("L" if kind == "roughness" else "RGB")
-        image = image.resize((RESOLUTION, RESOLUTION), Image.Resampling.LANCZOS)
+        image = image.resize((size, size), Image.Resampling.LANCZOS)
         output = io.BytesIO()
         image.save(output, "JPEG", quality=87 if kind == "normal" else 82,
                    optimize=True, subsampling=0 if kind == "normal" else 2)
@@ -75,6 +75,7 @@ def main() -> None:
     manifest["source"] = "ambientCG CC0 assets, bundled from petroulacl/fps-buildings-env-kit"
     manifest["license"] = "CC0-1.0"
     manifest["texture_resolution"] = [RESOLUTION, RESOLUTION]
+    manifest["medium_texture_resolution"] = [256, 256]
     manifest["processing"] = (
         "Original CC0 ambientCG JPEGs are downloaded directly from the source "
         "repository, independently verified by SHA-256, and downsampled with "
@@ -99,6 +100,8 @@ def main() -> None:
         for kind, suffix in KINDS.items():
             remote = f"{BASE}/{pack}/{pack}_{suffix}.jpg"
             raw = fetch_url(remote)
+            if kind == "photo":
+                photo_source = raw
             previously = entry.get("maps", {}).get(kind, {})
             prior_hash = previously.get("source_sha256")
             if prior_hash and sha256(raw) != prior_hash:
@@ -116,6 +119,20 @@ def main() -> None:
                 "optimized_bytes": len(optimized),
             }
             print(f"{name:6} {kind:9}: {len(optimized):7} bytes  {dest_name}")
+        # A separate 256px albedo is cheaper for Medium; High alone loads
+        # the 512px high-fidelity albedo/normal/roughness triplet.
+        medium = optimize(photo_source, "photo", size=256)
+        medium_name = f"{name}_medium.jpg.b64"
+        (TARGET / medium_name).write_text(
+            base64.b64encode(medium).decode("ascii"), encoding="ascii"
+        )
+        entry["medium_map"] = {
+            "asset": medium_name,
+            "source_url": output_records["photo"]["source_url"],
+            "source_sha256": output_records["photo"]["source_sha256"],
+            "optimized_sha256": sha256(medium),
+            "optimized_bytes": len(medium),
+        }
         entry["asset"] = output_records["photo"]["asset"]
         entry["normal_asset"] = output_records["normal"]["asset"]
         entry["roughness_asset"] = output_records["roughness"]["asset"]
