@@ -69,3 +69,6 @@
 .perf-actions button{flex:1;padding:9px 4px;font-size:10px}
 @media (pointer:coarse){#movement-hint{bottom:10px;left:50%;max-width:80vw;font-size:9px}
  #performance-panel{top:8px;right:8px;max-height:85vh;overflow:auto}}
+
+.vehicle-state{font-size:10px;font-weight:800;color:#e8d4a3;margin-top:5px;letter-spacing:.05em;text-shadow:0 1px 2px #000}
+@media(pointer:coarse){#vehicle{grid-column:4;grid-row:3;font-size:9px;padding:2px;background:#384536e6}}

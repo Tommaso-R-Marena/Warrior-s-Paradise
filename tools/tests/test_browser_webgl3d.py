@@ -13,7 +13,7 @@ GAME3D = BROWSER / "3d"
 
 class WebGL3DTests(unittest.TestCase):
     def test_cloudflare_fully_static_with_low_end_fallback(self):
-        for name in ("index.html", "style.css", "game.js", "asset-loader.js", "battle-art.js", "battle-audio.js", "skinning.js", "material-atlas.js", "telemetry.js", "tactical-navigation.js", "battle-atmosphere.js", "normandy-dressing.js"):
+        for name in ("index.html", "style.css", "game.js", "asset-loader.js", "battle-art.js", "battle-audio.js", "skinning.js", "material-atlas.js", "telemetry.js", "tactical-navigation.js", "battle-atmosphere.js", "normandy-dressing.js", "ww2-vehicles.js"):
             self.assertTrue((GAME3D / name).is_file(), name)
         html = (GAME3D / "index.html").read_text(encoding="utf-8")
         script = (GAME3D / "game.js").read_text(encoding="utf-8")
@@ -72,11 +72,16 @@ class WebGL3DTests(unittest.TestCase):
                      GAME3D / "telemetry.js", GAME3D / "tactical-navigation.js",
                      GAME3D / "battle-atmosphere.js",
                      GAME3D / "normandy-dressing.js",
+                     GAME3D / "ww2-vehicles.js",
+                     ROOT / "tools/tests/browser_ww2_vehicles_smoke.js",
                      ROOT / "tools/tests/browser_battle_atmosphere_smoke.js",
                      ROOT / "tools/tests/browser_tactical_navigation_smoke.js"):
             p = subprocess.run([node, "--check", str(file)], capture_output=True,
                                text=True, timeout=15, check=False)
             self.assertEqual(p.returncode, 0, p.stdout+p.stderr)
+        vehicles = subprocess.run([node, str(ROOT / "tools/tests/browser_ww2_vehicles_smoke.js")],
+                                  capture_output=True, text=True, timeout=20, check=False)
+        self.assertEqual(vehicles.returncode, 0, vehicles.stdout + vehicles.stderr)
         atmosphere = subprocess.run([node, str(ROOT / "tools/tests/browser_battle_atmosphere_smoke.js")],
                                     capture_output=True, text=True, timeout=20, check=False)
         self.assertEqual(atmosphere.returncode, 0, atmosphere.stdout + atmosphere.stderr)
