@@ -43,7 +43,7 @@ def reflected_declarations(text: str, macro: str) -> list[str]:
     making real reflected classes appear missing to the delegate audit.
     """
     declarations: list[str] = []
-    for match in re.finditer(rf"\\b{re.escape(macro)}\\s*\\(", text):
+    for match in re.finditer(rf"\b{re.escape(macro)}\s*\(", text):
         nesting = 1
         index = match.end()
         while index < len(text) and nesting:
@@ -56,9 +56,9 @@ def reflected_declarations(text: str, macro: str) -> list[str]:
         if nesting:
             continue
         declaration = re.match(
-            r"\\s*(?:class|struct)\\s+"
-            r"(?:WARRIORPARADISE_API\\s+)?"
-            r"([AUF][A-Za-z0-9_]*)\\b",
+            r"\s*(?:class|struct)\s+"
+            r"(?:WARRIORPARADISE_API\s+)?"
+            r"([AUF][A-Za-z0-9_]*)\b",
             text[index:],
         )
         if declaration:
