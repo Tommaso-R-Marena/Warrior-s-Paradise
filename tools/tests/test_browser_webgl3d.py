@@ -86,6 +86,9 @@ class WebGL3DTests(unittest.TestCase):
             p = subprocess.run([node, "--check", str(file)], capture_output=True,
                                text=True, timeout=15, check=False)
             self.assertEqual(p.returncode, 0, p.stdout+p.stderr)
+        allied = subprocess.run([node, str(ROOT / "tools/tests/browser_allied_rig_animation_smoke.js")],
+                                capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(allied.returncode,0,allied.stdout+allied.stderr)
         terrain = subprocess.run([node, str(ROOT / "tools/tests/browser_ww2_terrain_smoke.js")],
                                  capture_output=True,text=True,timeout=20,check=False)
         self.assertEqual(terrain.returncode,0,terrain.stdout+terrain.stderr)
