@@ -1078,7 +1078,7 @@ window.WP3DDiagnostics=()=>({
 // Executes the *same* player, collision, ballistics and AI simulation without
 // depending on a GPU's frame scheduler. Never exposed by ordinary play URLs.
 if(typeof location!=="undefined"&&typeof location.search==="string"&&
-   /(?:\\?|&)qa=1(?:&|$)/.test(location.search)){
+   (location.search.startsWith("?qa=1")||location.search.includes("&qa=1"))){
  window.WP3DQA=Object.freeze({
   step(ticks=60){
    if(!Number.isInteger(ticks)||ticks<1||ticks>600)throw Error("QA ticks must be 1..600");
