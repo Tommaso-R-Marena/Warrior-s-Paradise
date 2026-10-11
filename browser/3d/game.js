@@ -971,6 +971,8 @@ function dynamicGeometry(){
    m.cone(g.x,.03,g.z,1.4,3,COLORS.red,12);
   }else m.box(g.x,g.y,g.z,.22,.22,.22,COLORS.metal);
  }
+ if(window.WPBattleAtmosphere)
+  window.WPBattleAtmosphere.render(m,game.quality,player.x,player.z);
  // Model-specific Lee-Enfield, Sten and Bren view models (or compatibility gun).
  if(art)art.weapon(m,player,game);
  else{
@@ -1016,7 +1018,11 @@ function resize(){
 function render(){
  if(!lastWidth||!lastHeight)return;
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
- const eye=[player.x,player.crouch?1.02:1.67,player.z],forward=[
+ const stepBob=Math.sin(player.stepPhase||0)*(player.stepStrength||0)*
+  (player.aim?.008:.023);
+ const shake=(player.concussion||0)*.024;
+ const eye=[player.x,(player.crouch?1.02:1.67)+stepBob+
+  Math.sin(game.elapsed*37)*shake,player.z],forward=[
   -Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),
   Math.cos(player.yaw)*Math.cos(player.pitch)];
  const proj=perspective((player.aim?42:73)*Math.PI/180,lastWidth/lastHeight,.065,120);
@@ -1030,6 +1036,7 @@ function render(){
  gl.uniformMatrix4fv(uniforms.uVP,false,mul(proj,view));
  gl.uniform3fv(uniforms.uEye,new Float32Array(eye));
  if(gl.uniform1f){
+  if(isHigh&&uniforms.uWindTime)gl.uniform1f(uniforms.uWindTime,game.elapsed);
   gl.uniform1f(uniforms.uDetailLevel,game.quality==="low"?0:game.quality==="medium"?.58:1);
   gl.uniform1f(uniforms.uUseAtlas,materialTextures?1:0);
  }
@@ -1195,6 +1202,8 @@ window.WP3DDiagnostics=()=>({
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
   navigation:window.WPTacticalNav?window.WPTacticalNav.stats():null,
+  atmosphere:window.WPBattleAtmosphere?window.WPBattleAtmosphere.stats():null,
+  concussion:player.concussion||0,stepStrength:player.stepStrength||0,
   grenades:game.grenades.map(g=>({x:g.x,z:g.z,y:g.y,life:g.life})),
   position:{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch},
   playing:game.playing,elapsedSeconds:game.elapsed,framesPerSecond:game.fps,
