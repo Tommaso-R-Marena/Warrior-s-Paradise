@@ -27,6 +27,14 @@ for ob in list(mesh):
   bpy.data.objects.remove(ob,do_unlink=True)
 mesh=[ob for ob in bpy.data.objects if ob.type=="MESH"]
 assert mesh
+if asset_id=="allied_ww2":
+ print("ALLIED_MODEL_INSPECTION",
+   [(o.name,len(o.data.vertices),len(o.vertex_groups),
+     o.parent.name if o.parent else None,o.hide_render) for o in mesh
+    if not o.name.startswith(("WGT","WGTS"))][:90],flush=True)
+ print("ALLIED_ARMATURE_CHOICES",
+   [(o.name,len(o.data.bones),sum(bool(b.use_deform) for b in o.data.bones))
+    for o in bpy.data.objects if o.type=="ARMATURE"],flush=True)
 if category=="character":
  armatures=[o for o in bpy.data.objects if o.type=="ARMATURE"]
  assert armatures,"Cannot claim genuine rigging without an armature"
