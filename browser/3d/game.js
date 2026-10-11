@@ -552,7 +552,7 @@ const player={x:-36,z:-33,yaw:-.77,pitch:0,hp:100,maxHp:100,ammo:10,reserve:70,
  weapon:"rifle",cd:0,reload:0,aim:false,crouch:false,frags:2,med:2,hurt:0};
 const game={playing:false,finished:false,sector:0,capture:0,kills:0,elapsed:0,
  enemies:[],allies:[],grenades:[],tracers:[],strikes:[],support:1,order:"follow",
- flash:0,quality:"medium",difficulty:"regular",fps:45,scaler:1,adapt:0,lastShot:null,stealthHits:0,headshots:0};
+ flash:0,quality:"medium",difficulty:"regular",fps:45,scaler:1,adapt:0,lastShot:null,stealthHits:0,headshots:0,casualties:[]};
 const input={keys:{},fire:false,joyX:0,joyY:0,movePointer:null,lookPointer:null,
  lookX:0,lookY:0};
 function spawnEnemies(){
@@ -566,7 +566,8 @@ function spawnEnemies(){
    if(blocked(x,z,.8))continue;
    game.enemies.push({x,z,hp:80,maxHp:80,sector:n,cd:.5+rnd()*1.7,
      facing:rnd()*Math.PI*2,moveSpeed:0,
-    alert:0,lastX:x,lastZ:z,strafe:rnd()>.5?1:-1,phase:rnd()*6,hit:0});
+    alert:0,lastX:x,lastZ:z,strafe:rnd()>.5?1:-1,phase:rnd()*6,hit:0,
+    morale:1,reaction:0,crouch:false,cover:null,coverRetry:0});
    if(++count>=3+n)break;
   }
  }
@@ -599,15 +600,17 @@ function reset(){
  const weapon=WEAPONS[type];
  Object.assign(player,{x:-36,z:-33,yaw:-.78,pitch:0,hp:100,maxHp:100,
    ammo:weapon.capacity,reserve:weapon.reserve,weapon:type,cd:0,reload:0,aim:false,
-  frags:2,med:2,hurt:0,crouch:false,stepPhase:0,stepStrength:0,concussion:0});
+  frags:2,med:2,hurt:0,crouch:false,stepPhase:0,stepStrength:0,concussion:0,
+  recoilReturn:0,recoilBloom:0,recoilVisual:0,lastRecoil:"rifle"});
  Object.assign(game,{playing:true,finished:false,sector:0,capture:0,kills:0,elapsed:0,
   grenades:[],tracers:[],strikes:[],support:1,order:"follow",flash:0,
-  lastShot:null,stealthHits:0,headshots:0,
+  lastShot:null,stealthHits:0,headshots:0,casualties:[],
    difficulty:$("difficulty").value,quality:$("quality").value,scaler:1,adapt:0});
  if(game.quality==="high")ensureHighProgram();
  requestPhotographicMaterials(game.quality);
  spawnEnemies();spawnAllies();
  if(window.WPTacticalNav)window.WPTacticalNav.reset();
+ window.WPBattleTactics?.reset();
  if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.reset();
  if(window.WPArmoredFleet)window.WPArmoredFleet.reset();
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
@@ -699,7 +702,8 @@ function shoot(){
  const moving=Math.hypot(input.joyX,input.joyY)>.1||
   !!(input.keys.KeyW||input.keys.KeyS||input.keys.KeyA||input.keys.KeyD);
  const spread=w.spread*(player.aim?.24:.83)*(player.crouch?.70:1)*
-  (moving?1.24:1),eyeY=player.crouch?1.02:1.67;
+  (moving?1.24:1)*(window.WPWeaponHandling?.spreadMultiplier(player)||1),
+  eyeY=player.crouch?1.02:1.67;
  const shot=ballistics.trace({source:{x:player.x,y:eyeY,z:player.z},
   weapon:player.weapon,yaw:player.yaw,pitch:player.pitch,
   spreadYaw:(rnd()-.5)*spread,spreadPitch:(rnd()-.5)*spread*.72,
@@ -715,6 +719,8 @@ function shoot(){
   const e=shot.hit,unaware=(e.alert||0)<=.05;
   e.hp-=shot.damage;e.hit=.42;e.suppression=2.1;
   e.alert=Math.max(e.alert||0,3);e.lastX=player.x;e.lastZ=player.z;
+  window.WPBattleTactics?.onThreat(e,{x:player.x,z:player.z},
+   shot.zone==="head"?2.8:1.8,{covers,buildings:boxes},blocked,lineHit);
   if(unaware)game.stealthHits++;
   if(shot.zone==="head")game.headshots++;
   window.WP3DProbe?.event("hit");
@@ -727,6 +733,8 @@ function shoot(){
  }else for(const e of shot.nearMisses){
   e.suppression=Math.max(e.suppression||0,1.15);
   if((e.alert||0)<1){e.lastX=player.x;e.lastZ=player.z;e.alert=1.4;}
+  window.WPBattleTactics?.onThreat(e,{x:player.x,z:player.z},
+   .9,{covers,buildings:boxes},blocked,lineHit);
  }
  // Nearby soldiers hear gunfire but still need line of sight to return fire.
  const hear=player.weapon==="smg"?24:player.weapon==="lmg"?45:39;
@@ -735,8 +743,7 @@ function shoot(){
   if(Math.hypot(e.x-player.x,e.z-player.z)>hear)continue;
   if((e.alert||0)<1.2){e.alert=1.2;e.lastX=player.x;e.lastZ=player.z;}
  }
- player.yaw+=(rnd()-.5)*w.spread*.32;
- player.pitch=Math.max(-.7,Math.min(.7,player.pitch+w.spread*(player.aim?.18:.56)));
+ window.WPWeaponHandling?.fire(player,player.weapon,rnd()*2-1);
  if(window.WPBattleSound)window.WPBattleSound.shot(player.weapon,player.x,player.z,player);
  else beep(player.weapon==="smg"?165:player.weapon==="lmg"?95:120,.045);
 }
@@ -892,6 +899,7 @@ function simulate(dt){
  },(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type));
  player.concussion=Math.max(0,(player.concussion||0)-dt*.7);
  player.cd=Math.max(0,player.cd-dt);player.hurt=Math.max(0,player.hurt-dt*2);
+ window.WPWeaponHandling?.tick(player,dt);
  game.flash=Math.max(0,game.flash-dt);
  if(game.notice>0){game.notice-=dt;if(game.notice<=0)$("status").textContent="ADVANCE · CLEAR · CAPTURE";}
  if(game.hitmarker>0){game.hitmarker-=dt;if(game.hitmarker<=0)$("hitmarker").classList.remove("visible");}
@@ -971,6 +979,14 @@ function simulate(dt){
  game.grenades=game.grenades.filter(g=>g.life>-.3);
  updateCombinedArms(dt);
  if(!game.playing)return;
+ // Keep a bounded set of fallen soldiers instead of making them vanish.
+ for(const e of game.enemies){
+  if(e.hp<=0&&!e._corpse){
+   e._corpse=true;
+   game.casualties.push({x:e.x,z:e.z,facing:e.facing||0,time:game.elapsed});
+   if(game.casualties.length>16)game.casualties.shift();
+  }
+ }
  for(const e of game.enemies){
   if(e.hp<=0)continue;
   e.cd-=dt;e.hit=Math.max(0,e.hit-dt);
@@ -989,13 +1005,19 @@ function simulate(dt){
   else e.alert=Math.max(0,e.alert-dt);
   const tx=visible?victim.x:e.lastX,tz=visible?victim.z:e.lastZ;
   const targetD=Math.hypot(tx-e.x,tz-e.z),oldX=e.x,oldZ=e.z;
-  if(e.alert>0&&targetD>7){
+  const combatPlan=window.WPBattleTactics?.step(e,dt,{x:tx,z:tz},blocked,lineHit);
+  e.crouch=!!combatPlan?.crouch;
+  e.tacticalMode=combatPlan?.mode||"advance";
+  if(combatPlan){
+   const routeD=Math.hypot(combatPlan.x-e.x,combatPlan.z-e.z);
+   if(routeD>.15)navigateCombatant(e,combatPlan.x,combatPlan.z,combatPlan.speed,dt);
+  }else if(e.alert>0&&targetD>7){
    const speed=e.suppression>.2?.38:visible?1.24:.84;
    navigateCombatant(e,tx,tz,speed,dt);
   }
   e.moveSpeed=Math.hypot(e.x-oldX,e.z-oldZ)/Math.max(dt,.001);
   if(e.alert>0)e.facing=Math.atan2(tx-e.x,tz-e.z);
-  if(visible&&d<21&&e.cd<=0){
+  if(visible&&d<21&&e.cd<=0&&!combatPlan?.holdFire){
    e.cd=(e.suppression>.2?2.2:1.3)+rnd()*.95;
    const difficulty=game.difficulty==="veteran"?1.18:game.difficulty==="recruit"?.55:1;
    const hit=Math.max(.05,(.51-d*.013)*(victim.crouch?.52:1)*difficulty*
@@ -1059,6 +1081,20 @@ function dynamicGeometry(){
   }
  };
  for(const e of game.enemies)if(e.hp>0)present(e,"axis");
+ // Four budgeted geometry pieces per casualty; same existing VBO and draw call.
+ const maxBodies=game.quality==="low"?3:game.quality==="medium"?5:9;
+ let shown=0;
+ for(let i=game.casualties.length-1;i>=0&&shown<maxBodies;i--){
+  const b=game.casualties[i];
+  if(Math.hypot(b.x-player.x,b.z-player.z)>26)continue;
+  const facing=-b.facing;
+  m.box(b.x,.20,b.z,.57,.25,1.21,COLORS.ground,facing);
+  m.box(b.x+Math.sin(facing)*.62,.19,b.z+Math.cos(facing)*.62,.45,.30,.42,COLORS.helmet,facing);
+  m.box(b.x-Math.sin(facing)*.32,.32,b.z-Math.cos(facing)*.32,.46,.22,.42,COLORS.sand,facing);
+  m.box(b.x+.32,.12,b.z+.12,.07,.08,1.03,COLORS.dark,facing);
+  shown++;
+ }
+ game.corpsesDrawn=shown;
  for(const a of game.allies)if(a.hp>0)present(a,"ally");
  rig.skinnedLastFrame=skinnedActors;
  rig.skinnedTriangles=skinnedTriangles;
@@ -1087,6 +1123,7 @@ function dynamicGeometry(){
   window.WPBattleAtmosphere.render(m,game.quality,player.x,player.z);
  if(window.WPArmoredFleet)window.WPArmoredFleet.draw(m,window.WPAssetKit,game.quality,player,game.elapsed);
  // Model-specific Lee-Enfield, Sten and Bren view models (or compatibility gun).
+ game.recoilVisual=player.recoilVisual||0;
  if(art&&!window.WPArmoredFleet?.isDriving())art.weapon(m,player,game);
  else if(!window.WPArmoredFleet?.isDriving()){
   const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw),yaw=-player.yaw;
@@ -1338,6 +1375,11 @@ window.WP3DDiagnostics=()=>({
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
   lastShot:game.lastShot,stealthHits:game.stealthHits,headshots:game.headshots,
+  corpses:game.casualties.length,corpsesDrawn:game.corpsesDrawn||0,
+  recoilBloom:player.recoilBloom||0,recoilReturn:player.recoilReturn||0,
+  tactics:window.WPBattleTactics?.stats()||null,
+  combatStates:game.enemies.map(e=>({hp:e.hp,morale:e.morale??1,
+   mode:e.tacticalMode||"idle",cover:!!e.cover,reaction:e.reaction||0})),
   weaponProfile:window.WPInfantryBallistics?.profiles[player.weapon]||null,
   defenders:game.enemies.map(e=>({x:e.x,z:e.z,hp:e.hp,alert:e.alert,facing:e.facing})),
   navigation:window.WPTacticalNav?window.WPTacticalNav.stats():null,
