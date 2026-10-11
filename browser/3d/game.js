@@ -111,6 +111,9 @@ const highSource=FS.replace(
 ).replace(
  "float highlight=pow(max(0.,dot(n,halfDir)),mix(92.,8.,roughness));",
  "float highlight=pow(max(0.,dot(shadedN,halfDir)),mix(92.,8.,roughness));"
+).replace(
+ "vec3 rgb=vColor*exposure;",
+ "vec3 rgb=vColor*exposure*mix(vec3(.76,.85,.96),vec3(1.13,1.05,.89),smoothstep(.08,.88,sun));"
 );
 function shader(type,source){
  const o=gl.createShader(type);gl.shaderSource(o,source);gl.compileShader(o);
@@ -508,6 +511,14 @@ function loadLicensedScenery(){
      currentWorldData=environment.data;upload(staticMesh,currentWorldData);
      scenery.ww2EnvironmentTriangles=env.triangles;
      scenery.ww2EnvironmentProps=env.props;
+    }
+    // High-only sculpted rural ground; near all roads/foundations kept level.
+    if(window.WPWW2Terrain){
+     const hills=new Geometry();hills.data=currentWorldData.slice();
+     const terrain=window.WPWW2Terrain.append(hills,flags,boxes);
+     currentWorldData=hills.data;upload(staticMesh,currentWorldData);
+     scenery.terrainTriangles=terrain.triangles;
+     scenery.shadowedTerrainCells=terrain.shadowedCells;
     }
     artStructures.push(...result.colliders);
     scenery.instances+=result.placements.length;
@@ -1301,6 +1312,8 @@ window.WP3DDiagnostics=()=>({
   mediumDressingTriangles:scenery.mediumDressingTriangles||0,
   ww2EnvironmentTriangles:scenery.ww2EnvironmentTriangles||0,
   ww2EnvironmentProps:scenery.ww2EnvironmentProps||0,
+  terrainTriangles:scenery.terrainTriangles||0,
+  shadowedTerrainCells:scenery.shadowedTerrainCells||0,
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
