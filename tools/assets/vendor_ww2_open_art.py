@@ -54,7 +54,8 @@ for spec in SPECS:
      cmd=["blender","-b","-t","1","--python",str(ROOT/"tools/assets/blender_export_ww2.py"),
           "--",str(path),str(dest),spec["category"],name]
      result=subprocess.run(cmd,timeout=105,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
-     print("BLENDER_OUTPUT",name,original,result.stdout[-2200:],flush=True)
+     print("BLENDER_OUTPUT",name,original,result.stdout[-1600:],flush=True)
+     if name=="allied_ww2":print("ALLIED_RIG_DIAGNOSTICS","\n".join(line for line in result.stdout.splitlines() if "ALLIED_" in line)[:12000],flush=True)
      if result.returncode!=0:raise RuntimeError("Blender exit "+str(result.returncode))
     assert dest.exists(),"Blender produced no GLB"
     content=dest.read_bytes()
