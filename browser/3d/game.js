@@ -1274,6 +1274,7 @@ button("crouch",()=>{player.crouch=!player.crouch;});
 $("performance-download").addEventListener("click",()=>window.WP3DProbe?.exportReport());
 $("performance-capture").addEventListener("click",()=>window.WP3DProbe?.startCapture());
 $("performance-close").addEventListener("click",()=>window.WP3DProbe?.toggle());
+$("performance-open").addEventListener("click",()=>window.WP3DProbe?.toggle());
 // Register the root offline cache from the 3D subdirectory too. The
 // existing PWA service worker will cache these assets after first use.
 if("serviceWorker" in navigator && location.protocol!=="file:"){
