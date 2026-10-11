@@ -81,8 +81,19 @@ namespace WPMobileControls
                    Action == EWPMobileButton::Reload ||
                    Action == EWPMobileButton::Interact;
         }
-        return Action == EWPMobileButton::Fire ||
-               Action == EWPMobileButton::Interact;
+        if (Mode == EWPMobileMode::LightVehicle)
+        {
+            // Vehicle gunfire and disembark are distinct from infantry actions.
+            return Action == EWPMobileButton::Fire ||
+                   Action == EWPMobileButton::Interact;
+        }
+        if (Mode == EWPMobileMode::Emplacement)
+        {
+            // Mounted guns expose fire and leave controls.
+            return Action == EWPMobileButton::Fire ||
+                   Action == EWPMobileButton::Interact;
+        }
+        return false;
     }
 
     inline const TCHAR* GetLabel(EWPMobileButton Action, EWPMobileMode Mode,
