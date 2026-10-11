@@ -193,10 +193,10 @@ function upload(target,data){
   target.dynamic?gl.DYNAMIC_DRAW:gl.STATIC_DRAW);
  target.count=data.length/9;
 }
-function draw(target){
- if(!target.count)return;
+function draw(target,vertexCount=target.count){
+ if(!vertexCount)return;
  gl.bindVertexArray(target.vao);
- gl.drawArrays(gl.TRIANGLES,0,target.count);
+ gl.drawArrays(gl.TRIANGLES,0,vertexCount);
 }
 class Geometry{
  constructor(){this.data=[];}
@@ -386,10 +386,10 @@ function buildWorld(){
  }
  return m.data;
 }
-const staticMesh=mesh(false),lowStaticMesh=mesh(false),liveMesh=mesh(true);
+const staticMesh=mesh(false),liveMesh=mesh(true);
 const fallbackWorld=buildWorld();
 upload(staticMesh,fallbackWorld);
-upload(lowStaticMesh,fallbackWorld);
+let lowVertexCount=staticMesh.count;
 let currentWorldData=fallbackWorld;
 const scenery={loaded:false,instances:0,triangles:0,error:"",
  dressings:0,dressingTriangles:0,dressingError:"",dressingReady:false};
@@ -441,7 +441,7 @@ function loadLicensedScenery(){
   }
   currentWorldData=world.data;
   upload(staticMesh,currentWorldData);
-  upload(lowStaticMesh,currentWorldData);
+  lowVertexCount=staticMesh.count;
   scenery.loaded=true;scenery.instances=copies;scenery.triangles=added;
   // Independent CC0 farm import: if a model is missing, keep the Kenney scene.
   const farm=["barn","chicken_coop","windmill","well"];
@@ -468,7 +468,7 @@ function loadLicensedScenery(){
    }
    currentWorldData=extras.data;
    upload(staticMesh,currentWorldData);
-   upload(lowStaticMesh,currentWorldData);
+   lowVertexCount=staticMesh.count;
    artStructures.push(...colliders);
    scenery.instances+=sites.length;scenery.triangles+=ntri;
    scenery.buildings=sites.length;
@@ -1070,7 +1070,7 @@ function render(){
  }
  if(materialTextures&&atlasKit)atlasKit.bind(gl,{diffuse:uniforms.uDiffuse,normal:uniforms.uBump},materialTextures);
  // Low retains the previous licensed battlefield without the new scene-density cost.
- draw(game.quality==="low"?lowStaticMesh:staticMesh);
+ draw(staticMesh,game.quality==="low"?lowVertexCount:staticMesh.count);
  upload(liveMesh,dynamicGeometry());
  draw(liveMesh);
 }
@@ -1221,7 +1221,7 @@ window.WP3DDiagnostics=()=>({
  sector:game.sector,alive:game.enemies.filter(e=>e.hp>0).length,
  playerHp:player.hp,weapon:player.weapon,renderSize:[canvas.width,canvas.height],
  renderer:"WebGL2",geometryTriangles:staticMesh.count/3,
-  renderedStaticTriangles:(game.quality==="low"?lowStaticMesh:staticMesh).count/3,
+  renderedStaticTriangles:(game.quality==="low"?lowVertexCount:staticMesh.count)/3,
   dressingDrawn:game.quality!=="low"&&scenery.dressings>0,
   assetInstances:scenery.instances,assetTriangles:scenery.triangles,assetsLoaded:scenery.loaded,
   assetError:scenery.error,texturesLoaded:!!materialTextures,photoMaterialsLoaded:photographicMaterials.loaded,
