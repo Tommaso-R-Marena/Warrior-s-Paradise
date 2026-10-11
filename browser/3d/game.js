@@ -89,6 +89,16 @@ const FS=[
  "outColor=vec4(pow(max(rgb,0.),vec3(.93)),1.);",
  "}"
 ].join("\n");
+const FAST_FS=[
+ "#version 300 es","precision highp float;",
+ "in vec3 vColor;in vec3 vPos;in vec3 vNorm;",
+ "uniform vec3 uEye;out vec4 outColor;",
+ "void main(){",
+ "float sun=max(dot(normalize(vNorm),normalize(vec3(.53,.88,-.36))),0.);",
+ "float haze=clamp((distance(vPos,uEye)-18.)/86.,0.,.73);",
+ "outColor=vec4(mix(vColor*(.48+.58*sun),vec3(.58,.66,.64),haze),1.);",
+ "}"
+].join("\n");
 function shader(type,source){
  const o=gl.createShader(type);gl.shaderSource(o,source);gl.compileShader(o);
  if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(o));
@@ -103,6 +113,17 @@ try{
  fallback.hidden=false;fallback.textContent="3D shader setup failed. Try the lightweight Field Edition. "+String(e);
  return;
 }
+gl.useProgram(program);
+let fastProgram=null,fastVpLocation=null,fastEyeLocation=null;
+try{
+ fastProgram=gl.createProgram();
+ gl.attachShader(fastProgram,shader(gl.VERTEX_SHADER,VS));
+ gl.attachShader(fastProgram,shader(gl.FRAGMENT_SHADER,FAST_FS));
+ gl.linkProgram(fastProgram);
+ if(!gl.getProgramParameter(fastProgram,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(fastProgram));
+ fastVpLocation=gl.getUniformLocation(fastProgram,"uVP");
+ fastEyeLocation=gl.getUniformLocation(fastProgram,"uEye");
+}catch{fastProgram=null;}
 gl.useProgram(program);
 const vpLocation=gl.getUniformLocation(program,"uVP");
 const eyeLocation=gl.getUniformLocation(program,"uEye");
@@ -919,14 +940,16 @@ function render(){
   Math.cos(player.yaw)*Math.cos(player.pitch)];
  const proj=perspective((player.aim?42:73)*Math.PI/180,lastWidth/lastHeight,.065,120);
  const view=lookAt(eye,[eye[0]+forward[0],eye[1]+forward[1],eye[2]+forward[2]]);
- gl.uniformMatrix4fv(vpLocation,false,mul(proj,view));
- gl.uniform3fv(eyeLocation,new Float32Array(eye));
+ const useFast=game.quality==="low"&&!!fastProgram;
+ gl.useProgram(useFast?fastProgram:program);
+ gl.uniformMatrix4fv(useFast?fastVpLocation:vpLocation,false,mul(proj,view));
+ gl.uniform3fv(useFast?fastEyeLocation:eyeLocation,new Float32Array(eye));
  // Uniform detail tier keeps shader variants consistent; mobile low skips noise.
- if(gl.uniform1f){
-  gl.uniform1f(detailLocation,game.quality==="low"?0:game.quality==="medium"?.58:1);
+ if(!useFast&&gl.uniform1f){
+  gl.uniform1f(detailLocation,game.quality==="medium"?.58:1);
   gl.uniform1f(useAtlasLocation,materialTextures?1:0);
  }
- if(materialTextures&&atlasKit)atlasKit.bind(gl,{diffuse:diffuseLocation,normal:bumpLocation},materialTextures);
+ if(!useFast&&materialTextures&&atlasKit)atlasKit.bind(gl,{diffuse:diffuseLocation,normal:bumpLocation},materialTextures);
  draw(staticMesh);
  upload(liveMesh,dynamicGeometry());
  draw(liveMesh);
@@ -1080,7 +1103,7 @@ window.WP3DDiagnostics=()=>({
  renderer:"WebGL2",geometryTriangles:staticMesh.count/3,
   assetInstances:scenery.instances,assetTriangles:scenery.triangles,assetsLoaded:scenery.loaded,
   assetError:scenery.error,texturesLoaded:!!materialTextures,photoMaterialsLoaded:photographicMaterials.loaded,
-  photoMaterialsError:photographicMaterials.error,realPBRMaps:!!materialTextures?.realNormalRoughness,
+  photoMaterialsError:photographicMaterials.error,fastLowShader:!!fastProgram&&game.quality==="low",realPBRMaps:!!materialTextures?.realNormalRoughness,
   rigLoaded:rig.ready,rigError:rig.error,
   skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,buildingsLoaded:scenery.buildings||0,
   farmError:scenery.farmError||"",
