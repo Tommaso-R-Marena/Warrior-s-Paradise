@@ -1,0 +1,47 @@
+name: Build genuine ambientCG material maps
+
+on:
+  push:
+    branches: [feat/verified-pbr-material-maps]
+    paths:
+      - 'tools/scripts/build_cc0_pbr_assets.py'
+      - '.github/workflows/build-cc0-pbr.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wp-ambientcg-assets-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  import-cc0:
+    if: github.repository == 'Tommaso-R-Marena/Warrior-s-Paradise'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install image compressor
+        run: python -m pip install 'Pillow==11.3.0'
+      - name: Download and verify original CC0 textures
+        run: python tools/scripts/build_cc0_pbr_assets.py
+      - name: Commit generated assets to the triggering branch
+        run: |
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name 'github-actions[bot]'
+          git add browser/3d/assets/materials/
+          if ! git diff --cached --quiet; then
+            git commit -m 'assets(pbr): commit verified CC0 original albedo, normal and roughness maps'
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+      - name: Summary
+        run: |
+          echo '### CC0 texture build' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Generated 512px color/normal/roughness maps for Grass004, Ground037, Bricks066.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'All original and optimized SHA-256 hashes live in MANIFEST.json.' >> "$GITHUB_STEP_SUMMARY"
