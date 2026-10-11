@@ -76,15 +76,17 @@ function wind(){
  }catch{ambientStarted=false;}
 }
 function place(node,x=0,z=0,ear={x:0,z:0,yaw:0}){
- const d=Math.hypot(x-ear.x,z-ear.z);
- const attenuation=1/(1+.036*d+.005*d*d);
+ // A previous typo read ear.y instead of ear.yaw and crashed Chrome AudioParam.
+ const finite=v=>Number.isFinite(v)?v:0;
+ const px=finite(x),pz=finite(z),ex=finite(ear?.x),ez=finite(ear?.z),yaw=finite(ear?.yaw);
+ const dx=px-ex,dz=pz-ez,d=Math.hypot(dx,dz);
  const gain=context.createGain();
- gain.gain.value=Math.min(1,attenuation);
+ gain.gain.value=Math.max(0,Math.min(1,finite(1/(1+.036*d+.005*d*d))));
  node.connect(gain);
  if(context.createStereoPanner){
   const pan=context.createStereoPanner();
-  const dx=x-ear.x,dz=z-ear.z;
-  pan.pan.value=Math.max(-.92,Math.min(.92,(dx*Math.cos(ear.yaw)+dz*Math.sin(ear.y))/Math.max(4,d)));
+  const value=(dx*Math.cos(yaw)+dz*Math.sin(yaw))/Math.max(4,d);
+  pan.pan.value=Math.max(-.92,Math.min(.92,finite(value)));
   gain.connect(pan);pan.connect(master);
  }else gain.connect(master);
  return gain;
