@@ -56,6 +56,10 @@ jobs:
           fi
       - name: Test movement, firefights, assets, and capture actual frame times
         run: node tools/tests/browser_playwright_benchmark.mjs
+      - name: Real browser bullet damage, surprise targets, headshots and farmhouse cover
+        run: node tools/tests/browser_playwright_ballistics.mjs
+        env:
+          WP_TEST_URL: http://127.0.0.1:8765/3d/
         env:
           CI: "true"
           WP_TEST_URL: http://127.0.0.1:8765/3d/
