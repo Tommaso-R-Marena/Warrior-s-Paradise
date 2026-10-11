@@ -95,7 +95,7 @@ async function scenario(shouldLoad,farms=true){
  assert.equal(stats.textures,2,"Expected albedo/roughness and bump textures");
  assert.equal(before.assetsLoaded,shouldLoad,JSON.stringify(before));
  assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length+normandy.length+3:kenney.length+3);
- assert(sources.every(url=>/^\.\/assets\/(kenney|quaternius)\//.test(url)));
+ assert(sources.every(url=>/^\.\/assets\/(kenney|quaternius|oga)\//.test(url)));
  if(shouldLoad){
   assert(before.rigLoaded,"Licensed character rig failed to load");
   assert(before.assetInstances>=157&&before.assetTriangles>15000);
