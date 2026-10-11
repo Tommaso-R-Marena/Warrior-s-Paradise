@@ -2,6 +2,9 @@
 import bpy,sys,os
 args=sys.argv[sys.argv.index("--")+1:]
 source,out,category=args[:3]
+asset_id=args[3] if len(args)>3 else ""
+import math
+from mathutils import Vector
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)
 extension=os.path.splitext(source)[1].lower()
@@ -37,12 +40,72 @@ if category=="character":
    mod.object=primary
   for mod in ob.modifiers:
    if mod.type=="ARMATURE":mod.object=primary
-  if len(ob.vertex_groups):
-   # glTF requires the armature to own the skinned mesh hierarchy.
-   world=ob.matrix_world.copy()
-   ob.parent=primary
-   ob.matrix_world=world
+  # Some old Blender 2.7x sources animate separate meshes through object
+  # parenting, not through exportable glTF joint weights. Convert to real skin
+  # weights, rigid by nearest deform bone, instead of advertising a fake rig.
+  has_weights=False
+  for vertex in ob.data.vertices:
+   if any(item.weight>.0001 for item in vertex.groups):has_weights=True;break
+  if not has_weights:
+   bones=[bone for bone in primary.data.bones if bone.use_deform]
+   assert bones,"No deformable bones in Allied source"
+   groups={bone.name:ob.vertex_groups.get(bone.name) or ob.vertex_groups.new(name=bone.name) for bone in bones}
+   for vertex in ob.data.vertices:
+    point=ob.matrix_world @ vertex.co
+    best=None;dist=float("inf")
+    for bone in bones:
+     a=primary.matrix_world @ bone.head_local
+     b=primary.matrix_world @ bone.tail_local
+     ab=b-a;d=max(ab.length_squared,1e-9)
+     t=max(0,min(1,(point-a).dot(ab)/d))
+     diff=(point-(a+ab*t)).length_squared
+     if diff<dist:dist=diff;best=bone.name
+    groups[best].add([vertex.index],1.0,"REPLACE")
+   print("ALLIED_REPAIRED_SKIN_WEIGHTS",ob.name,len(ob.data.vertices))
+  # glTF requires the armature to be the skin owner; retain world transform.
+  world=ob.matrix_world.copy()
+  ob.parent=primary
+  ob.matrix_world=world
+ # Audit creator animations before adding fallback locomotion clips.
+ print("WW2_CHARACTER_SOURCE_ACTIONS",[(a.name,len(a.fcurves)) for a in bpy.data.actions])
+ if asset_id=="allied_ww2":
+  has_motion=any(any(k in a.name.lower() for k in ("walk","run","patrol","idle")) for a in bpy.data.actions)
+  if not has_motion:
+   primary.animation_data_create()
+   for clip,amplitude,speed in (("Allied_Idle",0.025,1),("Allied_Walk",0.24,1),
+                                 ("Allied_Run",0.39,1),("Allied_Aim",0.07,1)):
+    action=bpy.data.actions.new(clip)
+    primary.animation_data.action=action
+    for frame in (1,7,13,19,25):
+     cycle=math.sin((frame-1)/24*math.pi*2*speed)
+     for bone in primary.pose.bones:
+      label=bone.name.lower()
+      if "left" in label and ("leg" in label or "thigh" in label):direction=1
+      elif "right" in label and ("leg" in label or "thigh" in label):direction=-1
+      elif "left" in label and ("arm" in label or "shoulder" in label):direction=-.4
+      elif "right" in label and ("arm" in label or "shoulder" in label):direction=.4
+      else:continue
+      bone.rotation_mode="XYZ"
+      bone.rotation_euler[0]=direction*amplitude*cycle
+      bone.keyframe_insert(data_path="rotation_euler",frame=frame,group=bone.name)
+    track=primary.animation_data.nla_tracks.new()
+    track.name=clip
+    track.strips.new(clip,1,action)
+   primary.animation_data.action=None
+   print("WW2_ALLIED_GENERATED_LOCOMOTION_ACTIONS",4)
 if category=="vehicle":
+ if asset_id=="willys_mb":
+  # The game's small self-hosted WebGL pipeline only uses solid color factors.
+  # Strip 2K source maps from the derivative while preserving the authored mesh.
+  for material in bpy.data.materials:
+   material.use_nodes=True
+   bsdf=next((n for n in material.node_tree.nodes if n.type=="BSDF_PRINCIPLED"),None)
+   for node in list(material.node_tree.nodes):
+    if node.type=="TEX_IMAGE":material.node_tree.nodes.remove(node)
+   if bsdf:
+    bsdf.inputs["Base Color"].default_value=(.28,.34,.24,1)
+    bsdf.inputs["Metallic"].default_value=.05
+  print("WILLYS_MB_TEXTURES_OMITTED_FOR_SMALL_BROWSER_LOD")
  # Offline topology simplification — keeps authored silhouette while avoiding
  # thousands of CPU-transformed triangles per dynamic vehicle each frame.
  total=sum(max(0,len(poly.vertices)-2) for ob in mesh for poly in ob.data.polygons)

@@ -41,7 +41,7 @@ for spec in SPECS:
   assert candidates,"no supported 3D source found"
   def rank(item):
    stem=item[0].lower()
-   return (0 if "soldier" in stem or "paratrooper" in stem or "gaz" in stem or "tank" in stem else 1,
+   return (0 if "soldier" in stem or "paratrooper" in stem or "gaz" in stem or "tank" in stem or "jeep" in stem else 1,
     {".blend":0,".fbx":1,".glb":2,".obj":3}[item[1].suffix],len(stem))
   candidates.sort(key=rank)
   print("SOURCE_CANDIDATES",name,[(a,b.stat().st_size) for a,b in candidates][:9],flush=True)
@@ -52,7 +52,7 @@ for spec in SPECS:
     if path.suffix==".glb":dest.write_bytes(path.read_bytes())
     else:
      cmd=["blender","-b","-t","1","--python",str(ROOT/"tools/assets/blender_export_ww2.py"),
-          "--",str(path),str(dest),spec["category"]]
+          "--",str(path),str(dest),spec["category"],name]
      result=subprocess.run(cmd,timeout=105,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
      print("BLENDER_OUTPUT",name,original,result.stdout[-2200:],flush=True)
      if result.returncode!=0:raise RuntimeError("Blender exit "+str(result.returncode))
@@ -95,3 +95,5 @@ print("VENDORED_WW2_ASSETS",len(records),flush=True)
 # Fail if we don't get at least a period-correct soldier and military vehicle model.
 assert any(x["category"]=="character" for x in records),"No actual WW2 soldier mesh imported"
 assert any(x["category"]=="vehicle" for x in records),"No actual military vehicle mesh imported"
+assert any(x["id"]=="allied_ww2" and x["animations"]>=2 for x in records),"No working Allied animation GLB converted"
+assert any(x["id"]=="willys_mb" for x in records),"Historically authentic Willys MB jeep absent"
