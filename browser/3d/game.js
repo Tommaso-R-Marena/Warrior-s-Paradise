@@ -80,7 +80,7 @@ const FS=[
  "rgb=mix(rgb,textured,intensity*.78);",
  "vec3 eyeDir=normalize(uEye-vPos);",
  "vec3 halfDir=normalize(eyeDir+normalize(vec3(.53,.88,-.36)));",
- "float highlight=pow(max(0.,dot(n,halfDir)),mix(92.,8.,roughness));",
+ "float highlight=pow(max(0.,dot(shadedN,halfDir)),mix(92.,8.,roughness));",
  "rgb+=vec3(.07)*highlight*(1.-roughness)*intensity;",
  "}",
  "float fog=1.-exp(-pow(max(0.,distanceToEye-18.)/78.,1.45));",
