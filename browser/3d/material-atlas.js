@@ -90,7 +90,7 @@ async function enhance(gl,textures){
   const response=await fetch("./assets/materials/"+name+"_photo.jpg.b64",{cache:"force-cache"});
   if(!response.ok)throw Error("Photo surface missing: "+name+" "+response.status);
   const encoded=(await response.text()).replace(/\s/g,"");
-  if(encoded.length<400||encoded.length>100000||
+  if(encoded.length<400||encoded.length>500000||
    !/^[a-zA-Z0-9+/]*={0,2}$/.test(encoded))throw Error("Invalid photographic tile "+name);
   const binary=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
   if(binary[0]!==255||binary[1]!==216||binary[binary.length-2]!==255||
