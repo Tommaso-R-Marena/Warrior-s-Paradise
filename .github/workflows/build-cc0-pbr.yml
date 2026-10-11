@@ -1,6 +1,11 @@
 name: Build genuine ambientCG material maps
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/scripts/build_cc0_pbr_assets.py'
+      - '.github/workflows/build-cc0-pbr.yml'
   push:
     branches: [feat/verified-pbr-material-maps]
     paths:
@@ -17,13 +22,14 @@ concurrency:
 
 jobs:
   import-cc0:
-    if: github.repository == 'Tommaso-R-Marena/Warrior-s-Paradise'
+    if: github.repository == 'Tommaso-R-Marena/Warrior-s-Paradise' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: true
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -38,7 +44,7 @@ jobs:
           git add browser/3d/assets/materials/
           if ! git diff --cached --quiet; then
             git commit -m 'assets(pbr): commit verified CC0 original albedo, normal and roughness maps'
-            git push origin "HEAD:${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           fi
       - name: Summary
         run: |
