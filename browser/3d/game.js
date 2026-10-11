@@ -535,6 +535,7 @@ function reset(){
  if(game.quality==="high")ensureHighProgram();
  requestPhotographicMaterials(game.quality);
  spawnEnemies();spawnAllies();
+ if(window.WPTacticalNav)window.WPTacticalNav.reset();
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
   name,{ammo:w.capacity,reserve:w.reserve}
  ]));
@@ -583,6 +584,16 @@ function move(x,z,dx,dz){
  if(!blocked(x+dx,z,.44))x+=dx;
  if(!blocked(x,z+dz,.44))z+=dz;
  return [x,z];
+}
+function navigateCombatant(actor,gx,gz,speed,dt){
+ if(window.WPTacticalNav){
+  window.WPTacticalNav.advance(actor,gx,gz,speed,dt,blocked,move);return;
+ }
+ const distance=Math.hypot(gx-actor.x,gz-actor.z);
+ if(distance>.001){
+  const step=Math.min(distance,speed*dt)/distance;
+  [actor.x,actor.z]=move(actor.x,actor.z,(gx-actor.x)*step,(gz-actor.z)*step);
+ }
 }
 function lineHit(ax,az,bx,bz){
  return openLOS(ax,az,bx,bz);
@@ -732,8 +743,7 @@ function updateCombinedArms(dt){
   const fz=player.z-Math.cos(player.yaw)*behind+Math.sin(player.yaw)*side*2.1;
   const to=Math.hypot(fx-a.x,fz-a.z),oldX=a.x,oldZ=a.z;
   if(game.order==="follow"&&to>2.1){
-   [a.x,a.z]=move(a.x,a.z,(fx-a.x)/to*Math.min(4.7,to)*dt,
-    (fz-a.z)/to*Math.min(4.7,to)*dt);
+   navigateCombatant(a,fx,fz,Math.min(4.7,to),dt);
   }
   a.moveSpeed=Math.hypot(a.x-oldX,a.z-oldZ)/Math.max(dt,.001);
   if(a.moveSpeed>.05)a.facing=Math.atan2(player.x-a.x,player.z-a.z);
@@ -848,7 +858,7 @@ function simulate(dt){
   const targetD=Math.hypot(tx-e.x,tz-e.z),oldX=e.x,oldZ=e.z;
   if(e.alert>0&&targetD>7){
    const speed=e.suppression>.2?.38:visible?1.24:.84;
-   [e.x,e.z]=move(e.x,e.z,(tx-e.x)/targetD*speed*dt,(tz-e.z)/targetD*speed*dt);
+   navigateCombatant(e,tx,tz,speed,dt);
   }
   e.moveSpeed=Math.hypot(e.x-oldX,e.z-oldZ)/Math.max(dt,.001);
   if(e.alert>0)e.facing=Math.atan2(tx-e.x,tz-e.z);
@@ -1161,6 +1171,7 @@ window.WP3DDiagnostics=()=>({
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
+  navigation:window.WPTacticalNav?window.WPTacticalNav.stats():null,
   grenades:game.grenades.map(g=>({x:g.x,z:g.z,y:g.y,life:g.life})),
   position:{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch},
   playing:game.playing,elapsedSeconds:game.elapsed,framesPerSecond:game.fps,
