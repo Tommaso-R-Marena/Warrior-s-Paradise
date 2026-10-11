@@ -18,6 +18,15 @@
   <div class="team-status"><span id="squadstate">FIRETEAM 2/2 · FOLLOW</span><span id="supportstate">ARTILLERY × 1</span></div>
 </header>
 <div id="crosshair" aria-hidden="true"></div>
+<div id="movement-hint" role="status" aria-live="polite">WASD / ARROWS: MOVE · MOUSE: LOOK · SHIFT: SPRINT · F3: BENCHMARK</div>
+<aside id="performance-panel" hidden aria-label="Live performance and gameplay statistics">
+  <strong>WARRIOR'S PARADISE — PERFORMANCE LAB</strong>
+  <pre id="performance-details" aria-live="off">Gathering frame samples…</pre>
+  <div class="perf-actions">
+    <button id="performance-download" type="button">EXPORT JSON RESULTS</button>
+    <button id="performance-close" type="button">CLOSE (F3)</button>
+  </div>
+</aside>
 <div id="hitmarker" aria-hidden="true">×</div>
 <div id="left-stick" aria-label="Move with left thumb"><div class="ring"></div><div id="nub"></div></div>
 <div id="right-look" aria-label="Drag to look around"></div>
@@ -39,7 +48,7 @@
 <h1 id="menu-title">WARRIOR'S<br><em>PARADISE</em></h1>
 <p class="edition">3D FRONTLINE · TACTICAL ASSAULT</p>
 <p id="menu-copy">Lead a three-soldier fireteam through a Normandy assault. Use sandbags and buildings for cover, suppress defenders, direct limited artillery and capture three positions. Free, offline-capable single-player 3D combat rendered on your own device.</p>
-<p class="key-help"><strong>DESKTOP:</strong> WASD move · Mouse aim/fire · Right-click ADS · C crouch · X squad order · T artillery · R reload · G frag · V medic · Q weapon. <strong>PHONE:</strong> Twin-stick controls and tactical buttons.</p>
+<p class="key-help"><strong>DESKTOP:</strong> WASD / arrow keys move · Shift sprint · Mouse move to look · Left click fire · Right click ADS · C crouch · X squad order · T artillery · R reload · G frag · V medic · Q weapon · F3 performance lab. <strong>PHONE:</strong> Left thumb moves, right thumb looks, tactical buttons fire. Press DEPLOY and move toward the objective marker.</p>
 <div class="options"><label>RENDERING <select id="quality"><option value="low">LOW · PHONE</option><option value="medium" selected>BALANCED</option><option value="high">HIGH · LAPTOP</option></select></label>
 <label>WEAPON <select id="weapon"><option value="rifle">LEE-ENFIELD</option><option value="smg">STEN SMG</option><option value="lmg">BREN LMG</option></select></label>
 <label>ENEMY SKILL <select id="difficulty"><option value="recruit">RECRUIT</option><option value="regular" selected>REGULAR</option><option value="veteran">VETERAN</option></select></label></div>
@@ -53,5 +62,5 @@
 </div>
 </section>
 <div id="fallback" hidden role="alert"><strong>WebGL2 unavailable.</strong> Your browser has no usable 3D graphics context. <a href="../index.html">Play the lightweight Field Edition</a>.</div>
-</main><script src="./asset-loader.js" defer></script><script src="./material-atlas.js" defer></script><script src="./skinning.js" defer></script><script src="./battle-art.js" defer></script><script src="./battle-audio.js" defer></script><script src="./game.js" defer></script>
+</main><script src="./asset-loader.js" defer></script><script src="./material-atlas.js" defer></script><script src="./skinning.js" defer></script><script src="./battle-art.js" defer></script><script src="./battle-audio.js" defer></script><script src="./telemetry.js" defer></script><script src="./game.js" defer></script>
 </body></html>
