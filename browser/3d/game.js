@@ -5,7 +5,7 @@
 (()=>{
 "use strict";
 const $=id=>document.getElementById(id), canvas=$("viewport");
-const gl=canvas.getContext("webgl2",{antialias:false,alpha:false,powerPreference:"default"});
+const gl=canvas.getContext("webgl2",{antialias:false,alpha:true,powerPreference:"high-performance"});
 const fallback=$("fallback"), menu=$("menu");
 if(!gl){
   fallback.hidden=false;$("deploy").disabled=true;
@@ -110,7 +110,7 @@ if(materialTextures&&atlasKit?.enhance){
   .catch(error=>{photographicMaterials.error=String(error);});
 }
 gl.enable(gl.DEPTH_TEST);
-gl.clearColor(.58,.68,.73,1);
+gl.clearColor(0,0,0,0);
 function mesh(dynamic=false){
  const vao=gl.createVertexArray(),vbo=gl.createBuffer();
  gl.bindVertexArray(vao);gl.bindBuffer(gl.ARRAY_BUFFER,vbo);
