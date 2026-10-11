@@ -29,6 +29,8 @@ REQUIRED = [
     "browser/3d/tactical-navigation.js",
     "browser/3d/normandy-dressing.js",
     "browser/3d/ww2-vehicles.js",
+    "browser/3d/ww2-environment.js",
+    "tools/tests/browser_ww2_environment_smoke.js",
     "tools/tests/browser_ww2_vehicles_smoke.js",
     "tools/assets/vendor_ww2_open_art.py",
     "tools/assets/blender_export_ww2.py",
