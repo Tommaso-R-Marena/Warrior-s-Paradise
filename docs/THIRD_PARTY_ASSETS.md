@@ -1,5 +1,16 @@
 # Third-Party / Free Asset Register
 
+## Verified artist-authored CC0 PBR maps — graphics quality upgrade
+
+Warrior's Paradise now bundles the **real ambientCG OpenGL normal and roughness maps**, not only photographic base colors, for Grass004, Ground037 and Bricks066. The original source repository is `petroulacl/fps-buildings-env-kit`; all 9 source maps retain author-claimed **CC0** licensing and full SHA-256 provenance in `browser/3d/assets/materials/MANIFEST.json`. Source JPEGs are downloaded and downsampled reproducibly by `tools/scripts/build_cc0_pbr_assets.py` using pinned Pillow 11.3.0 on a standard GitHub Actions runner. The outputs are canonical Base64-encoded JPEG assets for the free static Cloudflare hosting tier.
+
+On **Medium/High**, the renderer fetches the nine optimized 512×512 textures from its **own** website after user deployment. It uploads a 2048×512 packed atlas: RGB photographic albedo + physically authored roughness in the alpha channel, and real OpenGL tangent normal maps. The shader uses a basic orientation-aware reconstruction on vertical/horizontal surfaces for diffuse lighting and a roughness-dependent specular response. It is an approximation to a full tangent-space PBR pipeline, **not a calibrated photorealistic renderer**. Limestone remains procedurally generated. On **Low**, no heavy map downloads are initiated; the fast procedural fallback keeps memory and rendering cost low.
+
+If a download or WebGL decoder fails, the original authored/procedural atlas remains visible. The material-integrity test `node tools/tests/browser_photo_material_smoke.js` checks all nine pinned hashes and verifies that roughness/normal channels are packed to the uploaded texture arrays.
+
+**What remains:** photoreal WWII soldier, weapon, vehicle and building assets; richer physically based lighting and occlusion/shadows; true tangent frames and normal-map rotation; real Android/iOS and desktop GPU benchmarking. A green automated Chromium benchmark does not prove 60 FPS on particular devices.
+
+
 ## Verified CC0 building photographs (October 2026)
 
 An independent public CI performance comparison showed that an attempted 0.85-second rapid dynamic-resolution adaptation caused worse software-browser frame pacing than the stable 3-second adaptive scaler. **That change was reverted before production**. Physics and movement tests passed in both configurations, but FPS averages fell under the experimental scaler, demonstrating the importance of measuring rather than presuming an optimization helps.
