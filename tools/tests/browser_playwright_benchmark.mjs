@@ -22,12 +22,19 @@ async function run(name,viewport,quality,mobile){
   if(quality!=="low"){
    await page.waitForFunction(()=>{
     const d=window.WP3DDiagnostics();
-    return d.realPBRMaps||!!d.photoMaterialsError;
+    return d.photoMaterialsLoaded||!!d.photoMaterialsError;
    },null,{timeout:30000});
   }
   const initial=await page.evaluate(()=>window.WP3DDiagnostics());
-  if(quality!=="low")assert(initial.realPBRMaps,
-   name+": artist-authored photographic normals/roughness failed: "+initial.photoMaterialsError);
+  if(quality!=="low")assert(initial.photoMaterialsLoaded,
+   name+": photographic maps did not load: "+initial.photoMaterialsError);
+  if(quality==="medium")assert(initial.materialMode==="medium",
+   "Medium must use cost-bounded photographic albedo atlas");
+  if(quality==="high"){
+   assert(initial.highShaderReady,"High dedicated normal shader did not compile");
+   assert(initial.realPBRMaps&&initial.materialMode==="detailed",
+    name+": artist-authored normals/roughness missing: "+initial.photoMaterialsError);
+  }
   assert(initial.texturesLoaded&&initial.renderer==="WebGL2",name+": graphics pipeline unavailable");
   await page.evaluate(()=>window.WP3DProbe.reset());
   const start=await page.evaluate(()=>window.WP3DDiagnostics().position);
