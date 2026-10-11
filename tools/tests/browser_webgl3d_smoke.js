@@ -57,12 +57,14 @@ function run(width,height,webgl=true){
  }};
  const atmosphere=fs.readFileSync(path.join(root,"battle-atmosphere.js"),"utf8");
  const vehicles=fs.readFileSync(path.join(root,"ww2-vehicles.js"),"utf8");
+ const ballistics=fs.readFileSync(path.join(root,"infantry-ballistics.js"),"utf8");
  const sandbox={window:win,document:doc,
   navigator:{userAgent:width<height?"Android Chrome":"Desktop Chrome"},
   requestAnimationFrame(fn){raf.push(fn)},console,Math,Float32Array,Error};
  vm.createContext(sandbox);
  vm.runInContext(atmosphere,sandbox,{filename:"browser/3d/battle-atmosphere.js",timeout:15000});
  vm.runInContext(vehicles,sandbox,{filename:"browser/3d/ww2-vehicles.js",timeout:15000});
+ vm.runInContext(ballistics,sandbox,{filename:"browser/3d/infantry-ballistics.js",timeout:15000});
  vm.runInContext(js,sandbox,{filename:"browser/3d/game.js",timeout:15000});
  if(!webgl){
   assert.equal(el("fallback").hidden,false);
