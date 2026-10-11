@@ -193,10 +193,10 @@ function upload(target,data){
   target.dynamic?gl.DYNAMIC_DRAW:gl.STATIC_DRAW);
  target.count=data.length/9;
 }
-function draw(target){
- if(!target.count)return;
+function draw(target,vertexCount=target.count){
+ if(!vertexCount)return;
  gl.bindVertexArray(target.vao);
- gl.drawArrays(gl.TRIANGLES,0,target.count);
+ gl.drawArrays(gl.TRIANGLES,0,vertexCount);
 }
 class Geometry{
  constructor(){this.data=[];}
@@ -389,7 +389,10 @@ function buildWorld(){
 const staticMesh=mesh(false),liveMesh=mesh(true);
 const fallbackWorld=buildWorld();
 upload(staticMesh,fallbackWorld);
-const scenery={loaded:false,instances:0,triangles:0,error:""};
+let lowVertexCount=staticMesh.count,mediumVertexCount=staticMesh.count;
+let currentWorldData=fallbackWorld;
+const scenery={loaded:false,instances:0,triangles:0,error:"",
+ dressings:0,dressingTriangles:0,dressingError:"",dressingReady:false};
 const rig={model:null,ready:false,error:"",skinnedLastFrame:0,skinnedTriangles:0};
 function loadSkinnedCharacters(){
  const runtime=window.WPSkinning;
@@ -436,7 +439,10 @@ function loadLicensedScenery(){
    added+=kit.appendInstances(world,assets[spec.name],positions,spec.palette);
    copies+=positions.length;
   }
-  upload(staticMesh,world.data);
+  currentWorldData=world.data;
+  upload(staticMesh,currentWorldData);
+  lowVertexCount=staticMesh.count;
+  mediumVertexCount=staticMesh.count;
   scenery.loaded=true;scenery.instances=copies;scenery.triangles=added;
   // Independent CC0 farm import: if a model is missing, keep the Kenney scene.
   const farm=["barn","chicken_coop","windmill","well"];
@@ -461,7 +467,10 @@ function loadLicensedScenery(){
      (max[0]-min[0])*site.scale,(max[2]-min[2])*site.scale
     ]);
    }
-   upload(staticMesh,extras.data);
+   currentWorldData=extras.data;
+   upload(staticMesh,currentWorldData);
+   lowVertexCount=staticMesh.count;
+   mediumVertexCount=staticMesh.count;
    artStructures.push(...colliders);
    scenery.instances+=sites.length;scenery.triangles+=ntri;
    scenery.buildings=sites.length;
@@ -471,6 +480,29 @@ function loadLicensedScenery(){
    scenery.farmError=String(err);
    if($("assetstatus"))$("assetstatus").textContent=
      "KENNEY CC0 SCENERY READY · FARM PACK OPTIONAL";
+  }).finally(()=>{
+   // Sequential staging prevents farm/dressing uploads overwriting each other.
+   const decoration=window.WPNormandyDressing;
+   if(!decoration){
+    scenery.dressingError="Optional CC0 decoration module unavailable";
+    scenery.dressingReady=true;return;
+   }
+   decoration.load(kit,Geometry,currentWorldData,blocked,flags).then(result=>{
+    currentWorldData=result.data;
+    upload(staticMesh,currentWorldData);
+    mediumVertexCount=lowVertexCount+result.mediumTriangles*3;
+    artStructures.push(...result.colliders);
+    scenery.instances+=result.placements.length;
+    scenery.triangles+=result.triangles;
+    scenery.dressings=result.placements.length;
+    scenery.dressingTriangles=result.triangles;
+    scenery.mediumDressingTriangles=result.mediumTriangles;
+    scenery.dressingCover=result.colliders.length;
+    scenery.dressingCounts=result.counts;
+    if($("assetstatus"))$("assetstatus").textContent=
+     "VERIFIED KENNEY + QUATERNIUS CC0 · "+scenery.instances+" WORLD OBJECTS";
+   }).catch(err=>{scenery.dressingError=String(err);})
+    .finally(()=>{scenery.dressingReady=true;});
   });
   
   if($("assetstatus"))$("assetstatus").textContent="KENNEY CC0 SCENERY READY · "+copies+" PLACED ASSETS";
@@ -1041,7 +1073,8 @@ function render(){
   gl.uniform1f(uniforms.uUseAtlas,materialTextures?1:0);
  }
  if(materialTextures&&atlasKit)atlasKit.bind(gl,{diffuse:uniforms.uDiffuse,normal:uniforms.uBump},materialTextures);
- draw(staticMesh);
+ // Low retains the previous licensed battlefield without the new scene-density cost.
+ draw(staticMesh,game.quality==="low"?lowVertexCount:game.quality==="medium"?mediumVertexCount:staticMesh.count);
  upload(liveMesh,dynamicGeometry());
  draw(liveMesh);
 }
@@ -1192,12 +1225,18 @@ window.WP3DDiagnostics=()=>({
  sector:game.sector,alive:game.enemies.filter(e=>e.hp>0).length,
  playerHp:player.hp,weapon:player.weapon,renderSize:[canvas.width,canvas.height],
  renderer:"WebGL2",geometryTriangles:staticMesh.count/3,
+  renderedStaticTriangles:(game.quality==="low"?lowVertexCount:game.quality==="medium"?mediumVertexCount:staticMesh.count)/3,
+  dressingDrawn:game.quality!=="low"&&scenery.dressings>0,
   assetInstances:scenery.instances,assetTriangles:scenery.triangles,assetsLoaded:scenery.loaded,
   assetError:scenery.error,texturesLoaded:!!materialTextures,photoMaterialsLoaded:photographicMaterials.loaded,
   photoMaterialsError:photographicMaterials.error,realPBRMaps:!!materialTextures?.realNormalRoughness,
   highShaderReady:!!highProgram,materialMode:photographicMaterials.mode,rigLoaded:rig.ready,rigError:rig.error,
   skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,buildingsLoaded:scenery.buildings||0,
   farmError:scenery.farmError||"",
+  dressingReady:scenery.dressingReady,dressingError:scenery.dressingError,
+  dressingInstances:scenery.dressings,dressingTriangles:scenery.dressingTriangles,
+  dressingCover:scenery.dressingCover||0,
+  mediumDressingTriangles:scenery.mediumDressingTriangles||0,
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "title": "Kenney CC0 Normandy Battlefield set dressing — pinned source",
+  "creator": "Kenney",
+  "license": "CC0-1.0",
+  "source_page": "https://kenney.nl/assets/nature-kit",
+  "mirror_repo": "Hidencod/tge-assets",
+  "mirror_revision": "08f0c913f6783cc81f9f6105a7cdda8562b1c192",
+  "source_prefix": "packs/nature-kit/",
+  "models": [
+    {
+      "name": "log-stacklarge",
+      "sha1": "ac1b84970217dd9d6562ba311030bea247f11b5a",
+      "bytes": 17604
+    },
+    {
+      "name": "stump-old",
+      "sha1": "ad7a8604b4fae186271e00a5c07e854cc4957766",
+      "bytes": 9564
+    },
+    {
+      "name": "rock-largeb",
+      "sha1": "52cdb4c8f63256a9756e9aced040808439c47e5b",
+      "bytes": 8560
+    },
+    {
+      "name": "fence-gate",
+      "sha1": "085ed4e220ace2e1c18a2d5d8436e2217f24ada9",
+      "bytes": 27652
+    },
+    {
+      "name": "grass-large",
+      "sha1": "c7c7557cea4e5877f03ccba676c5340d9bde6ced",
+      "bytes": 18504
+    },
+    {
+      "name": "log-large",
+      "sha1": "52e362e62522cc0b14d7102b5bdd4216935f5d3b",
+      "bytes": 7924
+    }
+  ]
+}

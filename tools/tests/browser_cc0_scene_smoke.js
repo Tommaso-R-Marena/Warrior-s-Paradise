@@ -13,11 +13,13 @@ const infantry=fs.readFileSync(path.join(root,"battle-art.js"),"utf8");
 const skinning=fs.readFileSync(path.join(root,"skinning.js"),"utf8");
 const materials=fs.readFileSync(path.join(root,"material-atlas.js"),"utf8");
 const spatialAudio=fs.readFileSync(path.join(root,"battle-audio.js"),"utf8");
+const decoration=fs.readFileSync(path.join(root,"normandy-dressing.js"),"utf8");
 const kenney=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
 const quaternius=["barn","chicken_coop","windmill","well"];
+const normandy=["log-stacklarge","fence-gate","log-large","rock-largeb","stump-old","grass-large"];
 const character="character_medium";
 const models=Object.fromEntries([
- ...kenney.map(name=>["kenney/"+name,fs.readFileSync(path.join(root,"assets/kenney",name+".glb.b64"),"utf8")]),
+ ...kenney.concat(normandy).map(name=>["kenney/"+name,fs.readFileSync(path.join(root,"assets/kenney",name+".glb.b64"),"utf8")]),
  ["kenney/"+character,fs.readFileSync(path.join(root,"assets/kenney",character+".glb.b64"),"utf8")],
  ...quaternius.map(name=>["quaternius/"+name,fs.readFileSync(path.join(root,"assets/quaternius",name+".glb.b64"),"utf8")])
 ]);
@@ -78,20 +80,21 @@ async function scenario(shouldLoad,farms=true){
  vm.runInContext(materials,sandbox,{filename:"material-atlas.js",timeout:15000});
  vm.runInContext(infantry,sandbox,{filename:"battle-art.js",timeout:15000});
  vm.runInContext(spatialAudio,sandbox,{filename:"battle-audio.js",timeout:15000});
+ vm.runInContext(decoration,sandbox,{filename:"normandy-dressing.js",timeout:15000});
  assert(win.WPBattleArt&&win.WPBattleSound&&win.WPMaterialAtlas,
   "Full presentation modules failed to initialize");
  vm.runInContext(gameplay,sandbox,{filename:"game.js",timeout:15000});
  // Microtask drain for asynchronous fetch, text decoding and static mesh upload.
- for(let i=0;i<120;i++){
+ for(let i=0;i<240;i++){
   await Promise.resolve();
   const state=win.WP3DDiagnostics();
-  if(shouldLoad?(state.assetsLoaded&&state.rigLoaded&&(state.buildingsLoaded===4||state.farmError)):state.assetError)break;
+  if(shouldLoad?(state.assetsLoaded&&state.rigLoaded&&state.dressingReady):state.assetError)break;
  }
  const before=win.WP3DDiagnostics();
  assert.equal(before.texturesLoaded,true,"Material textures failed to upload");
  assert.equal(stats.textures,2,"Expected albedo/roughness and bump textures");
  assert.equal(before.assetsLoaded,shouldLoad,JSON.stringify(before));
- assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length+1:kenney.length+1);
+ assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length+normandy.length+1:kenney.length+1);
  assert(sources.every(url=>/^\.\/assets\/(kenney|quaternius)\//.test(url)));
  if(shouldLoad){
   assert(before.rigLoaded,"Licensed character rig failed to load");
@@ -99,9 +102,18 @@ async function scenario(shouldLoad,farms=true){
   assert(before.geometryTriangles>24000);
   assert.equal(before.buildingsLoaded,farms?4:0);
   if(farms){
-   assert.equal(before.assetInstances,161);
-   assert.match(el("assetstatus").textContent,/IMPORTED MODELS/);
-  }else assert.match(before.farmError,/404/);
+   assert(before.assetInstances>161,"Missing extra CC0 set dressing");
+   assert.equal(before.dressingReady,true);
+   assert(before.dressingInstances>0,"Extra CC0 models not incorporated: "+before.dressingError);
+   assert(before.dressingTriangles>0&&before.dressingTriangles<=4800,
+    "Dressing exceeds hard triangle budget");
+   assert(before.dressingCover>0,"Tactical barriers need world collision");
+   assert.match(el("assetstatus").textContent,/WORLD OBJECTS/);
+  }else{
+   assert.match(before.farmError,/404/);
+   assert(before.dressingReady&&before.dressingInstances>0,
+    "Independent CC0 dressing should survive missing farm assets");
+  }
  }else{
   assert(before.assetError.includes("404"));
   assert.equal(before.assetInstances,0);
@@ -110,12 +122,29 @@ async function scenario(shouldLoad,farms=true){
  }
  el("deploy").fire("click");
  assert.equal(win.WP3DDiagnostics().alliesAlive,2);
+ if(shouldLoad){
+  const medium=win.WP3DDiagnostics();
+  assert.equal(medium.dressingDrawn,true,"Desktop default must show the full CC0 scenery");
+  assert(medium.renderedStaticTriangles<medium.geometryTriangles,
+   "Medium must use bounded CC0 LOD, not the full High mesh");
+  assert(medium.renderedStaticTriangles>medium.geometryTriangles-medium.dressingTriangles,
+   "Medium must still render actual additional licensed models");
+  assert(medium.mediumDressingTriangles<=1800,"Medium triangle budget exceeded");
+ }
  for(let i=0;i<50;i++){
   assert(raf.length>0,"Frame loop stopped");
   raf.shift()((i+1)*34);
  }
  assert(stats.draws>=100,"No geometry drawn");
  if(shouldLoad)assert(win.WP3DDiagnostics().skinActors>0,"Skinning not present in actual gameplay draw");
+ if(shouldLoad){
+  el("quality").value="low";
+  el("deploy").fire("click");
+  const low=win.WP3DDiagnostics();
+  assert.equal(low.dressingDrawn,false,"Low tier must skip the extra asset geometry");
+  assert(low.renderedStaticTriangles<low.geometryTriangles,
+   "Low tier should render fewer static triangles than Medium/High");
+ }
  assert(stats.uploads>=50,"Rendering stopped");
  return {loaded:before.assetsLoaded,triangles:before.geometryTriangles,
   props:before.assetInstances,draws:stats.draws};

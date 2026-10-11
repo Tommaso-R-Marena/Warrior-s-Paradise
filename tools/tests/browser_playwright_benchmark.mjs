@@ -18,6 +18,10 @@ async function run(name,viewport,quality,mobile){
   await page.locator("#difficulty").selectOption("recruit");
   await page.locator("#deploy").click();
   await page.waitForFunction(()=>window.WP3DDiagnostics().assetsLoaded&&window.WP3DDiagnostics().rigLoaded,{timeout:20000});
+  await page.waitForFunction(()=>window.WP3DDiagnostics().dressingReady,{timeout:20000});
+  const dressing=await page.evaluate(()=>window.WP3DDiagnostics());
+  assert(dressing.dressingInstances>0&&dressing.dressingTriangles<=4800,
+   name+": additional CC0 scene assets missing or too costly: "+dressing.dressingError);
   await page.waitForTimeout(500);
   if(quality!=="low"){
    await page.waitForFunction(()=>{
@@ -26,6 +30,16 @@ async function run(name,viewport,quality,mobile){
    },null,{timeout:30000});
   }
   const initial=await page.evaluate(()=>window.WP3DDiagnostics());
+  assert(initial.dressingDrawn===(quality!=="low"),
+   name+": expected quality tier to select correct static mesh");
+  if(quality==="low")assert(initial.renderedStaticTriangles<initial.geometryTriangles,
+   name+": Low tier should omit extra licensed mesh work");
+  if(quality==="medium"){
+   assert(initial.mediumDressingTriangles>0&&initial.mediumDressingTriangles<=1800,
+    name+": medium LOD content/budget incorrect");
+   assert(initial.renderedStaticTriangles<initial.geometryTriangles,
+    name+": Medium must draw fewer triangles than High");
+  }
   if(quality!=="low")assert(initial.photoMaterialsLoaded,
    name+": photographic maps did not load: "+initial.photoMaterialsError);
   if(quality==="medium")assert(initial.materialMode==="medium",
