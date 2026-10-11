@@ -1006,8 +1006,9 @@ function dynamicGeometry(){
  const present=(actor,team)=>{
   const distance=Math.hypot(actor.x-player.x,actor.z-player.z);
   if(rig.ready&&skinner&&distance<viewDist&&selected.has(actor)){
-   const drawn=skinner.append(m,rig.model,actor,team,game.elapsed);
-   if(art?.fieldEquipment)art.fieldEquipment(m,actor,team);
+   const chosen=rig.historical[team]||rig.model;
+   const drawn=skinner.append(m,chosen,actor,team,game.elapsed);
+   if(!rig.historical[team]&&art?.fieldEquipment)art.fieldEquipment(m,actor,team);
    skinnedActors++;skinnedTriangles+=drawn.triangles;
   }else if(art)art.soldier(m,actor,team,game.elapsed,actor.moveSpeed||0);
   else{
@@ -1043,8 +1044,9 @@ function dynamicGeometry(){
  }
  if(window.WPBattleAtmosphere)
   window.WPBattleAtmosphere.render(m,game.quality,player.x,player.z);
+ if(window.WPArmoredFleet)window.WPArmoredFleet.draw(m,window.WPAssetKit,game.quality,player,game.elapsed);
  // Model-specific Lee-Enfield, Sten and Bren view models (or compatibility gun).
- if(art)art.weapon(m,player,game);
+ if(art&&!window.WPArmoredFleet?.isDriving())art.weapon(m,player,game);
  else{
   const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw),yaw=-player.yaw;
   const py=(player.crouch?1.02:1.67)-.4;
