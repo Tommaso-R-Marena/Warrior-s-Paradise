@@ -30,6 +30,8 @@ REQUIRED = [
     "browser/3d/normandy-dressing.js",
     "browser/3d/ww2-vehicles.js",
     "browser/3d/device-gpu-profiler.js",
+    "browser/3d/ww2-terrain.js",
+    "tools/tests/browser_ww2_terrain_smoke.js",
     "tools/tests/browser_gpu_profiler_smoke.js",
     "browser/3d/ww2-environment.js",
     "tools/tests/browser_ww2_environment_smoke.js",
