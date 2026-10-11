@@ -13,7 +13,7 @@ GAME3D = BROWSER / "3d"
 
 class WebGL3DTests(unittest.TestCase):
     def test_cloudflare_fully_static_with_low_end_fallback(self):
-        for name in ("index.html", "style.css", "game.js", "asset-loader.js", "battle-art.js", "battle-audio.js", "skinning.js", "material-atlas.js", "telemetry.js", "tactical-navigation.js", "battle-atmosphere.js"):
+        for name in ("index.html", "style.css", "game.js", "asset-loader.js", "battle-art.js", "battle-audio.js", "skinning.js", "material-atlas.js", "telemetry.js", "tactical-navigation.js", "battle-atmosphere.js", "normandy-dressing.js"):
             self.assertTrue((GAME3D / name).is_file(), name)
         html = (GAME3D / "index.html").read_text(encoding="utf-8")
         script = (GAME3D / "game.js").read_text(encoding="utf-8")
@@ -71,6 +71,7 @@ class WebGL3DTests(unittest.TestCase):
                      ROOT / "tools/tests/browser_photo_material_smoke.js",
                      GAME3D / "telemetry.js", GAME3D / "tactical-navigation.js",
                      GAME3D / "battle-atmosphere.js",
+                     GAME3D / "normandy-dressing.js",
                      ROOT / "tools/tests/browser_battle_atmosphere_smoke.js",
                      ROOT / "tools/tests/browser_tactical_navigation_smoke.js"):
             p = subprocess.run([node, "--check", str(file)], capture_output=True,
