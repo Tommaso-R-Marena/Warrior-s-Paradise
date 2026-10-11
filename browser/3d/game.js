@@ -1361,7 +1361,22 @@ if(typeof location!=="undefined"&&typeof location.search==="string"&&
    for(let i=0;i<ticks&&game.playing;i++)simulate(1/60);
    return {x:player.x,z:player.z,elapsed:game.elapsed,playing:game.playing,
      input:{...input.keys},shots:window.WP3DProbe?.report().gameplay.shots||0};
-  }
+  },
+  combatScenario(data){
+   if(!game.playing||!data||!Number.isFinite(data.x)||!Number.isFinite(data.z))
+    throw Error("QA combat scenario requires deployment and coordinates");
+   if(data.weapon&&!WEAPONS[data.weapon])throw Error("Unknown weapon");
+   Object.assign(player,{x:data.x,z:data.z,yaw:data.yaw||0,pitch:data.pitch||0,
+    crouch:!!data.crouch,aim:data.aim!==false,cd:0,reload:0});
+   if(data.weapon){player.weapon=data.weapon;player.ammo=WEAPONS[data.weapon].capacity;}
+   if(Array.isArray(data.enemies)){
+    game.enemies=data.enemies.map(e=>({x:e.x,z:e.z,hp:e.hp??80,
+     maxHp:e.hp??80,facing:e.facing||0,alert:e.alert||0,lastX:e.x,lastZ:e.z,
+     hit:0,sector:0,cd:1000,suppression:0,phase:0}));
+   }
+   game.lastShot=null;hud();
+  },
+  shootOnce(){player.cd=0;shoot();return game.lastShot;}
  });
 }
 requestAnimationFrame(frame);
