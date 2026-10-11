@@ -1093,7 +1093,9 @@ function render(){
  const stepBob=Math.sin(player.stepPhase||0)*(player.stepStrength||0)*
   (player.aim?.008:.023);
  const shake=(player.concussion||0)*.024;
- const eye=[player.x,(player.crouch?1.02:1.67)+stepBob+
+ const driving=window.WPArmoredFleet?.current();
+ const eyeHeight=driving?(driving.id==="armor"?3.15:2.35):(player.crouch?1.02:1.67);
+ const eye=[player.x,eyeHeight+stepBob+
   Math.sin(game.elapsed*37)*shake,player.z],forward=[
   -Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),
   Math.cos(player.yaw)*Math.cos(player.pitch)];
