@@ -29,6 +29,8 @@ REQUIRED = [
     "browser/3d/tactical-navigation.js",
     "browser/3d/normandy-dressing.js",
     "browser/3d/ww2-vehicles.js",
+    "browser/3d/device-gpu-profiler.js",
+    "tools/tests/browser_gpu_profiler_smoke.js",
     "browser/3d/ww2-environment.js",
     "tools/tests/browser_ww2_environment_smoke.js",
     "tools/tests/browser_ww2_vehicles_smoke.js",
