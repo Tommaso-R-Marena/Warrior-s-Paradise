@@ -33,8 +33,9 @@ vm.runInNewContext(fs.readFileSync(path.join(root,"material-atlas.js"),"utf8"),m
 const art=mock.window.WPMaterialAtlas;
 (async()=>{
  const tex=art.upload(gl);
+ assert.equal(Object.keys(tiles).length,3);
  const ok=await art.enhance(gl,tex);
  assert.equal(ok,true);assert.deepEqual(Array.from(tex.size),[1024,256]);
  assert.equal(gl.uploads.length,4);assert.equal(gl.uploads[2].bytes,1024*256*4);
- console.log("PASS real CC0 terrain photo bundle:",JSON.stringify({tiles:2,uploaded:gl.uploads.length,size:tex.size}));
+ console.log("PASS real CC0 terrain photo bundle:",JSON.stringify({tiles:3,uploaded:gl.uploads.length,size:tex.size}));
 })().catch(e=>{console.error(e);process.exitCode=1});
