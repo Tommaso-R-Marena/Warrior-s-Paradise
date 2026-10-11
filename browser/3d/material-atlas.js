@@ -84,61 +84,71 @@ function bind(gl,uniforms,textures){
 async function enhance(gl,textures){
  if(!textures||typeof fetch!=="function"||typeof createImageBitmap!=="function"||
    typeof document==="undefined")return false;
- const names=["grass","mud","brick"];
- const images=[];
- for(const name of names){
-  const response=await fetch("./assets/materials/"+name+"_photo.jpg.b64",{cache:"force-cache"});
-  if(!response.ok)throw Error("Photo surface missing: "+name+" "+response.status);
-  const encoded=(await response.text()).replace(/\s/g,"");
-  if(encoded.length<400||encoded.length>100000||
-   !/^[a-zA-Z0-9+/]*={0,2}$/.test(encoded))throw Error("Invalid photographic tile "+name);
-  const binary=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
-  if(binary[0]!==255||binary[1]!==216||binary[binary.length-2]!==255||
-    binary[binary.length-1]!==217)throw Error("Bad JPEG markers: "+name);
-  const bitmap=await createImageBitmap(new Blob([binary],{type:"image/jpeg"}));
-  if(bitmap.width!==256||bitmap.height!==256)throw Error("Unexpected tile dimension");
-  images.push(bitmap);
- }
- const size=256,width=size*4,generated=generate();
- const canvas=document.createElement("canvas");canvas.width=width;canvas.height=size;
- const ctx=canvas.getContext("2d",{willReadFrequently:true});
- if(!ctx)throw Error("Photo atlas requires 2D canvas");
- for(let tile=0;tile<2;tile++)ctx.drawImage(images[tile],tile*size,0,size,size);
- ctx.drawImage(images[2],3*size,0,size,size);
- const image=ctx.getImageData(0,0,width,size).data;
- const color=new Uint8Array(width*size*4),normal=new Uint8Array(width*size*4);
- for(let y=0;y<size;y++)for(let x=0;x<width;x++){
-  const tile=Math.floor(x/size),lx=x%size;
-  const base=(Math.floor(y/2)*generated.width+tile*128+Math.floor(lx/2))*4;
-  const dst=(y*width+x)*4;
-  for(let k=0;k<4;k++){color[dst+k]=generated.color[base+k];
-    normal[dst+k]=generated.normal[base+k];}
-  if(tile<2||tile===3){
-   for(let k=0;k<3;k++){
-    const warmth=tile===3?[1.04,.96,.88][k]:1;
-    color[dst+k]=Math.min(255,Math.round(image[dst+k]*warmth));
+ const names=["grass","mud","brick"],kinds=["photo","normal","roughness"];
+ const size=512,width=size*4,loaded={};
+ const bitmaps=[];
+ try{
+  for(const name of names){
+   loaded[name]={};
+   for(const kind of kinds){
+    const response=await fetch("./assets/materials/"+name+"_"+kind+".jpg.b64",{cache:"force-cache"});
+    if(!response.ok)throw Error("PBR map unavailable: "+name+"/"+kind+" HTTP "+response.status);
+    const encoded=(await response.text()).replace(/\s/g,"");
+    if(encoded.length<400||encoded.length>500000||
+      !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded))throw Error("Invalid CC0 PBR map "+name+"/"+kind);
+    const raw=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
+    if(raw[0]!==255||raw[1]!==216||raw[raw.length-2]!==255||raw[raw.length-1]!==217)
+     throw Error("Incomplete PBR JPEG "+name+"/"+kind);
+    const bmp=await createImageBitmap(new Blob([raw],{type:"image/jpeg"}));
+    if(bmp.width!==size||bmp.height!==size)throw Error("Incorrect PBR source dimensions");
+    bitmaps.push(bmp);loaded[name][kind]=bmp;
    }
-   const lum=(index)=>.2126*image[index]+.7152*image[index+1]+.0722*image[index+2];
-   const left=(y*width+tile*size+((lx+size-1)%size))*4;
-   const right=(y*width+tile*size+((lx+1)%size))*4;
-   const up=(((y+size-1)%size)*width+x)*4;
-   const down=(((y+1)%size)*width+x)*4;
-   normal[dst]=Math.max(0,Math.min(255,Math.round(128-(lum(right)-lum(left))*.40)));
-   normal[dst+1]=Math.max(0,Math.min(255,Math.round(128-(lum(down)-lum(up))*.40)));
-   normal[dst+2]=255;normal[dst+3]=255;
   }
+  const original=generate();
+  const canvas=document.createElement("canvas");canvas.width=width;canvas.height=size;
+  const ctx=canvas.getContext("2d",{willReadFrequently:true});
+  if(!ctx)throw Error("No 2D PBR compositor");
+  const compose=kind=>{
+   ctx.clearRect(0,0,width,size);
+   for(let tile=0;tile<4;tile++){
+    if(tile===2)continue; // authored limestone remains procedural
+    const name=names[tile===3?2:tile];
+    ctx.drawImage(loaded[name][kind],tile*size,0,size,size);
+   }
+   return ctx.getImageData(0,0,width,size).data;
+  };
+  const diffuse=compose("photo"),normals=compose("normal"),
+   roughness=compose("roughness");
+  const color=new Uint8Array(width*size*4),normal=new Uint8Array(width*size*4);
+  const rowStride=original.width;
+  for(let y=0;y<size;y++)for(let x=0;x<width;x++){
+   const tile=Math.floor(x/size),lx=x%size;
+   const base=(Math.floor(y/4)*rowStride+tile*128+Math.floor(lx/4))*4;
+   const dst=(y*width+x)*4;
+   for(let k=0;k<4;k++){
+    color[dst+k]=original.color[base+k];
+    normal[dst+k]=original.normal[base+k];
+   }
+   if(tile!==2){
+    for(let k=0;k<3;k++)color[dst+k]=diffuse[dst+k];
+    color[dst+3]=roughness[dst];  // physically authored scalar roughness
+    for(let k=0;k<3;k++)normal[dst+k]=normals[dst+k]; // real OpenGL tangent normals
+    normal[dst+3]=255;
+   }
+  }
+  // Only publish new GPU contents once the full atlas successfully decoded.
+  for(const [id,data] of [[textures.diffuse,color],[textures.normal,normal]]){
+   gl.bindTexture(gl.TEXTURE_2D,id);
+   gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
+   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,width,size,0,gl.RGBA,gl.UNSIGNED_BYTE,data);
+   gl.generateMipmap(gl.TEXTURE_2D);
+  }
+  textures.size=[width,size];textures.photos=names;
+  textures.realNormalRoughness=true;
+  return true;
+ }finally{
+  for(const bmp of bitmaps)if(typeof bmp.close==="function")bmp.close();
  }
- // Reuse existing bound textures; no extra GPU objects or texture memory leaks.
- function replace(id,data){
-  gl.bindTexture(gl.TEXTURE_2D,id);
-  gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,width,size,0,gl.RGBA,gl.UNSIGNED_BYTE,data);
-  gl.generateMipmap(gl.TEXTURE_2D);
- }
- replace(textures.diffuse,color);replace(textures.normal,normal);
- textures.size=[width,size];textures.photos=names;
- for(const bmp of images)if(typeof bmp.close==="function")bmp.close();
- return true;
 }
 root.WPMaterialAtlas=Object.freeze({generate,upload,bind,enhance});
 })(window);
