@@ -42,6 +42,22 @@ if category=="character":
    world=ob.matrix_world.copy()
    ob.parent=primary
    ob.matrix_world=world
+if category=="vehicle":
+ # Offline topology simplification — keeps authored silhouette while avoiding
+ # thousands of CPU-transformed triangles per dynamic vehicle each frame.
+ total=sum(max(0,len(poly.vertices)-2) for ob in mesh for poly in ob.data.polygons)
+ target=1700
+ if total>target:
+  ratio=max(.05,min(1.0,target/total))
+  for ob in mesh:
+   if not ob.data.polygons:continue
+   bpy.ops.object.select_all(action="DESELECT")
+   ob.select_set(True);bpy.context.view_layer.objects.active=ob
+   dec=ob.modifiers.new("BrowserVehicleLOD",type="DECIMATE")
+   dec.ratio=ratio
+   try:bpy.ops.object.modifier_apply(modifier=dec.name)
+   except Exception as exc:print("LOD_REDUCTION_SKIP",ob.name,str(exc))
+  print("VEHICLE_TRIANGLE_LOD",total,target)
 for ob in bpy.data.objects: ob.select_set(ob.type in ("MESH","ARMATURE"))
 if bpy.context.view_layer.objects.active not in bpy.context.selected_objects:
  bpy.context.view_layer.objects.active=next(o for o in bpy.data.objects if o.type=="MESH")
