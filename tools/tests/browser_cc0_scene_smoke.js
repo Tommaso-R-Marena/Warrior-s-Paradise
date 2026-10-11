@@ -12,6 +12,7 @@ const gameplay=fs.readFileSync(path.join(root,"game.js"),"utf8");
 const infantry=fs.readFileSync(path.join(root,"battle-art.js"),"utf8");
 const skinning=fs.readFileSync(path.join(root,"skinning.js"),"utf8");
 const materials=fs.readFileSync(path.join(root,"material-atlas.js"),"utf8");
+const culling=fs.readFileSync(path.join(root,"spatial-mesh.js"),"utf8");
 const spatialAudio=fs.readFileSync(path.join(root,"battle-audio.js"),"utf8");
 const kenney=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
 const quaternius=["barn","chicken_coop","windmill","well"];
@@ -76,6 +77,7 @@ async function scenario(shouldLoad,farms=true){
  vm.runInContext(loader,sandbox,{filename:"asset-loader.js",timeout:15000});
  vm.runInContext(skinning,sandbox,{filename:"skinning.js",timeout:15000});
  vm.runInContext(materials,sandbox,{filename:"material-atlas.js",timeout:15000});
+ vm.runInContext(culling,sandbox,{filename:"spatial-mesh.js",timeout:15000});
  vm.runInContext(infantry,sandbox,{filename:"battle-art.js",timeout:15000});
  vm.runInContext(spatialAudio,sandbox,{filename:"battle-audio.js",timeout:15000});
  assert(win.WPBattleArt&&win.WPBattleSound&&win.WPMaterialAtlas,
@@ -89,6 +91,8 @@ async function scenario(shouldLoad,farms=true){
  }
  const before=win.WP3DDiagnostics();
  assert.equal(before.texturesLoaded,true,"Material textures failed to upload");
+ assert.equal(before.spatialCulling,true,"Real scene must use spatial static culling");
+ assert(before.staticTotalCells>=10,"No terrain chunks built");
  assert.equal(stats.textures,2,"Expected albedo/roughness and bump textures");
  assert.equal(before.assetsLoaded,shouldLoad,JSON.stringify(before));
  assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length+1:kenney.length+1);
@@ -115,6 +119,9 @@ async function scenario(shouldLoad,farms=true){
   raf.shift()((i+1)*34);
  }
  assert(stats.draws>=100,"No geometry drawn");
+ assert(win.WP3DDiagnostics().staticVisibleTriangles>1000,"No static world visible");
+ assert(win.WP3DDiagnostics().staticVisibleTriangles<=before.geometryTriangles,
+  "Spatial culling drew more triangles than world contains");
  if(shouldLoad)assert(win.WP3DDiagnostics().skinActors>0,"Skinning not present in actual gameplay draw");
  assert(stats.uploads>=50,"Rendering stopped");
  return {loaded:before.assetsLoaded,triangles:before.geometryTriangles,
