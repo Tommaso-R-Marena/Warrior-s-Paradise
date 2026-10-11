@@ -94,10 +94,14 @@ function fieldEquipment(g,actor,team){
 function weapon(g,player,game){
  const F=[-Math.sin(player.yaw),Math.cos(player.yaw)],R=[-Math.cos(player.yaw),-Math.sin(player.yaw)];
  const recoil=(game.flash||0)>0?Math.min(.11,game.flash*.6):0;
- const bob=Math.sin(game.elapsed*9)*(player.aim?.004:.012);
- const center={x:player.x+F[0]*(.91-recoil)+R[0]*(player.aim?.036:.29),
-  z:player.z+F[1]*(.91-recoil)+R[1]*(player.aim?.036:.29),
-  y:(player.crouch?1.02:1.67)-(player.aim?.22:.40)+player.pitch*.15+bob};
+ const bob=Math.sin(player.stepPhase||0)*(player.stepStrength||0)*
+  (player.aim?.004:.014);
+ const reloadDuration=player.weapon==="rifle"?1.9:player.weapon==="smg"?1.6:2.7;
+ const reloadPhase=player.reload>0?1-Math.min(1,player.reload/reloadDuration):0;
+ const reloadDip=player.reload>0?Math.sin(Math.PI*reloadPhase)*.22:0;
+ const center={x:player.x+F[0]*(.91-recoil)+R[0]*((player.aim?.036:.29)+reloadDip*.24),
+  z:player.z+F[1]*(.91-recoil)+R[1]*((player.aim?.036:.29)+reloadDip*.24),
+  y:(player.crouch?1.02:1.67)-(player.aim?.22:.40)+player.pitch*.15+bob-reloadDip};
  const X=n=>center.x+F[0]*n,Z=n=>center.z+F[1]*n;
  const yaw=-player.yaw,model=player.weapon;
  const box=(l,y,w,h,d,col)=>g.box(X(l),center.y+y,Z(l),w,h,d,col,yaw);
