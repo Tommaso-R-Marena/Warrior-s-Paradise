@@ -28,39 +28,32 @@ for ob in list(mesh):
 mesh=[ob for ob in bpy.data.objects if ob.type=="MESH"]
 assert mesh
 if asset_id=="allied_ww2":
- # 2020 source has two full Rigify controller rigs, 65+ hidden WGT widgets,
- # but only two real 3,206-vertex character bodies. Keep exactly one weighted
- # character and its parent armature before glTF conversion.
+ # The original 2020 Blender source includes two slow Rigify IK/control rigs,
+ # visible controller widget meshes, and a separate 29-bone metarig. Use only
+ # the actual US soldier mesh and the compact source metarig. Rebind original
+ # geometry with nearest deform-bone skin weights, then bake known clips.
  candidates=[ob for ob in mesh if ob.name.startswith("Char.") and len(ob.vertex_groups)>=20]
- assert candidates,"Original Allied character body absent"
- soldier=max(candidates,key=lambda ob:len(ob.data.vertices))
- source_rig=soldier.parent if soldier.parent and soldier.parent.type=="ARMATURE" else None
- assert source_rig,"Original character has no physical deform-armature parent"
- print("ALLIED_CURATED_SOURCE",soldier.name,source_rig.name,
-       len(soldier.data.vertices),len(soldier.vertex_groups),flush=True)
+ assert candidates,"US soldier body not found in original source"
+ soldier=next((o for o in candidates if o.name=="Char.001"),candidates[0])
+ source_rig=bpy.data.objects.get("metarig")
+ assert source_rig and source_rig.type=="ARMATURE","Source lacks simple 29-bone metarig"
+ world=soldier.matrix_world.copy()
+ soldier.parent=None
+ soldier.matrix_world=world
  for ob in list(bpy.data.objects):
   if ob not in (soldier,source_rig):bpy.data.objects.remove(ob,do_unlink=True)
- # Rigify custom-control widget geometry is not renderable infantry equipment.
- if soldier.name not in bpy.context.scene.collection.objects:
-  bpy.context.scene.collection.objects.link(soldier)
- if source_rig.name not in bpy.context.scene.collection.objects:
-  bpy.context.scene.collection.objects.link(source_rig)
- soldier.hide_render=False;soldier.hide_viewport=False
- source_rig.hide_render=False;source_rig.hide_viewport=False
- soldier.hide_set(False);source_rig.hide_set(False)
- # Drop controls and keep existing weighted DEF bones below 96-joint runtime
- # hard cap; animations are rebuilt on this clean deform-only hierarchy.
- bpy.ops.object.select_all(action="DESELECT")
- source_rig.select_set(True)
- bpy.context.view_layer.objects.active=source_rig
- bpy.ops.object.mode_set(mode="EDIT")
- original={b.name:b.use_deform for b in source_rig.data.bones}
- for bone in list(source_rig.data.edit_bones):
-  if not original.get(bone.name,False):
-   source_rig.data.edit_bones.remove(bone)
- bpy.ops.object.mode_set(mode="OBJECT")
- assert 1<=len(source_rig.data.bones)<=96,"Allied deform bones must meet WebGL runtime limit"
- print("ALLIED_COMPATIBLE_SKIN_BONES",len(source_rig.data.bones),flush=True)
+ for ob in (soldier,source_rig):
+  if ob.name not in bpy.context.scene.collection.objects:
+   bpy.context.scene.collection.objects.link(ob)
+  ob.hide_render=False
+  ob.hide_viewport=False
+  ob.hide_set(False)
+ # Drop original Rigify-specific weight group names before deterministic
+ # transfer to the compact metarig, or glTF would silently omit skinning.
+ for vg in list(soldier.vertex_groups):soldier.vertex_groups.remove(vg)
+ assert 1<=len(source_rig.data.bones)<=96
+ print("ALLIED_METARIG_REBIND",soldier.name,len(soldier.data.vertices),
+  source_rig.name,len(source_rig.data.bones),flush=True)
  mesh=[soldier]
 if asset_id=="allied_ww2":
  print("ALLIED_MODEL_INSPECTION",
