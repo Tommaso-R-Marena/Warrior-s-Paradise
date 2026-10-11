@@ -25,7 +25,19 @@ for(const spec of manifest.assets){
   signatures.set(crypto.createHash("sha256").update(bytes).digest("hex"),label);
  }
 }
-assert.equal(Object.keys(tiles).length,9);
+for(const spec of manifest.assets){
+ const record=spec.medium_map;
+ assert(record&&record.asset===spec.name+"_medium.jpg.b64");
+ const encoded=fs.readFileSync(path.join(root,"assets/materials",record.asset),"utf8").trim();
+ const bytes=Buffer.from(encoded,"base64");
+ assert.equal(bytes.length,record.optimized_bytes);
+ assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"),record.optimized_sha256);
+ assert.equal(crypto.createHash("sha256").update(bytes).digest("hex").length,64);
+ tiles[spec.name+"_medium"]=encoded;
+ signatures.set(record.optimized_sha256,spec.name+"_medium");
+ bytesTotal+=bytes.length;
+}
+assert.equal(Object.keys(tiles).length,12);
 const gl={TEXTURE_2D:1,UNPACK_ALIGNMENT:2,RGBA:3,UNSIGNED_BYTE:4,LINEAR:5,LINEAR_MIPMAP_LINEAR:6,
  CLAMP_TO_EDGE:7,TEXTURE_WRAP_S:8,TEXTURE_WRAP_T:9,TEXTURE_MAG_FILTER:10,TEXTURE_MIN_FILTER:11,
  TEXTURE0:12,TEXTURE1:13,uploads:[],createTexture(){return{}},bindTexture(){},pixelStorei(){},
@@ -44,14 +56,14 @@ const canvas={width:0,height:0,getContext(){return ctx2d}};
 const mock={window:{},Math,Uint8Array,Blob,document:{createElement:()=>canvas},
  atob:s=>Buffer.from(s,"base64").toString("binary"),
  fetch:async url=>{
-  const name=url.match(/\/(grass|mud|brick)_(photo|normal|roughness)\.jpg\.b64$/);
+  const name=url.match(/\/(grass|mud|brick)_(photo|normal|roughness|medium)\.jpg\.b64$/);
   return {ok:!!name,status:name?200:404,text:async()=>tiles[name[1]+"_"+name[2]]};
  },
  createImageBitmap:async blob=>{
   const data=Buffer.from(await blob.arrayBuffer());
   const label=signatures.get(crypto.createHash("sha256").update(data).digest("hex"));
   assert(label,"Unknown source bitmap");
-  return {width:512,height:512,kind:label.split("_")[1],close(){}};
+  return {width:label.endsWith("_medium")?256:512,height:label.endsWith("_medium")?256:512,kind:label.split("_")[1],close(){}};
  }};
 vm.runInNewContext(fs.readFileSync(path.join(root,"material-atlas.js"),"utf8"),mock);
 const art=mock.window.WPMaterialAtlas;
@@ -71,6 +83,6 @@ const art=mock.window.WPMaterialAtlas;
  assert.equal(gl.uploads[6].firstAlpha,88,"Artist-authored roughness not packed to alpha");
  assert.equal(gl.uploads[7].sample[2],246,"Genuine OpenGL normal blue channel not packed");
  console.log("PASS real CC0 terrain photo bundle:",JSON.stringify({
-  maps:9,bytes:bytesTotal,atlases:2,mediumSize:simple.size,
+  maps:12,bytes:bytesTotal,atlases:2,mediumSize:simple.size,
   highSize:tex.size,provenanceHashesVerified:true}));
 })().catch(e=>{console.error(e);process.exitCode=1});
