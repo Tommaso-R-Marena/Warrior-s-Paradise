@@ -32,9 +32,16 @@ if category=="character":
  for a in armatures:
   if a!=primary:bpy.data.objects.remove(a,do_unlink=True)
  for ob in mesh:
-  if not any(m.type=="ARMATURE" for m in ob.modifiers):
+  if not any(m.type=="ARMATURE" for m in ob.modifiers) and len(ob.vertex_groups):
    mod=ob.modifiers.new(name="Armature",type="ARMATURE")
    mod.object=primary
+  for mod in ob.modifiers:
+   if mod.type=="ARMATURE":mod.object=primary
+  if len(ob.vertex_groups):
+   # glTF requires the armature to own the skinned mesh hierarchy.
+   world=ob.matrix_world.copy()
+   ob.parent=primary
+   ob.matrix_world=world
 for ob in bpy.data.objects: ob.select_set(ob.type in ("MESH","ARMATURE"))
 if bpy.context.view_layer.objects.active not in bpy.context.selected_objects:
  bpy.context.view_layer.objects.active=next(o for o in bpy.data.objects if o.type=="MESH")
