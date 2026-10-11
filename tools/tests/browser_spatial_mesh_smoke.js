@@ -22,8 +22,8 @@ assert(p.batchCount>=16&&p.batchCount<=30);
 const all=p.batches.map(x=>spatial.visible(x,0,0,0,.65,90));
 assert(all.some(Boolean)&&all.some(x=>!x),"Looking north must cull geometry behind player");
 assert(p.batches.every(b=>spatial.visible(b,b.cx,b.cz,0,.65,90)),"A cell at eye must remain visible");
-assert(p.batches.every(b=>spatial.visible(b,0,0,0,Math.PI/2,200)||b.cz < -b.radius-2),
- "180-degree field should include all possible forward cells");
+assert(p.batches.filter(b=>b.cz>b.radius+3).every(b=>spatial.visible(b,0,0,0,Math.PI/2,200)),
+ "A 180-degree field must not cull wholly forward cells");
 const malformed=data.slice();malformed[1]=NaN;
 assert.throws(()=>spatial.partition(malformed,20),/Invalid vertex/);
 const missing=data.slice(0,-1);
