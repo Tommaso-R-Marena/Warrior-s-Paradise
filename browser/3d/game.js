@@ -1412,6 +1412,7 @@ if(typeof location!=="undefined"&&typeof location.search==="string"&&
    Object.assign(player,{x:data.x,z:data.z,yaw:data.yaw||0,pitch:data.pitch||0,
     crouch:!!data.crouch,aim:data.aim!==false,cd:0,reload:0});
    if(data.weapon){player.weapon=data.weapon;player.ammo=WEAPONS[data.weapon].capacity;}
+   Object.assign(player,{recoilReturn:0,recoilBloom:0,recoilVisual:0,lastRecoil:player.weapon});
    if(Array.isArray(data.enemies)){
     game.enemies=data.enemies.map(e=>({x:e.x,z:e.z,hp:e.hp??80,
      maxHp:e.hp??80,facing:e.facing||0,alert:e.alert||0,lastX:e.x,lastZ:e.z,
