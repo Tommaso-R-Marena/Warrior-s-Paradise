@@ -30,8 +30,8 @@
       "chosen_file": "GAZ 67.fbx",
       "source_bytes": 372877,
       "original_package_sha256": "e2993b7cc36f663ceb5c9f9b563ddbb09293571f5bdaae3aec1bdcc7fe4a4110",
-      "derived_glb_bytes": 1263708,
-      "derived_sha256": "e859187a21423d2d5c7f955fa1450c4b86f4a3514f860653bd9a1d8e48e6c7df",
+      "derived_glb_bytes": 105904,
+      "derived_sha256": "b09aafadfed5a5753da44342952b9460c9fa39b05ce925b750fbd8f332903059",
       "animations": 0,
       "skins": 0,
       "model_file": "browser/3d/assets/oga/gaz67_jeep.glb.b64"
@@ -47,8 +47,8 @@
       "chosen_file": "tank.blend",
       "source_bytes": 822720,
       "original_package_sha256": "4437922d50043d53a8c4a104a240da0adc11fecf229961ab3a5ccf7eea906c5c",
-      "derived_glb_bytes": 367896,
-      "derived_sha256": "2491345803a6988c9bef7d6bff1cf566bccce008ff10ea7d82e8709259a99866",
+      "derived_glb_bytes": 133836,
+      "derived_sha256": "9ba60fb75971f4bf38c046b9e4cc5dc3a5b0e32e954d730d1489af212d80bc6b",
       "animations": 0,
       "skins": 0,
       "model_file": "browser/3d/assets/oga/panzer_study.glb.b64"
