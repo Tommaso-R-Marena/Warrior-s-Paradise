@@ -25,7 +25,7 @@ const ctx2d={drawImage(){},getImageData(){const data=new Uint8ClampedArray(1024*
 const canvas={width:0,height:0,getContext(){return ctx2d}};
 const mock={window:{},Math,Uint8Array,Blob,document:{createElement:()=>canvas},
  atob:s=>Buffer.from(s,"base64").toString("binary"),
- fetch:async url=>{const name=url.match(/\/(grass|mud)_photo\.jpg\.b64$/)?.[1];
+ fetch:async url=>{const name=url.match(/\/(grass|mud|brick)_photo\.jpg\.b64$/)?.[1];
  return{ok:!!name,status:name?200:404,text:async()=>tiles[name]};},
  createImageBitmap:async blob=>{const bytes=new Uint8Array(await blob.arrayBuffer());
  assert.equal(bytes[0],255);return{width:256,height:256,close(){}}}};
@@ -33,8 +33,9 @@ vm.runInNewContext(fs.readFileSync(path.join(root,"material-atlas.js"),"utf8"),m
 const art=mock.window.WPMaterialAtlas;
 (async()=>{
  const tex=art.upload(gl);
+ assert.equal(Object.keys(tiles).length,3);
  const ok=await art.enhance(gl,tex);
  assert.equal(ok,true);assert.deepEqual(Array.from(tex.size),[1024,256]);
  assert.equal(gl.uploads.length,4);assert.equal(gl.uploads[2].bytes,1024*256*4);
- console.log("PASS real CC0 terrain photo bundle:",JSON.stringify({tiles:2,uploaded:gl.uploads.length,size:tex.size}));
+ console.log("PASS real CC0 terrain photo bundle:",JSON.stringify({tiles:3,uploaded:gl.uploads.length,size:tex.size}));
 })().catch(e=>{console.error(e);process.exitCode=1});

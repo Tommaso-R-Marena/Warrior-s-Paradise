@@ -28,6 +28,7 @@ REQUIRED = [
     "browser/3d/telemetry.js",
     "browser/3d/assets/materials/grass_photo.jpg.b64",
     "browser/3d/assets/materials/mud_photo.jpg.b64",
+    "browser/3d/assets/materials/brick_photo.jpg.b64",
     "browser/3d/assets/materials/MANIFEST.json",
     "tools/tests/browser_telemetry_smoke.js",
     "tools/tests/browser_photo_material_smoke.js",

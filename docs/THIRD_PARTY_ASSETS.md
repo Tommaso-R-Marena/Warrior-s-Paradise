@@ -1,5 +1,12 @@
 # Third-Party / Free Asset Register
 
+## Verified CC0 building photographs (October 2026)
+
+An independent public CI performance comparison showed that an attempted 0.85-second rapid dynamic-resolution adaptation caused worse software-browser frame pacing than the stable 3-second adaptive scaler. **That change was reverted before production**. Physics and movement tests passed in both configurations, but FPS averages fell under the experimental scaler, demonstrating the importance of measuring rather than presuming an optimization helps.
+
+The retained art-only change adds CC0 `ambientCG Bricks066` photographic masonry beside `Grass004` and `Ground037`, with fixed-size locally hosted images and exact attribution in `browser/3d/assets/materials/MANIFEST.json`. Diffuse color is photographic; bump and roughness are approximate, and limestone remains procedurally generated. **This is a small realism improvement, not photorealistic AAA artwork or 60 FPS.**
+
+
 ## Browser realism, movement and measured playtesting (October 2026)
 
 **Actually implemented:** The 3D browser edition supports WASD, arrow keys, mouse aim/fire, pointer-lock on deploy, mobile dual-touch sticks, crouch and sprint. A former 45-millisecond-per-rendered-frame simulation cap meant slow GPUs slowed in-game time; it now uses bounded wall-clock substeps. The new `telemetry.js` reports actual frame timings (average FPS, 1%-low, frame p50/p95/p99, CPU render time), player meters traveled/stuck time, firing/accuracy, captures and kills. Press **F3** during gameplay to view measurements and export JSON; nothing is uploaded.
