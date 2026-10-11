@@ -77,6 +77,7 @@ class WebGL3DTests(unittest.TestCase):
                      GAME3D / "device-gpu-profiler.js",
                      GAME3D / "ww2-terrain.js",
                      ROOT / "tools/tests/browser_ww2_terrain_smoke.js",
+                     ROOT / "tools/tests/browser_allied_rig_animation_smoke.js",
                      ROOT / "tools/tests/browser_gpu_profiler_smoke.js",
                      ROOT / "tools/tests/browser_ww2_environment_smoke.js",
                      ROOT / "tools/tests/browser_ww2_vehicles_smoke.js",
