@@ -32,7 +32,13 @@ async function run(name,viewport,quality,mobile){
   }else{
    await page.keyboard.down("w");await page.waitForTimeout(2000);await page.keyboard.up("w");
   }
-  const after=await page.evaluate(()=>window.WP3DDiagnostics().position);
+  const diagnosticAfter=await page.evaluate(()=>window.WP3DDiagnostics());
+  const after=diagnosticAfter.position;
+  console.log("MOVEMENT_DIAGNOSTIC",name,JSON.stringify({
+   from:start,to:after,playing:diagnosticAfter.playing,
+   gameTime:diagnosticAfter.elapsedSeconds,input:diagnosticAfter.input,
+   fps:diagnosticAfter.framesPerSecond,perf:diagnosticAfter.performance}));
+  if(dist(start,after)<=1.1)await page.screenshot({path:path.join(dest,name+"-stuck.png")});
   assert(dist(start,after)>1.1,name+": movement stuck ("+dist(start,after)+" m)");
   if(!mobile){
    const before=after;
