@@ -15,7 +15,8 @@ try{
    const x=d.obstacle?-24:0,z=d.obstacle?-25:0;
    const enemyZ=d.obstacle?-4:d.range,enemyX=x;
    window.WP3DQA.combatScenario({x,z,weapon:d.weapon,pitch:d.pitch,
-    aim:true,yaw:0,enemies:[{x:enemyX,z:enemyZ,hp:80,alert:0,facing:3.14159}]});
+    aim:true,yaw:0,clearDecoration:true,
+    enemies:[{x:enemyX,z:enemyZ,hp:80,alert:0,facing:3.14159}]});
    const before=window.WP3DDiagnostics().defenders[0];
    const shot=window.WP3DQA.shootOnce();
    const after=window.WP3DDiagnostics();
@@ -23,7 +24,7 @@ try{
     headshots:after.headshots};
  },{weapon,range,pitch,obstacle});
  const surprise=await doShot({range:12});
- assert(surprise.shot?.hit,"A fully unaware enemy at 12 meters did not take damage");
+ assert(surprise.shot?.hit,"A fully unaware enemy at 12 meters did not take damage: "+JSON.stringify(surprise));
  assert(surprise.before.alert===0&&surprise.after.hp<surprise.before.hp,
   "No surprise damage or impossible awareness-based hit gate");
  assert(surprise.stealthHits>0,"Surprise hit must be recorded");
