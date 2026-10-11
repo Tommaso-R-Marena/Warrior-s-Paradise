@@ -544,15 +544,15 @@ function loadLicensedScenery(){
 }
 
 const WEAPONS={
- rifle:{name:"LEE-ENFIELD",capacity:10,reserve:70,damage:55,delay:.6,reload:1.9,spread:.015},
- smg:{name:"STEN",capacity:32,reserve:128,damage:19,delay:.10,reload:1.6,spread:.052},
- lmg:{name:"BREN",capacity:30,reserve:100,damage:32,delay:.16,reload:2.7,spread:.038}
+ rifle:{name:"LEE-ENFIELD",capacity:10,reserve:70,damage:62,delay:.6,reload:1.9,spread:.015},
+ smg:{name:"STEN",capacity:32,reserve:128,damage:29,delay:.10,reload:1.6,spread:.052},
+ lmg:{name:"BREN",capacity:30,reserve:100,damage:42,delay:.16,reload:2.7,spread:.038}
 };
 const player={x:-36,z:-33,yaw:-.77,pitch:0,hp:100,maxHp:100,ammo:10,reserve:70,
  weapon:"rifle",cd:0,reload:0,aim:false,crouch:false,frags:2,med:2,hurt:0};
 const game={playing:false,finished:false,sector:0,capture:0,kills:0,elapsed:0,
  enemies:[],allies:[],grenades:[],tracers:[],strikes:[],support:1,order:"follow",
- flash:0,quality:"medium",difficulty:"regular",fps:45,scaler:1,adapt:0};
+ flash:0,quality:"medium",difficulty:"regular",fps:45,scaler:1,adapt:0,lastShot:null,stealthHits:0,headshots:0};
 const input={keys:{},fire:false,joyX:0,joyY:0,movePointer:null,lookPointer:null,
  lookX:0,lookY:0};
 function spawnEnemies(){
@@ -575,8 +575,8 @@ function spawnAllies(){
  game.allies=[{x:-37.5,z:-35,hp:85,cd:1.1,ammo:16,reload:0,phase:0,moveSpeed:0,facing:-.78,alert:1},
              {x:-33.5,z:-35,hp:85,cd:1.5,ammo:16,reload:0,phase:2.1,moveSpeed:0,facing:-.78,alert:1}];
 }
-function addTracer(ax,az,bx,bz,team){
- game.tracers.push({ax,az,bx,bz,life:.12,team});
+function addTracer(ax,az,bx,bz,team,ay=1.46,by=1.46){
+ game.tracers.push({ax,az,bx,bz,ay,by,life:.12,team});
  if(game.tracers.length>30)game.tracers.shift();
 }
 function orderSquad(){
@@ -602,6 +602,7 @@ function reset(){
   frags:2,med:2,hurt:0,crouch:false,stepPhase:0,stepStrength:0,concussion:0});
  Object.assign(game,{playing:true,finished:false,sector:0,capture:0,kills:0,elapsed:0,
   grenades:[],tracers:[],strikes:[],support:1,order:"follow",flash:0,
+  lastShot:null,stealthHits:0,headshots:0,
    difficulty:$("difficulty").value,quality:$("quality").value,scaler:1,adapt:0});
  if(game.quality==="high")ensureHighProgram();
  requestPhotographicMaterials(game.quality);
@@ -691,39 +692,51 @@ function shoot(){
   return;
  }
  if(player.reload>0||player.cd>0)return;
- const w=WEAPONS[player.weapon];
+ const w=WEAPONS[player.weapon],ballistics=window.WPInfantryBallistics;
  if(player.ammo<=0){reload();return;}
  player.cd=w.delay;player.ammo--;game.flash=.13;
- if(window.WP3DProbe)window.WP3DProbe.event("shot");
- const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw);
- const accuracy=player.aim?.32:1;
- const moving=Math.hypot(input.joyX,input.joyY)>.1;
- const shift=(rnd()-.5)*(w.spread*accuracy+(moving?.012:0));
- const shootYaw=player.yaw+shift;
- const sx=-Math.sin(shootYaw),sz=Math.cos(shootYaw);
- let target=null,nearest=70;
+ window.WP3DProbe?.event("shot");
+ const moving=Math.hypot(input.joyX,input.joyY)>.1||
+  !!(input.keys.KeyW||input.keys.KeyS||input.keys.KeyA||input.keys.KeyD);
+ const spread=w.spread*(player.aim?.24:.83)*(player.crouch?.70:1)*
+  (moving?1.24:1),eyeY=player.crouch?1.02:1.67;
+ const shot=ballistics.trace({source:{x:player.x,y:eyeY,z:player.z},
+  weapon:player.weapon,yaw:player.yaw,pitch:player.pitch,
+  spreadYaw:(rnd()-.5)*spread,spreadPitch:(rnd()-.5)*spread*.72,
+  targets:game.enemies,
+  obstacles:{buildings:boxes,covers,structures:artStructures,trunks:treeTrunks}});
+ const end=shot.endpoint;
+ addTracer(player.x,player.z,end.x,end.z,"friendly",eyeY,end.y);
+ game.lastShot={weapon:player.weapon,damage:shot.damage,zone:shot.zone,
+  distance:Math.round(shot.distance*10)/10,reason:shot.reason,
+  blockedBy:shot.blockedBy||null,hit:!!shot.hit,
+  targetAlertBefore:shot.hit?.alert||0};
+ if(shot.hit){
+  const e=shot.hit,unaware=(e.alert||0)<=.05;
+  e.hp-=shot.damage;e.hit=.42;e.suppression=2.1;
+  e.alert=Math.max(e.alert||0,3);e.lastX=player.x;e.lastZ=player.z;
+  if(unaware)game.stealthHits++;
+  if(shot.zone==="head")game.headshots++;
+  window.WP3DProbe?.event("hit");
+  $("hitmarker").classList.add("visible");
+  $("hitmarker").classList.toggle("headshot",shot.zone==="head");
+  game.hitmarker=.17;
+  const result=e.hp<=0?"TARGET DOWN":shot.zone==="head"?"HEADSHOT":"HIT";
+  if(e.hp<=0){game.kills++;window.WP3DProbe?.event("kill");}
+  msg(result+" · "+Math.round(shot.damage)+" DAMAGE"+(unaware?" · SURPRISE":""),e.hp<=0?1.1:.7);
+ }else for(const e of shot.nearMisses){
+  e.suppression=Math.max(e.suppression||0,1.15);
+  if((e.alert||0)<1){e.lastX=player.x;e.lastZ=player.z;e.alert=1.4;}
+ }
+ // Nearby soldiers hear gunfire but still need line of sight to return fire.
+ const hear=player.weapon==="smg"?24:player.weapon==="lmg"?45:39;
  for(const e of game.enemies){
-  if(e.hp<=0)continue;
-  const vx=e.x-player.x,vz=e.z-player.z,t=vx*sx+vz*sz;
-  const off=Math.abs(vx*sz-vz*sx);
-  if(t>0&&t<nearest&&off<.42+Math.abs(t)*.003 &&
-   Math.abs(player.pitch)<.055+.45/Math.max(.6,t) &&
-   lineHit(player.x,player.z,e.x,e.z)){
-   target=e;nearest=t;
-  }
+  if(e.hp<=0||e===shot.hit)continue;
+  if(Math.hypot(e.x-player.x,e.z-player.z)>hear)continue;
+  if((e.alert||0)<1.2){e.alert=1.2;e.lastX=player.x;e.lastZ=player.z;}
  }
  player.yaw+=(rnd()-.5)*w.spread*.32;
- player.pitch=Math.max(-.7,Math.min(.7,player.pitch+w.spread*(player.aim?.2:.6)));
- const range=target?Math.hypot(target.x-player.x,target.z-player.z):38;
- addTracer(player.x,player.z,player.x+sx*range,player.z+sz*range,"friendly");
- if(target){
-  target.hp-=w.damage*(.9+rnd()*.2);target.hit=.25;
-  if(window.WP3DProbe)window.WP3DProbe.event("hit");
-  target.suppression=1.7;
-  $("hitmarker").classList.add("visible");
-  game.hitmarker=.12;
-  if(target.hp<=0){game.kills++;if(window.WP3DProbe)window.WP3DProbe.event("kill");msg("TARGET DOWN",.85);}
- }
+ player.pitch=Math.max(-.7,Math.min(.7,player.pitch+w.spread*(player.aim?.18:.56)));
  if(window.WPBattleSound)window.WPBattleSound.shot(player.weapon,player.x,player.z,player);
  else beep(player.weapon==="smg"?165:player.weapon==="lmg"?95:120,.045);
 }
