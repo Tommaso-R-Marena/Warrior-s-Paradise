@@ -28,6 +28,41 @@ for ob in list(mesh):
 mesh=[ob for ob in bpy.data.objects if ob.type=="MESH"]
 assert mesh
 if asset_id=="allied_ww2":
+ # 2020 source has two full Rigify controller rigs, 65+ hidden WGT widgets,
+ # but only two real 3,206-vertex character bodies. Keep exactly one weighted
+ # character and its parent armature before glTF conversion.
+ candidates=[ob for ob in mesh if ob.name.startswith("Char.") and len(ob.vertex_groups)>=20]
+ assert candidates,"Original Allied character body absent"
+ soldier=max(candidates,key=lambda ob:len(ob.data.vertices))
+ source_rig=soldier.parent if soldier.parent and soldier.parent.type=="ARMATURE" else None
+ assert source_rig,"Original character has no physical deform-armature parent"
+ print("ALLIED_CURATED_SOURCE",soldier.name,source_rig.name,
+       len(soldier.data.vertices),len(soldier.vertex_groups),flush=True)
+ for ob in list(bpy.data.objects):
+  if ob not in (soldier,source_rig):bpy.data.objects.remove(ob,do_unlink=True)
+ # Rigify custom-control widget geometry is not renderable infantry equipment.
+ if soldier.name not in bpy.context.scene.collection.objects:
+  bpy.context.scene.collection.objects.link(soldier)
+ if source_rig.name not in bpy.context.scene.collection.objects:
+  bpy.context.scene.collection.objects.link(source_rig)
+ soldier.hide_render=False;soldier.hide_viewport=False
+ source_rig.hide_render=False;source_rig.hide_viewport=False
+ soldier.hide_set(False);source_rig.hide_set(False)
+ # Drop controls and keep existing weighted DEF bones below 96-joint runtime
+ # hard cap; animations are rebuilt on this clean deform-only hierarchy.
+ bpy.ops.object.select_all(action="DESELECT")
+ source_rig.select_set(True)
+ bpy.context.view_layer.objects.active=source_rig
+ bpy.ops.object.mode_set(mode="EDIT")
+ original={b.name:b.use_deform for b in source_rig.data.bones}
+ for bone in list(source_rig.data.edit_bones):
+  if not original.get(bone.name,False):
+   source_rig.data.edit_bones.remove(bone)
+ bpy.ops.object.mode_set(mode="OBJECT")
+ assert 1<=len(source_rig.data.bones)<=96,"Allied deform bones must meet WebGL runtime limit"
+ print("ALLIED_COMPATIBLE_SKIN_BONES",len(source_rig.data.bones),flush=True)
+ mesh=[soldier]
+if asset_id=="allied_ww2":
  print("ALLIED_MODEL_INSPECTION",
    [(o.name,len(o.data.vertices),len(o.vertex_groups),
      o.parent.name if o.parent else None,o.hide_render) for o in mesh
@@ -77,7 +112,10 @@ if category=="character":
  # Audit creator animations before adding fallback locomotion clips.
  print("WW2_CHARACTER_SOURCE_ACTIONS",[(a.name,len(a.fcurves)) for a in bpy.data.actions])
  if asset_id=="allied_ww2":
-  has_motion=any(any(k in a.name.lower() for k in ("walk","run","patrol","idle")) for a in bpy.data.actions)
+  # Converted Rigify actions target discarded IK controllers and cannot be
+  # replayed in glTF directly. Always generate an honest labeled retargeted
+  # four-state locomotion library on the 35-bone deform armature.
+  has_motion=False
   if not has_motion:
    primary.animation_data_create()
    for clip,amplitude,speed in (("Allied_Idle",0.025,1),("Allied_Walk",0.24,1),
@@ -88,10 +126,14 @@ if category=="character":
      cycle=math.sin((frame-1)/24*math.pi*2*speed)
      for bone in primary.pose.bones:
       label=bone.name.lower()
-      if "left" in label and ("leg" in label or "thigh" in label):direction=1
-      elif "right" in label and ("leg" in label or "thigh" in label):direction=-1
-      elif "left" in label and ("arm" in label or "shoulder" in label):direction=-.4
-      elif "right" in label and ("arm" in label or "shoulder" in label):direction=.4
+      left=("left" in label or label.endswith(".l"))
+      right=("right" in label or label.endswith(".r"))
+      leg=any(k in label for k in ("leg","thigh","shin","foot"))
+      arm=any(k in label for k in ("arm","shoulder","forearm"))
+      if left and leg:direction=1
+      elif right and leg:direction=-1
+      elif left and arm:direction=-.4
+      elif right and arm:direction=.4
       else:continue
       bone.rotation_mode="XYZ"
       bone.rotation_euler[0]=direction*amplitude*cycle
