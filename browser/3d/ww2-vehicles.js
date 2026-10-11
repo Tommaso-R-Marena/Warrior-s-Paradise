@@ -76,7 +76,8 @@ function move(dt,input,player,blocked){
   Math.max(v.width,o.width)*.72);
  if(!other&&!blocked(nx,nz,footprint)){v.x=nx;v.z=nz;}
  else v.speed=0;
- player.x=v.x;player.z=v.z;player.yaw=v.yaw;
+ player.x=v.x;player.z=v.z;
+ // Keep independent aiming direction for cannon turret/mouse camera.
  return true;
 }
 function fire(player,enemies,visible,onHit,onTracer,onBlast){
