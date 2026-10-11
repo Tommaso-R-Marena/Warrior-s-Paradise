@@ -21,7 +21,7 @@ const kenney=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-s
 const quaternius=["barn","chicken_coop","windmill","well"];
 const normandy=["log-stacklarge","fence-gate","log-large","rock-largeb","stump-old","grass-large"];
 const character="character_medium";
-const historical=["axis_ww2","gaz67_jeep","panzer_study"];
+const historical=["axis_ww2","allied_ww2","willys_mb","gaz67_jeep","panzer_study"];
 const models=Object.fromEntries([
  ...kenney.concat(normandy).map(name=>["kenney/"+name,fs.readFileSync(path.join(root,"assets/kenney",name+".glb.b64"),"utf8")]),
  ["kenney/"+character,fs.readFileSync(path.join(root,"assets/kenney",character+".glb.b64"),"utf8")],
@@ -102,12 +102,13 @@ async function scenario(shouldLoad,farms=true){
  assert.equal(before.texturesLoaded,true,"Material textures failed to upload");
  assert.equal(stats.textures,2,"Expected albedo/roughness and bump textures");
  assert.equal(before.assetsLoaded,shouldLoad,JSON.stringify(before));
- assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length+normandy.length+5:kenney.length+5);
+ assert.equal(sources.length,shouldLoad?kenney.length+quaternius.length+normandy.length+6:kenney.length+6);
  assert(sources.every(url=>/^\.\/assets\/(kenney|quaternius|oga)\//.test(url)));
  if(shouldLoad){
   assert(before.rigLoaded,"Licensed character rig failed to load");
   assert.equal(before.ww2Rigs.axis,true,"Actual rigged German soldier not parsed: "+JSON.stringify(before.ww2Rigs));
-  assert.equal(before.armor.loaded,2,"Actual CC0 jeep and tank models not parsed: "+JSON.stringify(before.armor.errors));
+  assert.equal(before.ww2Rigs.ally,true,"US paratrooper bone rig did not decode in actual WebGL runtime");
+  assert.equal(before.armor.loaded,3,"Audited Willys Jeep + existing fallback vehicles missing: "+JSON.stringify(before.armor.errors));
   assert(before.assetInstances>=157&&before.assetTriangles>15000);
   assert(before.geometryTriangles>24000);
   assert.equal(before.buildingsLoaded,farms?4:0);
