@@ -32,7 +32,7 @@ SOURCES = {
 }
 KINDS = {"photo": "Color", "normal": "NormalGL", "roughness": "Roughness"}
 RESOLUTION = 512
-MAX_SOURCE_BYTES = 8_000_000
+MAX_SOURCE_BYTES = 32_000_000
 
 
 def sha256(data: bytes) -> str:
