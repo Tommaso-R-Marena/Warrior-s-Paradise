@@ -117,18 +117,27 @@ try{
 gl.useProgram(program);
 let highProgram=null;
 let highUniforms=null;
-try{
- if(!highSource.includes("vec3 shadedN=n;") || highSource.includes("float highlight=pow(max(0.,dot(n,halfDir))"))
-  throw Error("High quality normal shader template mismatch");
- const glsl=shader(gl.FRAGMENT_SHADER,highSource);
- highProgram=gl.createProgram();
- gl.attachShader(highProgram,shader(gl.VERTEX_SHADER,VS));
- gl.attachShader(highProgram,glsl);
- gl.linkProgram(highProgram);
- if(!gl.getProgramParameter(highProgram,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(highProgram));
- highUniforms=Object.fromEntries(["uVP","uEye","uDetailLevel","uUseAtlas","uDiffuse","uBump"]
-  .map(name=>[name,gl.getUniformLocation(highProgram,name)]));
-}catch(error){highProgram=null;highUniforms=null;}
+let highCompileTried=false;
+function ensureHighProgram(){
+ if(highCompileTried)return !!highProgram;
+ highCompileTried=true;
+ try{
+  if(!highSource.includes("vec3 shadedN=n;") ||
+   highSource.includes("float highlight=pow(max(0.,dot(n,halfDir))"))
+   throw Error("High quality normal shader template mismatch");
+  const glsl=shader(gl.FRAGMENT_SHADER,highSource);
+  highProgram=gl.createProgram();
+  gl.attachShader(highProgram,shader(gl.VERTEX_SHADER,VS));
+  gl.attachShader(highProgram,glsl);
+  gl.linkProgram(highProgram);
+  if(!gl.getProgramParameter(highProgram,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(highProgram));
+  highUniforms=Object.fromEntries(["uVP","uEye","uDetailLevel","uUseAtlas","uDiffuse","uBump"]
+   .map(name=>[name,gl.getUniformLocation(highProgram,name)]));
+ }catch(error){highProgram=null;highUniforms=null;}
+ // Shader setup must not affect Low/Medium scene measurements.
+ gl.useProgram(program);
+ return !!highProgram;
+}
 gl.useProgram(program);
 const vpLocation=gl.getUniformLocation(program,"uVP");
 const eyeLocation=gl.getUniformLocation(program,"uEye");
@@ -523,6 +532,7 @@ function reset(){
  Object.assign(game,{playing:true,finished:false,sector:0,capture:0,kills:0,elapsed:0,
   grenades:[],tracers:[],strikes:[],support:1,order:"follow",flash:0,
    difficulty:$("difficulty").value,quality:$("quality").value,scaler:1,adapt:0});
+ if(game.quality==="high")ensureHighProgram();
  requestPhotographicMaterials(game.quality);
  spawnEnemies();spawnAllies();
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
