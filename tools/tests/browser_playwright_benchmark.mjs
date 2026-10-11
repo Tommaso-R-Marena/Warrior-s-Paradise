@@ -18,6 +18,10 @@ async function run(name,viewport,quality,mobile){
   await page.locator("#difficulty").selectOption("recruit");
   await page.locator("#deploy").click();
   await page.waitForFunction(()=>window.WP3DDiagnostics().assetsLoaded&&window.WP3DDiagnostics().rigLoaded,{timeout:20000});
+  await page.waitForFunction(()=>window.WP3DDiagnostics().dressingReady,{timeout:20000});
+  const dressing=await page.evaluate(()=>window.WP3DDiagnostics());
+  assert(dressing.dressingInstances>0&&dressing.dressingTriangles<=4800,
+   name+": additional CC0 scene assets missing or too costly: "+dressing.dressingError);
   await page.waitForTimeout(500);
   if(quality!=="low"){
    await page.waitForFunction(()=>{
