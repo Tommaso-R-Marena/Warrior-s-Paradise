@@ -53,7 +53,10 @@ for spec in SPECS:
     else:
      cmd=["blender","-b","-t","1","--python",str(ROOT/"tools/assets/blender_export_ww2.py"),
           "--",str(path),str(dest),spec["category"]]
-     subprocess.run(cmd,check=True,timeout=105,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+     result=subprocess.run(cmd,timeout=105,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+     print("BLENDER_OUTPUT",name,original,result.stdout[-2200:],flush=True)
+     if result.returncode!=0:raise RuntimeError("Blender exit "+str(result.returncode))
+    assert dest.exists(),"Blender produced no GLB"
     content=dest.read_bytes()
     import struct
     assert 28<len(content)<3_500_000 and content[:4]==b"glTF"
