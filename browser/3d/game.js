@@ -1059,7 +1059,8 @@ window.WP3DDiagnostics=()=>({
   activeTracers:game.tracers.length,
   position:{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch},
   playing:game.playing,elapsedSeconds:game.elapsed,framesPerSecond:game.fps,
-  performance:window.WP3DProbe?window.WP3DProbe.report().performance:null
+  performance:window.WP3DProbe?window.WP3DProbe.report().performance:null,
+  input:{keys:Object.keys(input.keys).filter(k=>input.keys[k]),joyX:input.joyX,joyY:input.joyY}
 });
 requestAnimationFrame(frame);
 })();
