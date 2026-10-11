@@ -143,8 +143,11 @@ async function scenario(shouldLoad,farms=true){
   assert.equal(medium.dressingDrawn,true,"Desktop default must show the full CC0 scenery");
   assert(medium.renderedStaticTriangles<medium.geometryTriangles,
    "Medium must use bounded CC0 LOD, not the full High mesh");
-  assert(medium.renderedStaticTriangles>medium.geometryTriangles-medium.dressingTriangles,
-   "Medium must still render actual additional licensed models");
+  const withoutQualityOnlyArt=medium.geometryTriangles-medium.dressingTriangles-
+   medium.ww2EnvironmentTriangles-medium.terrainTriangles;
+  assert.equal(medium.renderedStaticTriangles,
+   withoutQualityOnlyArt+medium.mediumDressingTriangles,
+   "Medium must contain only the licensed Medium props, not High-only terrain or rubble");
   assert(medium.mediumDressingTriangles<=1800,"Medium triangle budget exceeded");
  }
  for(let i=0;i<50;i++){
