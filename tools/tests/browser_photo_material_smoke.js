@@ -56,14 +56,21 @@ const mock={window:{},Math,Uint8Array,Blob,document:{createElement:()=>canvas},
 vm.runInNewContext(fs.readFileSync(path.join(root,"material-atlas.js"),"utf8"),mock);
 const art=mock.window.WPMaterialAtlas;
 (async()=>{
+ const simple=art.upload(gl);
+ assert.equal(await art.enhance(gl,simple),true);
+ assert.deepEqual(Array.from(simple.size),[1024,256]);
+ assert.equal(!!simple.realNormalRoughness,false);
+ assert.equal(gl.uploads.length,4);
+ assert.equal(gl.uploads[2].bytes,1024*256*4);
  const tex=art.upload(gl);
- assert.equal(await art.enhance(gl,tex),true);
+ assert.equal(await art.enhanceDetailed(gl,tex),true);
  assert.deepEqual(Array.from(tex.size),[2048,512]);
  assert.equal(tex.realNormalRoughness,true);
- assert.equal(gl.uploads.length,4);
- assert.equal(gl.uploads[2].bytes,2048*512*4);
- assert.equal(gl.uploads[2].firstAlpha,88,"Artist-authored roughness not packed to alpha");
- assert.equal(gl.uploads[3].sample[2],246,"Genuine OpenGL normal blue channel not packed");
+ assert.equal(gl.uploads.length,8);
+ assert.equal(gl.uploads[6].bytes,2048*512*4);
+ assert.equal(gl.uploads[6].firstAlpha,88,"Artist-authored roughness not packed to alpha");
+ assert.equal(gl.uploads[7].sample[2],246,"Genuine OpenGL normal blue channel not packed");
  console.log("PASS real CC0 terrain photo bundle:",JSON.stringify({
-  maps:9,bytes:bytesTotal,atlases:2,textureSize:tex.size,provenanceHashesVerified:true}));
+  maps:9,bytes:bytesTotal,atlases:2,mediumSize:simple.size,
+  highSize:tex.size,provenanceHashesVerified:true}));
 })().catch(e=>{console.error(e);process.exitCode=1});
