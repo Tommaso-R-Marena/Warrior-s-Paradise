@@ -44,7 +44,12 @@ jobs:
           git add browser/3d/assets/materials/
           if ! git diff --cached --quiet; then
             git commit -m 'assets(pbr): commit verified CC0 original albedo, normal and roughness maps'
-            git push origin "HEAD:${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+            # A PR review or concurrent code edit may have advanced the head
+            # while 2K source media downloaded. Rebase safely; never force-push.
+            HEAD_BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+            git fetch origin "$HEAD_BRANCH"
+            git rebase "origin/$HEAD_BRANCH"
+            git push origin "HEAD:$HEAD_BRANCH"
           fi
       - name: Summary
         run: |
