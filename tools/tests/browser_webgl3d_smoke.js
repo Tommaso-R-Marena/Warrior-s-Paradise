@@ -90,7 +90,14 @@ function run(width,height,webgl=true){
   assert(fn,"requestAnimationFrame must schedule next frame");
   fn((i+1)*34);
  };
+ const start=win.WP3DDiagnostics().position;
+ for(const fn of callbacks.keydown||[])fn({code:"KeyW",key:"w",repeat:false,preventDefault(){}});
  for(let i=0;i<80;i++)frame(i);
+ for(const fn of callbacks.keyup||[])fn({code:"KeyW",key:"w",preventDefault(){}});
+ const moved=win.WP3DDiagnostics().position;
+ assert(Math.hypot(moved.x-start.x,moved.z-start.z)>1.25,
+  "WASD player must physically traverse the 3D scene");
+ assert(win.WP3DDiagnostics().elapsedSeconds>2.0,"Simulation must advance in real time");
  const original=el("mag").textContent;
  el("fire").send("pointerdown");
  for(let i=80;i<110;i++)frame(i);
@@ -105,6 +112,13 @@ function run(width,height,webgl=true){
  for(let i=185;i<250;i++)frame(i);
  assert.match(el("frags").textContent,/× 1/);
  assert.equal(win.WP3DDiagnostics().weapon,"smg");
+ const beforeArrow=win.WP3DDiagnostics().position;
+ for(const fn of callbacks.keydown||[])fn({code:"ArrowUp",key:"ArrowUp",repeat:false,preventDefault(){}});
+ for(let i=250;i<270;i++)frame(i);
+ for(const fn of callbacks.keyup||[])fn({code:"ArrowUp",key:"ArrowUp",preventDefault(){}});
+ const afterArrow=win.WP3DDiagnostics().position;
+ assert(Math.hypot(afterArrow.x-beforeArrow.x,afterArrow.z-beforeArrow.z)>.1,
+  "ArrowUp must move the player");
  assert.match(el("squadstate").textContent,/FIRETEAM/);
  assert.match(el("supportstate").textContent,/ARTILLERY/);
  assert.match(el("nav").textContent,/TO FARM APPROACH/);
