@@ -1,0 +1,39 @@
+name: Vendor verified CC0 Normandy models
+
+on:
+  push:
+    branches: [feat/cc0-normandy-set-dressing-20261011]
+    paths:
+      - "tools/assets/vendor_kenney_normandy.py"
+      - "tools/assets/kenney_normandy_lock.json"
+      - ".github/workflows/vendor-kenney-normandy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wp-vendor-kenney-normandy
+  cancel-in-progress: false
+
+jobs:
+  pin-and-vendor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download only audited Kenney GLB source blobs
+        run: python3 tools/assets/vendor_kenney_normandy.py
+      - name: Commit transport assets and provenance manifest to feature branch
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add browser/3d/assets/kenney/*.glb.b64 browser/3d/assets/kenney/NORMANDY_MANIFEST.json
+          if ! git diff --cached --quiet; then
+            git commit -m "assets(cc0): vendor six hash-verified Kenney battlefield models"
+            git push origin HEAD:feat/cc0-normandy-set-dressing-20261011
+          fi
