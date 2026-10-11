@@ -84,7 +84,7 @@ function bind(gl,uniforms,textures){
 async function enhance(gl,textures){
  if(!textures||typeof fetch!=="function"||typeof createImageBitmap!=="function"||
    typeof document==="undefined")return false;
- const names=["grass","mud"];
+ const names=["grass","mud","brick"];
  const images=[];
  for(const name of names){
   const response=await fetch("./assets/materials/"+name+"_photo.jpg.b64",{cache:"force-cache"});
@@ -104,6 +104,7 @@ async function enhance(gl,textures){
  const ctx=canvas.getContext("2d",{willReadFrequently:true});
  if(!ctx)throw Error("Photo atlas requires 2D canvas");
  for(let tile=0;tile<2;tile++)ctx.drawImage(images[tile],tile*size,0,size,size);
+ ctx.drawImage(images[2],3*size,0,size,size);
  const image=ctx.getImageData(0,0,width,size).data;
  const color=new Uint8Array(width*size*4),normal=new Uint8Array(width*size*4);
  for(let y=0;y<size;y++)for(let x=0;x<width;x++){
@@ -112,8 +113,11 @@ async function enhance(gl,textures){
   const dst=(y*width+x)*4;
   for(let k=0;k<4;k++){color[dst+k]=generated.color[base+k];
     normal[dst+k]=generated.normal[base+k];}
-  if(tile<2){
-   for(let k=0;k<3;k++)color[dst+k]=image[dst+k];
+  if(tile<2||tile===3){
+   for(let k=0;k<3;k++){
+    const warmth=tile===3?[1.04,.96,.88][k]:1;
+    color[dst+k]=Math.min(255,Math.round(image[dst+k]*warmth));
+   }
    const lum=(index)=>.2126*image[index]+.7152*image[index+1]+.0722*image[index+2];
    const left=(y*width+tile*size+((lx+size-1)%size))*4;
    const right=(y*width+tile*size+((lx+1)%size))*4;
