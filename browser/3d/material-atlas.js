@@ -89,7 +89,7 @@ async function enhance(gl,textures){
  for(const name of names){
   const response=await fetch("./assets/materials/"+name+"_photo.jpg.b64",{cache:"force-cache"});
   if(!response.ok)throw Error("Photo surface missing: "+name+" "+response.status);
-  const encoded=(await response.text()).replace(/\\s/g,"");
+  const encoded=(await response.text()).replace(/\s/g,"");
   if(encoded.length<400||encoded.length>100000||
    !/^[a-zA-Z0-9+/]*={0,2}$/.test(encoded))throw Error("Invalid photographic tile "+name);
   const binary=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
