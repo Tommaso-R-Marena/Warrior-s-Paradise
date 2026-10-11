@@ -43,8 +43,8 @@ def fetch_url(url: str) -> bytes:
     request = Request(url, headers={"User-Agent": "WarriorsParadise-CC0-AssetBuild/1.0"})
     with urlopen(request, timeout=35) as response:
         payload = response.read(MAX_SOURCE_BYTES + 1)
-    if not 10_000 < len(payload) <= MAX_SOURCE_BYTES:
-        raise ValueError(f"source empty or over size limit: {url}")
+    if not 100 < len(payload) <= MAX_SOURCE_BYTES:
+        raise ValueError(f"source empty or over size limit ({len(payload)} bytes): {url}")
     if not payload.startswith(b"\xff\xd8") or not payload.endswith(b"\xff\xd9"):
         raise ValueError(f"not a complete JPEG: {url}")
     return payload
