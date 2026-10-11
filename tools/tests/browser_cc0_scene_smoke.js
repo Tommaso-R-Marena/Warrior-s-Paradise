@@ -125,7 +125,11 @@ async function scenario(shouldLoad,farms=true){
  if(shouldLoad){
   const medium=win.WP3DDiagnostics();
   assert.equal(medium.dressingDrawn,true,"Desktop default must show the full CC0 scenery");
-  assert.equal(medium.renderedStaticTriangles,medium.geometryTriangles);
+  assert(medium.renderedStaticTriangles<medium.geometryTriangles,
+   "Medium must use bounded CC0 LOD, not the full High mesh");
+  assert(medium.renderedStaticTriangles>medium.geometryTriangles-medium.dressingTriangles,
+   "Medium must still render actual additional licensed models");
+  assert(medium.mediumDressingTriangles<=1800,"Medium triangle budget exceeded");
  }
  for(let i=0;i<50;i++){
   assert(raf.length>0,"Frame loop stopped");
