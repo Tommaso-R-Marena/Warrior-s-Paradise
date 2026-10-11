@@ -7,7 +7,9 @@ FOLDER=ROOT/"browser/3d/assets/oga"
 EXPECTED={
  "axis_ww2":("CC0-1.0","nisu","a8e2f5a5777d1c9d4c18f76922d9737b88be717a455a65336a8772deb53729cb"),
  "gaz67_jeep":("CC0-1.0","artie31","e2993b7cc36f663ceb5c9f9b563ddbb09293571f5bdaae3aec1bdcc7fe4a4110"),
- "panzer_study":("CC0-1.0","hubahuba","4437922d50043d53a8c4a104a240da0adc11fecf229961ab3a5ccf7eea906c5c")
+ "panzer_study":("CC0-1.0","hubahuba","4437922d50043d53a8c4a104a240da0adc11fecf229961ab3a5ccf7eea906c5c"),
+ "willys_mb":("CC-BY-SA-3.0","Aligned Games",None),
+ "allied_ww2":("CC-BY-3.0","knik1985",None)
 }
 class HistoricalWW2Models(unittest.TestCase):
  def test_hashes_licenses_and_valid_gltf(self):
@@ -19,7 +21,8 @@ class HistoricalWW2Models(unittest.TestCase):
     rec=rows[name]
     self.assertEqual(rec["license"],license)
     self.assertEqual(rec["creator"],author)
-    self.assertEqual(rec["original_package_sha256"],sha)
+    if sha:self.assertEqual(rec["original_package_sha256"],sha)
+    else:self.assertEqual(len(rec["original_package_sha256"]),64)
     raw=base64.b64decode((ROOT/rec["model_file"]).read_text("ascii").strip(),validate=True)
     self.assertEqual(hashlib.sha256(raw).hexdigest(),rec["derived_sha256"])
     self.assertEqual(len(raw),rec["derived_glb_bytes"])
@@ -31,7 +34,12 @@ class HistoricalWW2Models(unittest.TestCase):
     doc=json.loads(raw[20:20+json_len])
     self.assertFalse(doc.get("extensionsRequired"))
     self.assertTrue(doc.get("meshes"))
-    if name=="axis_ww2":self.assertTrue(doc.get("skins"),"WWII soldier must be actually rigged")
+    if name in ("axis_ww2","allied_ww2"):
+     self.assertEqual(len(doc.get("skins",[])),1,"Actual skin missing")
+     self.assertLessEqual(len(doc["skins"][0]["joints"]),96)
+     if name=="allied_ww2":
+      self.assertGreaterEqual(len(doc.get("animations",[])),2,"Allied running/walking clips missing")
+      self.assertGreaterEqual(rec["animations"],2)
     else:
      tris=sum((doc["accessors"][p["indices"]]["count"]
         if "indices" in p else doc["accessors"][p["attributes"]["POSITION"]]["count"])/3
