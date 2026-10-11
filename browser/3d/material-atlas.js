@@ -84,6 +84,65 @@ function bind(gl,uniforms,textures){
 async function enhance(gl,textures){
  if(!textures||typeof fetch!=="function"||typeof createImageBitmap!=="function"||
    typeof document==="undefined")return false;
+ const names=["grass","mud","brick"];
+ const images=[];
+ for(const name of names){
+  const response=await fetch("./assets/materials/"+name+"_photo.jpg.b64",{cache:"force-cache"});
+  if(!response.ok)throw Error("Photo surface missing: "+name+" "+response.status);
+  const encoded=(await response.text()).replace(/\s/g,"");
+  if(encoded.length<400||encoded.length>100000||
+   !/^[a-zA-Z0-9+/]*={0,2}$/.test(encoded))throw Error("Invalid photographic tile "+name);
+  const binary=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
+  if(binary[0]!==255||binary[1]!==216||binary[binary.length-2]!==255||
+    binary[binary.length-1]!==217)throw Error("Bad JPEG markers: "+name);
+  const bitmap=await createImageBitmap(new Blob([binary],{type:"image/jpeg"}));
+  if(bitmap.width!==512||bitmap.height!==512)throw Error("Unexpected tile dimension");
+  images.push(bitmap);
+ }
+ const size=256,width=size*4,generated=generate();
+ const canvas=document.createElement("canvas");canvas.width=width;canvas.height=size;
+ const ctx=canvas.getContext("2d",{willReadFrequently:true});
+ if(!ctx)throw Error("Photo atlas requires 2D canvas");
+ for(let tile=0;tile<2;tile++)ctx.drawImage(images[tile],tile*size,0,size,size);
+ ctx.drawImage(images[2],3*size,0,size,size);
+ const image=ctx.getImageData(0,0,width,size).data;
+ const color=new Uint8Array(width*size*4),normal=new Uint8Array(width*size*4);
+ for(let y=0;y<size;y++)for(let x=0;x<width;x++){
+  const tile=Math.floor(x/size),lx=x%size;
+  const base=(Math.floor(y/2)*generated.width+tile*128+Math.floor(lx/2))*4;
+  const dst=(y*width+x)*4;
+  for(let k=0;k<4;k++){color[dst+k]=generated.color[base+k];
+    normal[dst+k]=generated.normal[base+k];}
+  if(tile<2||tile===3){
+   for(let k=0;k<3;k++){
+    const warmth=tile===3?[1.04,.96,.88][k]:1;
+    color[dst+k]=Math.min(255,Math.round(image[dst+k]*warmth));
+   }
+   const lum=(index)=>.2126*image[index]+.7152*image[index+1]+.0722*image[index+2];
+   const left=(y*width+tile*size+((lx+size-1)%size))*4;
+   const right=(y*width+tile*size+((lx+1)%size))*4;
+   const up=(((y+size-1)%size)*width+x)*4;
+   const down=(((y+1)%size)*width+x)*4;
+   normal[dst]=Math.max(0,Math.min(255,Math.round(128-(lum(right)-lum(left))*.40)));
+   normal[dst+1]=Math.max(0,Math.min(255,Math.round(128-(lum(down)-lum(up))*.40)));
+   normal[dst+2]=255;normal[dst+3]=255;
+  }
+ }
+ // Reuse existing bound textures; no extra GPU objects or texture memory leaks.
+ function replace(id,data){
+  gl.bindTexture(gl.TEXTURE_2D,id);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,width,size,0,gl.RGBA,gl.UNSIGNED_BYTE,data);
+  gl.generateMipmap(gl.TEXTURE_2D);
+ }
+ replace(textures.diffuse,color);replace(textures.normal,normal);
+ textures.size=[width,size];textures.photos=names;
+ for(const bmp of images)if(typeof bmp.close==="function")bmp.close();
+ return true;
+}
+async function enhanceDetailed(gl,textures){
+ if(!textures||typeof fetch!=="function"||typeof createImageBitmap!=="function"||
+   typeof document==="undefined")return false;
  const names=["grass","mud","brick"],kinds=["photo","normal","roughness"];
  const size=512,width=size*4,loaded={};
  const bitmaps=[];
@@ -150,5 +209,6 @@ async function enhance(gl,textures){
   for(const bmp of bitmaps)if(typeof bmp.close==="function")bmp.close();
  }
 }
-root.WPMaterialAtlas=Object.freeze({generate,upload,bind,enhance});
+
+root.WPMaterialAtlas=Object.freeze({generate,upload,bind,enhance,enhanceDetailed});
 })(window);
