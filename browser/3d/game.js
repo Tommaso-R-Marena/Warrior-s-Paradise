@@ -68,7 +68,14 @@ const FS=[
  "vec2 uv=(fract(surface*.26)*.968+.016+vec2(tile,0.))/vec2(4.,1.);",
  "vec4 pbr=texture(uDiffuse,uv);vec3 bump=texture(uBump,uv).rgb;",
  "float roughness=clamp(pbr.a,.3,1.);",
- "float bumpSun=max(0.,dot(normalize(vec3((bump.r-.5)*1.25,.96,(bump.g-.5)*1.25)),normalize(vec3(.53,.88,-.36))));",
+ "vec3 mapN=normalize(vec3(bump.rg*2.-1.,max(.25,bump.b*2.-1.)));",
+ "vec3 shadedN=n;",
+ "if(terrain>.5)shadedN=normalize(vec3(mapN.x,abs(mapN.z),mapN.y));",
+ "else if(masonry>.5){",
+ " if(abs(n.x)>abs(n.z))shadedN=normalize(vec3(sign(n.x)*mapN.z,mapN.y,mapN.x));",
+ " else shadedN=normalize(vec3(mapN.x,mapN.y,sign(n.z)*mapN.z));",
+ "}",
+ "float bumpSun=max(0.,dot(shadedN,normalize(vec3(.53,.88,-.36))));",
  "vec3 textured=pbr.rgb*(.39+.7*bumpSun);",
  "rgb=mix(rgb,textured,intensity*.78);",
  "vec3 eyeDir=normalize(uEye-vPos);",
@@ -108,12 +115,15 @@ const atlasKit=window.WPMaterialAtlas;
 try{if(atlasKit)materialTextures=atlasKit.upload(gl);}catch(error){
  materialTextures=null;
 }
-const photographicMaterials={loaded:false,error:""};
-if(materialTextures&&atlasKit?.enhance){
- // High/balanced: attempt self-hosted CC0 photographic albedo materials.
- // Keep original procedurally generated textures when unavailable or on low.
- atlasKit.enhance(gl,materialTextures).then(ok=>photographicMaterials.loaded=!!ok)
-  .catch(error=>{photographicMaterials.error=String(error);});
+const photographicMaterials={loaded:false,error:"",loading:false};
+function requestPBRMaterials(){
+ if(!materialTextures||!atlasKit?.enhance||
+  photographicMaterials.loading||photographicMaterials.loaded)return;
+ photographicMaterials.loading=true;
+ atlasKit.enhance(gl,materialTextures)
+  .then(ok=>{photographicMaterials.loaded=!!ok;})
+  .catch(error=>{photographicMaterials.error=String(error);})
+  .finally(()=>{photographicMaterials.loading=false;});
 }
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(.58,.68,.73,1);
@@ -481,6 +491,7 @@ function reset(){
  Object.assign(game,{playing:true,finished:false,sector:0,capture:0,kills:0,elapsed:0,
   grenades:[],tracers:[],strikes:[],support:1,order:"follow",flash:0,
    difficulty:$("difficulty").value,quality:$("quality").value,scaler:1,adapt:0});
+ if(game.quality!=="low")requestPBRMaterials();
  spawnEnemies();spawnAllies();
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
   name,{ammo:w.capacity,reserve:w.reserve}
@@ -1069,7 +1080,8 @@ window.WP3DDiagnostics=()=>({
  renderer:"WebGL2",geometryTriangles:staticMesh.count/3,
   assetInstances:scenery.instances,assetTriangles:scenery.triangles,assetsLoaded:scenery.loaded,
   assetError:scenery.error,texturesLoaded:!!materialTextures,photoMaterialsLoaded:photographicMaterials.loaded,
-  photoMaterialsError:photographicMaterials.error,rigLoaded:rig.ready,rigError:rig.error,
+  photoMaterialsError:photographicMaterials.error,realPBRMaps:!!materialTextures?.realNormalRoughness,
+  rigLoaded:rig.ready,rigError:rig.error,
   skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,buildingsLoaded:scenery.buildings||0,
   farmError:scenery.farmError||"",
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
