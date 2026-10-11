@@ -393,10 +393,17 @@ let lowVertexCount=staticMesh.count,mediumVertexCount=staticMesh.count;
 let currentWorldData=fallbackWorld;
 const scenery={loaded:false,instances:0,triangles:0,error:"",
  dressings:0,dressingTriangles:0,dressingError:"",dressingReady:false};
-const rig={model:null,ready:false,error:"",skinnedLastFrame:0,skinnedTriangles:0};
+const rig={model:null,ready:false,error:"",historical:{},skinnedLastFrame:0,skinnedTriangles:0};
 function loadSkinnedCharacters(){
  const runtime=window.WPSkinning;
  if(!runtime)return;
+ for(const [team,name] of [["ally","allied_ww2"],["axis","axis_ww2"]]){
+  runtime.load(name).then(model=>{
+   rig.historical[team]=model;
+   if($("rigstatus"))$("rigstatus").textContent=
+    "WWII SOLDIER MESHES "+Object.keys(rig.historical).length+"/2 READY";
+  }).catch(error=>{rig[team+"Error"]=String(error);});
+ }
  runtime.load("character_medium").then(model=>{
   rig.model=model;rig.ready=true;
   if($("rigstatus"))$("rigstatus").textContent="58-JOINT CC0 CHARACTER RIG READY";
@@ -579,6 +586,7 @@ function reset(){
  spawnEnemies();spawnAllies();
  if(window.WPTacticalNav)window.WPTacticalNav.reset();
  if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.reset();
+ if(window.WPArmoredFleet)window.WPArmoredFleet.reset();
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
   name,{ammo:w.capacity,reserve:w.reserve}
  ]));
@@ -602,6 +610,12 @@ function hud(){
  $("info").textContent=WEAPONS[player.weapon].name+" · "+(player.crouch?"CROUCHED":player.aim?"ADS":"HIP FIRE")+" · "+game.kills+" KILLS";
  $("squadstate").textContent="FIRETEAM "+game.allies.filter(a=>a.hp>0).length+"/2 · "+game.order.toUpperCase();
  $("supportstate").textContent="ARTILLERY × "+game.support;
+ if($("vehicle-state")){
+  const driving=window.WPArmoredFleet?.current();
+  $("vehicle-state").textContent=driving?
+   "DRIVING "+driving.name+" · "+Math.round(Math.abs(driving.speed)*3.6)+" KM/H":
+   "E / VEHICLE: ENTER NEARBY TRANSPORT";
+ }
  $("capture-fill").style.width=Math.floor(game.capture*100)+"%";
  if(flag){
   const distance=Math.round(Math.hypot(player.x-flag.x,player.z-flag.z));
@@ -642,7 +656,18 @@ function lineHit(ax,az,bx,bz){
  return openLOS(ax,az,bx,bz);
 }
 function shoot(){
- if(!game.playing||player.reload>0||player.cd>0)return;
+ if(!game.playing)return;
+ const fleet=window.WPArmoredFleet;
+ if(fleet?.isDriving()){
+  if(fleet.current()?.id==="armor"){
+   const fired=fleet.fire(player,game.enemies,lineHit,victim=>{
+    if(victim.hp<=0){game.kills++;msg("ARMOR: TARGET DOWN",1);}
+   },addTracer,(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type));
+   if(fired)window.WPBattleSound?.explosion(player.x,player.z,player);
+  }
+  return;
+ }
+ if(player.reload>0||player.cd>0)return;
  const w=WEAPONS[player.weapon];
  if(player.ammo<=0){reload();return;}
  player.cd=w.delay;player.ammo--;game.flash=.13;
@@ -740,6 +765,13 @@ function heal(){
  if(!game.playing||!player.med||player.hp>=100)return;
  player.med--;player.hp=Math.min(100,player.hp+36);msg("FIELD DRESSING APPLIED",1.1);
 }
+function enterVehicle(){
+ if(!game.playing||!window.WPArmoredFleet)return;
+ if(window.WPArmoredFleet.toggle(player,blocked)){
+  const v=window.WPArmoredFleet.current();
+  msg(v?"DRIVING "+v.name+" · E TO DISEMBARK":"DISEMBARKED · FIRETEAM ON FOOT",1.6);
+ }else msg("NO SAFE VEHICLE ENTRY / EXIT NEARBY",1);
+}
 function swap(){
  if(!game.playing)return;
  const names=Object.keys(WEAPONS),idx=names.indexOf(player.weapon);
@@ -817,6 +849,10 @@ function simulate(dt){
  if(!game.playing)return;
  game.elapsed+=dt;
  if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.update(dt);
+ if(window.WPArmoredFleet)window.WPArmoredFleet.tick(dt,player,lineHit,damage=>{
+  player.hurt=.7;msg("ENEMY ARMOR · SEEK COVER",1);
+  if(player.hp<=0)end(false);
+ },(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type));
  player.concussion=Math.max(0,(player.concussion||0)-dt*.7);
  player.cd=Math.max(0,player.cd-dt);player.hurt=Math.max(0,player.hurt-dt*2);
  game.flash=Math.max(0,game.flash-dt);
@@ -835,7 +871,9 @@ function simulate(dt){
  const x=-Math.sin(player.yaw)*forward-Math.cos(player.yaw)*strafe;
  const z=Math.cos(player.yaw)*forward-Math.sin(player.yaw)*strafe;
  const oldX=player.x,oldZ=player.z;
- [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
+ if(!window.WPArmoredFleet?.isDriving())
+  [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
+ else window.WPArmoredFleet.move(dt,input,player,blocked);
  const traveled=Math.hypot(player.x-oldX,player.z-oldZ);
  player.stepPhase=(player.stepPhase||0)+traveled*9;
  player.stepStrength=Math.max(0,Math.min(1,
