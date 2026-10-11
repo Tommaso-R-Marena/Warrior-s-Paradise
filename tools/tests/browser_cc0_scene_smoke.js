@@ -16,6 +16,8 @@ const spatialAudio=fs.readFileSync(path.join(root,"battle-audio.js"),"utf8");
 const decoration=fs.readFileSync(path.join(root,"normandy-dressing.js"),"utf8");
 const vehicles=fs.readFileSync(path.join(root,"ww2-vehicles.js"),"utf8");
 const ballistics=fs.readFileSync(path.join(root,"infantry-ballistics.js"),"utf8");
+const tactics=fs.readFileSync(path.join(root,"battle-tactics.js"),"utf8");
+const handling=fs.readFileSync(path.join(root,"weapon-handling.js"),"utf8");
 const ww2Environment=fs.readFileSync(path.join(root,"ww2-environment.js"),"utf8");
 const terrainScript=fs.readFileSync(path.join(root,"ww2-terrain.js"),"utf8");
 const kenney=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
@@ -89,6 +91,8 @@ async function scenario(shouldLoad,farms=true){
  vm.runInContext(decoration,sandbox,{filename:"normandy-dressing.js",timeout:15000});
  vm.runInContext(vehicles,sandbox,{filename:"ww2-vehicles.js",timeout:15000});
  vm.runInContext(ballistics,sandbox,{filename:"infantry-ballistics.js",timeout:15000});
+ vm.runInContext(tactics,sandbox,{filename:"battle-tactics.js",timeout:15000});
+ vm.runInContext(handling,sandbox,{filename:"weapon-handling.js",timeout:15000});
  vm.runInContext(ww2Environment,sandbox,{filename:"ww2-environment.js",timeout:15000});
  vm.runInContext(terrainScript,sandbox,{filename:"ww2-terrain.js",timeout:15000});
  assert(win.WPBattleArt&&win.WPBattleSound&&win.WPMaterialAtlas,
