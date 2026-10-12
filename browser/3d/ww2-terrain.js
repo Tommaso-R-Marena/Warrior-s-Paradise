@@ -32,7 +32,10 @@ function raw(x,z,flags,buildings){
  const broad=noise(x*.046+8,z*.045-6),local=noise(x*.10+4,z*.10-2);
  const waves=Math.sin(x*.083+z*.022)*Math.cos(z*.076-x*.019);
  const ridge=3.05*Math.exp(-Math.pow((x-19)/4.1,2)-Math.pow((z+34)/11,2));
- const escarpment=4.5*Math.exp(-Math.pow((x+22)/5.6,2)-Math.pow((z-29)/11,2));
+ // Elevated orchard terrace with a genuinely steep cross-slope. The cliff
+ // still consists of ordinary triangles, so it cannot be walked through.
+ const escarpment=5.4*(1-smooth((x+23)/4.8))*
+  smooth((z-17)/8)*(1-smooth((z-34)/6));
  const landscape=1.72*(broad-.5)+.65*waves+.42*(local-.5)+ridge+escarpment;
  return BASE_Y+(1-flatten(x,z,flags,buildings))*landscape;
 }
