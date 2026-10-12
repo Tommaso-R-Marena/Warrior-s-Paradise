@@ -70,6 +70,7 @@ function run(width,height,webgl=true){
  vm.runInContext(ballistics,sandbox,{filename:"browser/3d/infantry-ballistics.js",timeout:15000});
  vm.runInContext(tactics,sandbox,{filename:"browser/3d/battle-tactics.js",timeout:15000});
  vm.runInContext(handling,sandbox,{filename:"browser/3d/weapon-handling.js",timeout:15000});
+ vm.runInContext(terrain,sandbox,{filename:"browser/3d/ww2-terrain.js",timeout:15000});
  vm.runInContext(js,sandbox,{filename:"browser/3d/game.js",timeout:15000});
  if(!webgl){
   assert.equal(el("fallback").hidden,false);
