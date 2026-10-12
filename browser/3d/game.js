@@ -469,10 +469,19 @@ function loadLicensedScenery(){
     if(blocked(x,z,2.2)||Math.hypot(x+36,z+33)<8||
       flags.some(f=>Math.hypot(x-f.x,z-f.z)<7))continue;
     const scale=spec.scale[0]+rand()*(spec.scale[1]-spec.scale[0]);
-    positions.push([x,0,z,scale,rand()*Math.PI*2]);
-    if(spec.name.startsWith("tree-")){
-     treeTrunks.push({x,z,radius:.46});
+    const yaw=rand()*Math.PI*2;
+    const bounds=window.WPNormandyDressing?.footprint?.(assets[spec.name],x,z,scale,yaw);
+    if(bounds&&spec.name==="rock-largea"){
+     const rock=[bounds[0],bounds[1],bounds[2]*.90,bounds[3]*.90];
+     if(blocked(rock[0],rock[1],Math.max(rock[2],rock[3])*.5))continue;
+     solidProps.push(rock);
+    }else if(bounds&&spec.name==="fence-simple"){
+     if(blocked(bounds[0],bounds[1],Math.max(bounds[2],bounds[3])*.4))continue;
+     solidProps.push(bounds);
     }
+    positions.push([x,worldHeight(x,z),z,scale,yaw]);
+    if(spec.name.startsWith("tree-"))
+     treeTrunks.push({x,z,radius:Math.max(.35,Math.min(.73,scale*.125))});
    }
    added+=kit.appendInstances(world,assets[spec.name],positions,spec.palette);
    copies+=positions.length;
@@ -538,7 +547,7 @@ function loadLicensedScenery(){
      scenery.ww2EnvironmentTriangles=env.triangles;
      scenery.ww2EnvironmentProps=env.props;
     }
-    // High-only sculpted rural ground; near all roads/foundations kept level.
+    // High mesh refines the same topography used by collision.
     if(window.WPWW2Terrain){
      const hills=new Geometry();hills.data=currentWorldData.slice();
      const terrain=window.WPWW2Terrain.append(hills,flags,boxes);
@@ -546,7 +555,8 @@ function loadLicensedScenery(){
      scenery.terrainTriangles=terrain.triangles;
      scenery.shadowedTerrainCells=terrain.shadowedCells;
     }
-    artStructures.push(...result.colliders);
+    mediumSolids.push(...(result.mediumColliders||[]));
+    highSolids.push(...result.colliders);
     scenery.instances+=result.placements.length;
     scenery.triangles+=result.triangles;
     scenery.dressings=result.placements.length;
@@ -564,8 +574,8 @@ function loadLicensedScenery(){
  }).catch(err=>{
   scenery.error=String(err);
   if($("assetstatus"))$("assetstatus").textContent="LIGHTWEIGHT SCENERY ACTIVE · OPTIONAL ART UNAVAILABLE";
-  // If an import fails, keep the code-built baseline without partial collision.
-  treeTrunks.length=0;
+  // If importing fails, procedural rock and tree colliders remain authoritative.
+  solidProps.length=0;
  });
 }
 
