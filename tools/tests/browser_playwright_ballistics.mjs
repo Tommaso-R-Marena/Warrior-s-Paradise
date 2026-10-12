@@ -14,7 +14,12 @@ try{
  const doShot=async({weapon="rifle",range=12,pitch=0,obstacle=false})=>page.evaluate(async d=>{
    const x=d.obstacle?-24:0,z=d.obstacle?-25:0;
    const enemyZ=d.obstacle?-4:d.range,enemyX=x;
-   window.WP3DQA.combatScenario({x,z,weapon:d.weapon,pitch:d.pitch,
+   // Aimed headshot follows physical elevation, rather than using a
+   // misleading constant aiming pitch from the former flat world.
+   const pitch=d.pitch==="head"?Math.atan2(
+    (window.WP3DQA.terrainProbe(enemyX,enemyZ).y+2.15)-
+    (window.WP3DQA.terrainProbe(x,z).y+1.67),enemyZ-z):d.pitch;
+   window.WP3DQA.combatScenario({x,z,weapon:d.weapon,pitch,
     aim:true,yaw:0,clearDecoration:true,
     enemies:[{x:enemyX,z:enemyZ,hp:80,alert:0,facing:3.14159}]});
    const before=window.WP3DDiagnostics().defenders[0];
@@ -33,7 +38,7 @@ try{
  assert(near.shot.hit&&far.shot.hit,"Rifle must hit unobstructed enemies at both ranges");
  assert(near.shot.damage>far.shot.damage,
   "A longer rifle shot must do strictly less damage than the capped close-range maximum");
- const head=await doShot({range:12,pitch:.041});
+ const head=await doShot({range:12,pitch:"head"});
  assert(head.shot.hit&&head.shot.zone==="head"&&head.shot.damage>near.shot.damage,
   "A real elevated aim must produce a lethal headshot, not a generic body hit");
  const tooFar=await doShot({range:70});
