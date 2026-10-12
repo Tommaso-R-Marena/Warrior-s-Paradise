@@ -82,7 +82,9 @@ async function load(kit,Geometry,base,blocked,flags,buildings=[]){
    }
    else mediumDone=true;
   }
-  actual+=kit.appendInstances(geo,models[item.name],[item.instance]);
+  const grounded=item.instance.slice();
+  grounded[1]=root.WPWW2Terrain?.surface(grounded[0],grounded[2],flags,buildings)||0;
+  actual+=kit.appendInstances(geo,models[item.name],[grounded]);
  }
  if(actual!==batch.triangles)throw Error("Set dressing budget accounting mismatch");
  return {...batch,mediumTriangles,mediumColliders,data:geo.data,sourceModels:specs.length};
