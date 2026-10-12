@@ -66,7 +66,7 @@ function plan(models,blocked,flags){
  }
  return {placements,colliders:collision,counts,triangles,attempts};
 }
-async function load(kit,Geometry,base,blocked,flags){
+async function load(kit,Geometry,base,blocked,flags,buildings=[]){
  const models=await kit.loadModels(specs.map(s=>({name:s.name})));
  const batch=plan(models,blocked,flags);
  const geo=new Geometry();
