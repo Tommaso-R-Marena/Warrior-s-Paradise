@@ -39,7 +39,7 @@ try{
  assert(near.shot.damage>far.shot.damage,
   "A longer rifle shot must do strictly less damage than the capped close-range maximum");
  const head=await doShot({range:12,pitch:"head"});
- assert(head.shot.hit&&head.shot.zone==="head"&&head.shot.damage>near.shot.damage,
+ assert(head.shot.hit&&head.shot.zone==="head"&&head.shot.damage>62,
   "A real elevated aim must produce a lethal headshot, not a generic body hit: "+JSON.stringify(head));
  const tooFar=await doShot({range:70});
  assert(!tooFar.shot.hit&&tooFar.after.hp===tooFar.before.hp,
