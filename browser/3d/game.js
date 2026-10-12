@@ -542,7 +542,8 @@ function loadLicensedScenery(){
     // nor players acquire invisible cover on less capable graphics tiers.
     if(window.WPWW2Environment){
      const environment=new Geometry();environment.data=currentWorldData.slice();
-     const env=window.WPWW2Environment.append(environment,blocked,flags);
+     const env=window.WPWW2Environment.append(environment,blocked,flags,boxes);
+     highSolids.push(...(env.colliders||[]));
      currentWorldData=environment.data;upload(staticMesh,currentWorldData);
      scenery.ww2EnvironmentTriangles=env.triangles;
      scenery.ww2EnvironmentProps=env.props;
@@ -649,7 +650,10 @@ function reset(){
  if(window.WPTacticalNav)window.WPTacticalNav.reset();
  window.WPBattleTactics?.reset();
  if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.reset();
- if(window.WPArmoredFleet)window.WPArmoredFleet.reset();
+ if(window.WPArmoredFleet){
+  window.WPArmoredFleet.reset();
+  window.WPArmoredFleet.setGround(worldHeight);
+ }
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
   name,{ammo:w.capacity,reserve:w.reserve}
  ]));
@@ -1046,6 +1050,7 @@ function simulate(dt){
    if(range<d&&seen){victim=candidate;d=range;}
   }
   const visible=!!victim;
+  e.groundY=worldHeight(e.x,e.z);
   if(visible){e.alert=2.1;e.lastX=victim.x;e.lastZ=victim.z;}
   else e.alert=Math.max(0,e.alert-dt);
   const tx=visible?victim.x:e.lastX,tz=visible?victim.z:e.lastZ;
@@ -1168,7 +1173,10 @@ function dynamicGeometry(){
  }
  if(window.WPBattleAtmosphere)
   window.WPBattleAtmosphere.render(m,game.quality,player.x,player.z);
- if(window.WPArmoredFleet)window.WPArmoredFleet.draw(m,window.WPAssetKit,game.quality,player,game.elapsed);
+ if(window.WPArmoredFleet){
+  window.WPArmoredFleet.setGround(worldHeight);
+  window.WPArmoredFleet.draw(m,window.WPAssetKit,game.quality,player,game.elapsed);
+ }
  // Model-specific Lee-Enfield, Sten and Bren view models (or compatibility gun).
  game.recoilVisual=player.recoilVisual||0;
  if(art&&!window.WPArmoredFleet?.isDriving())art.weapon(m,player,game);
@@ -1466,12 +1474,22 @@ if(typeof location!=="undefined"&&typeof location.search==="string"&&
    if(data.weapon){player.weapon=data.weapon;player.ammo=WEAPONS[data.weapon].capacity;}
    Object.assign(player,{recoilReturn:0,recoilBloom:0,recoilVisual:0,lastRecoil:player.weapon});
    if(Array.isArray(data.enemies)){
-    game.enemies=data.enemies.map(e=>({x:e.x,z:e.z,hp:e.hp??80,
+    game.enemies=data.enemies.map(e=>({x:e.x,z:e.z,groundY:worldHeight(e.x,e.z),hp:e.hp??80,
      maxHp:e.hp??80,facing:e.facing||0,alert:e.alert||0,lastX:e.x,lastZ:e.z,
      hit:0,sector:0,cd:1000,suppression:0,phase:0}));
    }
    game.lastShot=null;hud();
   },
+  terrainProbe(x,z,r=.44){
+   return {x,z,y:worldHeight(x,z),blocked:blocked(x,z,r),
+    slope:window.WPWW2Terrain?.slope(x,z,flags,boxes).grade||0,
+    quality:collisionQuality};
+  },
+  collisionExamples(){
+   return {rocks:solidProps.map(b=>Array.from(b)),core:coreSolids.map(b=>Array.from(b)),
+    medium:mediumSolids.map(b=>Array.from(b)),high:highSolids.map(b=>Array.from(b))};
+  },
+  traverse(x,z,dx,dz){return move(x,z,dx,dz);},
   shootOnce(){player.cd=0;shoot();return game.lastShot;}
  });
 }
