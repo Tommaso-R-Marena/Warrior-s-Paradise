@@ -15,7 +15,7 @@ const records=[],models={},status={ready:false,loaded:0,errors:{},trianglesLast:
 let occupied=null,fired=0,hit=0;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 function reset(){
- records.length=0;for(const d of defs)records.push({...d,speed:0,reload:0,shotFlash:0,alive:true});
+ records.length=0;for(const d of defs)records.push({...d,speed:0,reload:0,shotFlash:0,alive:true,groundY:0});
  occupied=null;fired=0;hit=0;status.trianglesLast=0;
 }
 reset();
@@ -130,11 +130,11 @@ function drawArmor(g,v,quality,aimYaw){
   const cyaw=Number.isFinite(aimYaw)?-aimYaw:yaw;
   const cp=Math.cos(cyaw),sp=Math.sin(cyaw),rel=dz-pivotZ;
   const ox=v.x+sn*pivotZ,oz=v.z+cs*pivotZ;
-  g.box(ox+cp*dx+sp*rel,y,oz-sp*dx+cp*rel,w,h,d,c,cyaw);n+=12;
+  g.box(ox+cp*dx+sp*rel,y+(v.groundY||0),oz-sp*dx+cp*rel,w,h,d,c,cyaw);n+=12;
  }
  let n=0;
  function box(dx,y,dz,w,h,d,c=hull,angle=0){
-  g.box(v.x+cs*dx+sn*dz,y,v.z-sn*dx+cs*dz,w,h,d,c,yaw+angle);n+=12;
+  g.box(v.x+cs*dx+sn*dz,y+(v.groundY||0),v.z-sn*dx+cs*dz,w,h,d,c,yaw+angle);n+=12;
  }
  // Hull, mantlet, tracks and roadwheel arrangement follow distinct
  // Allied rounded Sherman versus German boxy Panzer IV silhouettes.
@@ -204,31 +204,34 @@ function draw(g,kit,quality,player,time){
    const modelYaw=-v.yaw,cs=Math.cos(modelYaw),sn=Math.sin(modelYaw);
    const originX=v.x-midpointX*cs-midpointZ*sn;
    const originZ=v.z+midpointX*sn-midpointZ*cs;
-   triangles+=kit.appendInstances(g,model,[[originX,y,originZ,scale,modelYaw]]);
+   triangles+=kit.appendInstances(g,model,[[originX,y+(v.groundY||0),originZ,scale,modelYaw]]);
    imported++;
   }else if(v.id!=="jeep"&&quality!=="low"){
    triangles+=drawArmor(g,v,quality,v.id==="armor"&&occupied==="armor"?player.yaw:null);
   }else{
    // Functional always-present silhouette for phone and absent imported art.
    const c=v.team==="axis"?[.34,.37,.30]:[.30,.36,.27];
-   g.box(v.x,1.0,v.z,v.width,1.0,v.length,c,-v.yaw);
-   g.box(v.x,1.65,v.z-.45,v.width*.77,.60,v.length*.52,c,-v.yaw);
+   g.box(v.x,1.0+(v.groundY||0),v.z,v.width,1.0,v.length,c,-v.yaw);
+   g.box(v.x,1.65+(v.groundY||0),v.z-.45,v.width*.77,.60,v.length*.52,c,-v.yaw);
    if(v.id!=="jeep"){
-    g.box(v.x,2.13,v.z,.95,.45,1.40,[.25,.30,.24],v.yaw);
-    g.box(v.x-Math.sin(v.yaw)*1.6,2.07,v.z+Math.cos(v.yaw)*1.6,.14,.14,2.3,[.15,.17,.15],-v.yaw);
+    g.box(v.x,2.13+(v.groundY||0),v.z,.95,.45,1.40,[.25,.30,.24],v.yaw);
+    g.box(v.x-Math.sin(v.yaw)*1.6,2.07+(v.groundY||0),v.z+Math.cos(v.yaw)*1.6,.14,.14,2.3,[.15,.17,.15],-v.yaw);
    }else{
-    g.box(v.x,1.72,v.z-.28,v.width*.93,.08,.12,[.19,.19,.17],v.yaw);
+    g.box(v.x,1.72+(v.groundY||0),v.z-.28,v.width*.93,.08,.12,[.19,.19,.17],v.yaw);
    }
    triangles+=72;
   }
-  if(v.shotFlash>0)g.cone(v.x,2.5,v.z,0.16,.55,[.96,.66,.22],5);
+  if(v.shotFlash>0)g.cone(v.x,2.5+(v.groundY||0),v.z,0.16,.55,[.96,.66,.22],5);
  }
  status.trianglesLast=triangles;
  return triangles;
+}
+function setGround(height){
+ for(const v of records)v.groundY=height(v.x,v.z);
 }
 function info(){return {ready:status.ready,loaded:status.loaded,errors:{...status.errors},
  driving:occupied,vehicle:current()?.name||"",enemyAlive:records.find(v=>v.id==="enemy")?.alive,
  vehicles:records.map(v=>({id:v.id,name:v.name,x:v.x,z:v.z,hp:v.hp,speed:v.speed,alive:v.alive})),
  shots:fired,hits:hit,renderedTriangles:status.trianglesLast};}
-root.WPArmoredFleet=Object.freeze({reset,load,toggle,isDriving,current,near,move,fire,tick,draw,info});
+root.WPArmoredFleet=Object.freeze({reset,load,toggle,isDriving,current,near,move,fire,tick,draw,info,setGround});
 })(window);

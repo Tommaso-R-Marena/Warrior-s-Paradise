@@ -18,7 +18,7 @@ function soldier(g,actor,team,t,distMoved=0){
  const s=Math.sin(yaw),c=Math.cos(yaw);
  const part=(px,py,pz,w,h,d,col,rotation=0)=>{
   const X=x+px*c+pz*s,Z=z-px*s+pz*c;
-  g.box(X,py,Z,w,h,d,col,yaw+rotation);
+  g.box(X,py+(actor.groundY||0),Z,w,h,d,col,yaw+rotation);
  };
  const stride=Math.min(1,Math.max(0,distMoved*1.8));
  const cadence=t*9+(actor.phase||0);

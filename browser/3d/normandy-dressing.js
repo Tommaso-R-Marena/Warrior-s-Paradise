@@ -72,16 +72,20 @@ async function load(kit,Geometry,base,blocked,flags){
  const geo=new Geometry();
  geo.data=base.slice();
  let actual=0,mediumTriangles=0,mediumDone=false;
+ const mediumColliders=[];
  for(const item of batch.placements){
   const count=models[item.name].count;
   if(!mediumDone){
-   if(mediumTriangles+count<=MEDIUM_TRIANGLES)mediumTriangles+=count;
+   if(mediumTriangles+count<=MEDIUM_TRIANGLES){
+    mediumTriangles+=count;
+    if(specs.find(s=>s.name===item.name)?.cover)mediumColliders.push(item.box);
+   }
    else mediumDone=true;
   }
   actual+=kit.appendInstances(geo,models[item.name],[item.instance]);
  }
  if(actual!==batch.triangles)throw Error("Set dressing budget accounting mismatch");
- return {...batch,mediumTriangles,data:geo.data,sourceModels:specs.length};
+ return {...batch,mediumTriangles,mediumColliders,data:geo.data,sourceModels:specs.length};
 }
 root.WPNormandyDressing=Object.freeze({load,plan,footprint,
  specs:specs.map(s=>({...s})),limits:Object.freeze({
