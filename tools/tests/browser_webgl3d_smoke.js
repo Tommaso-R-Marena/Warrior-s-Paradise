@@ -60,6 +60,7 @@ function run(width,height,webgl=true){
  const ballistics=fs.readFileSync(path.join(root,"infantry-ballistics.js"),"utf8");
  const tactics=fs.readFileSync(path.join(root,"battle-tactics.js"),"utf8");
  const handling=fs.readFileSync(path.join(root,"weapon-handling.js"),"utf8");
+ const terrain=fs.readFileSync(path.join(root,"ww2-terrain.js"),"utf8");
  const sandbox={window:win,document:doc,
   navigator:{userAgent:width<height?"Android Chrome":"Desktop Chrome"},
   requestAnimationFrame(fn){raf.push(fn)},console,Math,Float32Array,Error};
