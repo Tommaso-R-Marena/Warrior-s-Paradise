@@ -102,7 +102,7 @@ function weapon(g,player,game){
  const reloadDip=player.reload>0?Math.sin(Math.PI*reloadPhase)*.22:0;
  const center={x:player.x+F[0]*(.91-recoil)+R[0]*((player.aim?.036:.29)+reloadDip*.24),
   z:player.z+F[1]*(.91-recoil)+R[1]*((player.aim?.036:.29)+reloadDip*.24),
-  y:(player.crouch?1.02:1.67)-(player.aim?.22:.40)+player.pitch*.15+bob-reloadDip};
+  y:(player.groundY||0)+(player.crouch?1.02:1.67)-(player.aim?.22:.40)+player.pitch*.15+bob-reloadDip};
  const X=n=>center.x+F[0]*n,Z=n=>center.z+F[1]*n;
  const yaw=-player.yaw,model=player.weapon;
  const box=(l,y,w,h,d,col)=>g.box(X(l),center.y+y,Z(l),w,h,d,col,yaw);
