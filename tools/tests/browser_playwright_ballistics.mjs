@@ -14,7 +14,12 @@ try{
  const doShot=async({weapon="rifle",range=12,pitch=0,obstacle=false})=>page.evaluate(async d=>{
    const x=d.obstacle?-24:0,z=d.obstacle?-25:0;
    const enemyZ=d.obstacle?-4:d.range,enemyX=x;
-   window.WP3DQA.combatScenario({x,z,weapon:d.weapon,pitch:d.pitch,
+   // Aimed headshot follows physical elevation, rather than using a
+   // misleading constant aiming pitch from the former flat world.
+   const pitch=d.pitch==="head"?Math.atan2(
+    (window.WP3DQA.terrainProbe(enemyX,enemyZ).y+2.31)-
+    (window.WP3DQA.terrainProbe(x,z).y+1.67),enemyZ-z):d.pitch;
+   window.WP3DQA.combatScenario({x,z,weapon:d.weapon,pitch,
     aim:true,yaw:0,clearDecoration:true,
     enemies:[{x:enemyX,z:enemyZ,hp:80,alert:0,facing:3.14159}]});
    const before=window.WP3DDiagnostics().defenders[0];
@@ -33,9 +38,9 @@ try{
  assert(near.shot.hit&&far.shot.hit,"Rifle must hit unobstructed enemies at both ranges");
  assert(near.shot.damage>far.shot.damage,
   "A longer rifle shot must do strictly less damage than the capped close-range maximum");
- const head=await doShot({range:12,pitch:.041});
- assert(head.shot.hit&&head.shot.zone==="head"&&head.shot.damage>near.shot.damage,
-  "A real elevated aim must produce a lethal headshot, not a generic body hit");
+ const head=await doShot({range:12,pitch:"head"});
+ assert(head.shot.hit&&head.shot.zone==="head"&&head.shot.damage>62,
+  "A real elevated aim must produce a lethal headshot, not a generic body hit: "+JSON.stringify(head));
  const tooFar=await doShot({range:70});
  assert(!tooFar.shot.hit&&tooFar.after.hp===tooFar.before.hp,
   "Rifle must do exactly zero health damage beyond gameplay max range");
@@ -67,6 +72,42 @@ try{
  assert(firing.finishedBloom<firing.immediateBloom*.05&&
    firing.finishedReturn<firing.immediateReturn*.05,
   "Weapon kick and bloom must recover after not firing");
+ const terrainCheck=await page.evaluate(async()=>{
+   // Actual deployed physics, not a static stand-in: all procedural rocks,
+   // imported Kenney boulders and base terrain share contact-space coordinates.
+   await new Promise(resolve=>{
+    if(window.WP3DDiagnostics().assetsLoaded){resolve();return;}
+    const t=setInterval(()=>{if(window.WP3DDiagnostics().assetsLoaded){clearInterval(t);resolve();}},30);
+    setTimeout(()=>{clearInterval(t);resolve();},4500);
+   });
+   const qa=window.WP3DQA,d=window.WP3DDiagnostics(),all=qa.collisionExamples();
+   const core=all.core[0],boulder=all.rocks[0];
+   function blocked(box){return !!box&&qa.terrainProbe(box[0],box[1],.20).blocked;}
+   const from=core?[core[0]-core[2]/2-1.2,core[1]]:null;
+   const walked=from?qa.traverse(from[0],from[1],core[2]/2+2,0):null;
+   // Exercise real swept player movement through a rock, not only isBlocked().
+   const rockSweep=box=>{
+    if(!box)return false;
+    const edge=box[0]-box[2]/2;
+    const end=qa.traverse(edge-1.2,box[1],box[2]+2.4,0);
+    return end[0]<box[0]-Math.min(.25,box[2]*.15);
+   };
+   return {sweptCoreStopped:rockSweep(core),sweptGLBRockStopped:rockSweep(boulder),
+    actualGround:d.physicalTerrainTriangles,elevation:d.terrainAtPlayer,
+    coreCount:all.core.length,boulders:all.rocks.length,
+    proceduralBlocked:blocked(core),importedBlocked:blocked(boulder),
+    sweptFrom:from,sweptTo:walked,rockCenter:core,
+    graphics:d.collisionQuality,activeDressing:d.activeDressingColliders};
+ });
+ assert(terrainCheck.actualGround===722,"Game does not use authoritative physical mesh");
+ assert(terrainCheck.coreCount>=15&&terrainCheck.proceduralBlocked,
+  "Baseline rocks and battlefield obstacles must be solid");
+ assert(terrainCheck.boulders>0&&terrainCheck.importedBlocked,
+  "At least one imported Kenney boulder must use the actual GLB collision bounds");
+ assert(terrainCheck.sweptCoreStopped&&terrainCheck.sweptGLBRockStopped,
+  "Swept player movement must not tunnel through procedural or imported boulders");
+ assert(terrainCheck.activeDressing===0&&terrainCheck.graphics==="low",
+  "Low graphics cannot have invisible High-detail obstacle collisions");
  assert(!errors.length,"Chromium console errors: "+JSON.stringify(errors));
  console.log("PASS ACTUAL CHROMIUM FIRE",JSON.stringify({
   surpriseDamage:surprise.shot.damage,headshot:head.shot.damage,

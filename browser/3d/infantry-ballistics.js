@@ -35,14 +35,14 @@ function cylinderInterval(ox,oz,dx,dz,x,z,r,maxRange){
  return [Math.max(.15,near),Math.min(maxRange,far)];
 }
 function hitEnemy(eye,dx,dz,pitch,velocity,e,maxRange){
- const crouch=!!e.crouch||e.suppression>1.2,drop=crouch?.42:0;
+ const crouch=!!e.crouch||e.suppression>1.2,drop=crouch?.42:0,ground=e.groundY||0;
  const zones=[
-  {name:"head",dx:0,r:.285,low:1.91-drop,high:2.44-drop},
-  {name:"torso",dx:0,r:.42,low:.94-drop,high:1.91-drop},
-  {name:"arm",dx:-.49,r:.21,low:1.03-drop,high:1.77-drop},
-  {name:"arm",dx:.49,r:.21,low:1.03-drop,high:1.77-drop},
-  {name:"leg",dx:-.20,r:.19,low:.12-drop*.40,high:.97-drop*.55},
-  {name:"leg",dx:.20,r:.19,low:.12-drop*.40,high:.97-drop*.55}
+  {name:"head",dx:0,r:.285,low:1.91-drop+ground,high:2.44-drop+ground},
+  {name:"torso",dx:0,r:.42,low:.94-drop+ground,high:1.91-drop+ground},
+  {name:"arm",dx:-.49,r:.21,low:1.03-drop+ground,high:1.77-drop+ground},
+  {name:"arm",dx:.49,r:.21,low:1.03-drop+ground,high:1.77-drop+ground},
+  {name:"leg",dx:-.20,r:.19,low:.12-drop*.40+ground,high:.97-drop*.55+ground},
+  {name:"leg",dx:.20,r:.19,low:.12-drop*.40+ground,high:.97-drop*.55+ground}
  ];
  let best=null;
  for(const z of zones){

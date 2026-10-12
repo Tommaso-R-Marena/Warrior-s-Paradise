@@ -193,7 +193,7 @@ function append(g,model,actor,team="axis",time=0,lod=1){
    if(sum<=.000001){px=x;py=y;pz=z;sum=1}
    const pos=[px/sum,py/sum,pz/sum];
    transformed[i]=[actor.x+(pos[0]*cos+pos[2]*sin)*scale,
-    .055+pos[1]*scale+(actor.crouch?-.12:0),
+    (actor.groundY||0)+.055+pos[1]*scale+(actor.crouch?-.12:0),
     actor.z+(-pos[0]*sin+pos[2]*cos)*scale];
    const vertex=mesh.colors&&mesh.colorStride>=3?
     Array.from(mesh.colors.slice(i*mesh.colorStride,i*mesh.colorStride+3)):palette;

@@ -60,6 +60,7 @@ function run(width,height,webgl=true){
  const ballistics=fs.readFileSync(path.join(root,"infantry-ballistics.js"),"utf8");
  const tactics=fs.readFileSync(path.join(root,"battle-tactics.js"),"utf8");
  const handling=fs.readFileSync(path.join(root,"weapon-handling.js"),"utf8");
+ const terrain=fs.readFileSync(path.join(root,"ww2-terrain.js"),"utf8");
  const sandbox={window:win,document:doc,
   navigator:{userAgent:width<height?"Android Chrome":"Desktop Chrome"},
   requestAnimationFrame(fn){raf.push(fn)},console,Math,Float32Array,Error};
@@ -69,6 +70,7 @@ function run(width,height,webgl=true){
  vm.runInContext(ballistics,sandbox,{filename:"browser/3d/infantry-ballistics.js",timeout:15000});
  vm.runInContext(tactics,sandbox,{filename:"browser/3d/battle-tactics.js",timeout:15000});
  vm.runInContext(handling,sandbox,{filename:"browser/3d/weapon-handling.js",timeout:15000});
+ vm.runInContext(terrain,sandbox,{filename:"browser/3d/ww2-terrain.js",timeout:15000});
  vm.runInContext(js,sandbox,{filename:"browser/3d/game.js",timeout:15000});
  if(!webgl){
   assert.equal(el("fallback").hidden,false);
@@ -122,7 +124,7 @@ function run(width,height,webgl=true){
  assert.notEqual(el("mag").textContent,after,"reload never completed");
  el("grenade").send("pointerdown");
  const launched=win.WP3DDiagnostics().grenades[0];
- assert(launched&&launched.y>1&&launched.life>1.5,
+ assert(launched&&launched.y-win.WP3DDiagnostics().terrainAtPlayer>.95&&launched.life>1.5,
   "Frag should spawn near the player's hand with a timed fuse");
  el("swap").send("pointerdown");
  frame(185);

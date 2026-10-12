@@ -18,7 +18,7 @@ function soldier(g,actor,team,t,distMoved=0){
  const s=Math.sin(yaw),c=Math.cos(yaw);
  const part=(px,py,pz,w,h,d,col,rotation=0)=>{
   const X=x+px*c+pz*s,Z=z-px*s+pz*c;
-  g.box(X,py,Z,w,h,d,col,yaw+rotation);
+  g.box(X,py+(actor.groundY||0),Z,w,h,d,col,yaw+rotation);
  };
  const stride=Math.min(1,Math.max(0,distMoved*1.8));
  const cadence=t*9+(actor.phase||0);
@@ -76,7 +76,7 @@ function fieldEquipment(g,actor,team){
  const colors=TEAM[team]||TEAM.axis;
  const yaw=actor.facing||0,c=Math.cos(yaw),s=Math.sin(yaw);
  const part=(px,py,pz,w,h,d,col)=>{
-  g.box(actor.x+px*c+pz*s,py,actor.z-px*s+pz*c,w,h,d,col,yaw);
+  g.box(actor.x+px*c+pz*s,py+(actor.groundY||0),actor.z-px*s+pz*c,w,h,d,col,yaw);
  };
  const duck=actor.crouch?.12:0;
  part(0,2.15-duck,.02,.64,.19,.60,colors.helmet);
@@ -102,7 +102,7 @@ function weapon(g,player,game){
  const reloadDip=player.reload>0?Math.sin(Math.PI*reloadPhase)*.22:0;
  const center={x:player.x+F[0]*(.91-recoil)+R[0]*((player.aim?.036:.29)+reloadDip*.24),
   z:player.z+F[1]*(.91-recoil)+R[1]*((player.aim?.036:.29)+reloadDip*.24),
-  y:(player.crouch?1.02:1.67)-(player.aim?.22:.40)+player.pitch*.15+bob-reloadDip};
+  y:(player.groundY||0)+(player.crouch?1.02:1.67)-(player.aim?.22:.40)+player.pitch*.15+bob-reloadDip};
  const X=n=>center.x+F[0]*n,Z=n=>center.z+F[1]*n;
  const yaw=-player.yaw,model=player.weapon;
  const box=(l,y,w,h,d,col)=>g.box(X(l),center.y+y,Z(l),w,h,d,col,yaw);

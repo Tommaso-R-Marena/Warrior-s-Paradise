@@ -265,6 +265,13 @@ const boxes=[
 const flags=[{x:-12,z:-5,title:"FARM APPROACH"},{x:11,z:11,title:"CROSSROADS"},{x:31,z:29,title:"RADIO POST"}];
 const treeTrunks=[];
 const artStructures=[];
+const solidProps=[],coreSolids=[],mediumSolids=[],highSolids=[];
+let collisionQuality="low";
+const worldHeight=(x,z)=>window.WPWW2Terrain?.surface(x,z,flags,boxes)||0;
+const terrainPassable=(x,z,nx,nz,r,kind="infantry")=>
+ !window.WPWW2Terrain||window.WPWW2Terrain.traversable(x,z,nx,nz,r,flags,boxes,kind);
+const tierSolids=()=>collisionQuality==="high"?highSolids:
+ collisionQuality==="medium"?mediumSolids:[];
 const covers=flags.flatMap(f=>[
  [f.x-6,f.z-7,4,.85],[f.x+6,f.z+6,4,.85],
  [f.x-6,f.z+5,.85,4],[f.x+5,f.z-6,.85,4]
@@ -272,7 +279,10 @@ const covers=flags.flatMap(f=>[
 const within=(x,z,b,pad=0)=>Math.abs(x-b[0])<(b[2]/2+pad)&&Math.abs(z-b[1])<(b[3]/2+pad);
 function blocked(x,z,r=.42){
  if(x<-47+r||x>47-r||z<-47+r||z>47-r)return true;
- return boxes.some(b=>within(x,z,b,r))||covers.some(b=>within(x,z,b,r))||artStructures.some(b=>within(x,z,b,r))||treeTrunks.some(t=>Math.hypot(x-t.x,z-t.z)<t.radius+r);
+ return boxes.some(b=>within(x,z,b,r))||covers.some(b=>within(x,z,b,r))||
+ artStructures.some(b=>within(x,z,b,r))||solidProps.some(b=>within(x,z,b,r))||
+ coreSolids.some(b=>within(x,z,b,r))||tierSolids().some(b=>within(x,z,b,r))||
+ treeTrunks.some(t=>Math.hypot(x-t.x,z-t.z)<t.radius+r);
 }
 function openLOS(ax,az,bx,bz){
  const d=Math.hypot(bx-ax,bz-az),segments=Math.ceil(d/.55);
@@ -280,17 +290,25 @@ function openLOS(ax,az,bx,bz){
   const t=i/segments;if(boxes.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.12))||
       covers.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
       artStructures.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
+      solidProps.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
+      coreSolids.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
+      tierSolids().some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
       treeTrunks.some(tr=>Math.hypot(ax+(bx-ax)*t-tr.x,az+(bz-az)*t-tr.z)<tr.radius))return false;
  }
  return true;
 }
 function buildWorld(){
  const m=new Geometry();
- m.quad([-49,-.1,-49],[-49,-.1,49],[49,-.1,49],[49,-.1,-49],COLORS.grass);
+ // The first mesh is the exact same triangulation used by ground collision.
+ if(window.WPWW2Terrain)window.WPWW2Terrain.append(m,flags,boxes,"base");
+ else m.quad([-49,-.1,-49],[-49,-.1,49],[49,-.1,49],[49,-.1,-49],COLORS.grass);
  for(let i=0;i<340;i++){
   const x=-46+rnd()*92,z=-46+rnd()*92,r=.35+rnd()*1.65;
   const col=rnd()>.45?COLORS.grass2:COLORS.ground;
-  m.quad([x,.001,z],[x-r,.001,z+r*.45],[x+.18,.001,z+r],[x+r,.001,z],col);
+  m.quad([x,worldHeight(x,z)+.018,z],
+   [x-r,worldHeight(x-r,z+r*.45)+.018,z+r*.45],
+   [x+.18,worldHeight(x+.18,z+r)+.018,z+r],
+   [x+r,worldHeight(x+r,z)+.018,z],col);
  }
  // Country road with diagonal segments; no dynamic tessellation required.
  for(let i=-8;i<8;i++){
@@ -337,21 +355,27 @@ function buildWorld(){
   const x=-45+rnd()*90,z=-45+rnd()*90;
   if(blocked(x,z,2.2)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<6))continue;
   const h=3.4+rnd()*2.3;
-  m.box(x,h*.25,z,.35,h*.5,.35,COLORS.trunk);
-  m.cone(x,h*.38,z,.9+rnd()*.5,h*.51,i%3?COLORS.leaf:COLORS.leaf2,7);
-  m.cone(x,h*.57,z,.75,h*.4,COLORS.leaf2,7);
+  const ground=worldHeight(x,z);
+  m.box(x,ground+h*.25,z,.35,h*.5,.35,COLORS.trunk);
+  treeTrunks.push({x,z,radius:.22});
+  m.cone(x,ground+h*.38,z,.9+rnd()*.5,h*.51,i%3?COLORS.leaf:COLORS.leaf2,7);
+  m.cone(x,ground+h*.57,z,.75,h*.4,COLORS.leaf2,7);
  }
  for(let i=0;i<85;i++){
   const x=-43+rnd()*86,z=-43+rnd()*86;
   if(blocked(x,z,1.7)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<3))continue;
-  const type=i%5;
+  const type=i%5,ground=worldHeight(x,z);
   if(type===0){
-   for(let j=0;j<4;j++)m.box(x+(j-1.5)*.95,.33,z,1.05,.65,.70,COLORS.sand);
+   coreSolids.push([x,z,3.8,.70]);
+   for(let j=0;j<4;j++)m.box(x+(j-1.5)*.95,ground+.33,z,1.05,.65,.70,COLORS.sand);
   }else if(type===1){
-   m.box(x,.45,z,.8,.9,.8,COLORS.wood);
-   m.box(x,.45,z+.43,.9,.12,.12,COLORS.timber);
+   coreSolids.push([x,z,.82,1.12]);
+   m.box(x,ground+.45,z,.8,.9,.8,COLORS.wood);
+   m.box(x,ground+.45,z+.43,.9,.12,.12,COLORS.timber);
   }else{
-   m.box(x,.18,z,.3+rnd()*.8,.35,.7,COLORS.stone);
+   const w=.3+rnd()*.8;
+   coreSolids.push([x,z,w,.70]);
+   m.box(x,ground+.18,z,w,.35,.7,COLORS.stone);
   }
  }
  for(const [x,z,w,d] of covers){
@@ -367,8 +391,10 @@ function buildWorld(){
  for(let i=0;i<18;i++){
   const x=-43+i*4,z=-43+(i%3)*1.5;
   if(blocked(x,z,1.2))continue;
-  m.box(x,.72,z,.12,1.44,.12,COLORS.timber);
-  m.box(x,1.03,z+1.2,.09,.09,2.5,COLORS.wood);
+  const ground=worldHeight(x,z);
+  coreSolids.push([x,z+1.2,.18,2.7]);
+  m.box(x,ground+.72,z,.12,1.44,.12,COLORS.timber);
+  m.box(x,ground+1.03,z+1.2,.09,.09,2.5,COLORS.wood);
  }
  for(let i=0;i<35;i++){
   const x=-42+rnd()*84,z=-41+rnd()*82,r=.45+rnd()*.8;
@@ -443,10 +469,19 @@ function loadLicensedScenery(){
     if(blocked(x,z,2.2)||Math.hypot(x+36,z+33)<8||
       flags.some(f=>Math.hypot(x-f.x,z-f.z)<7))continue;
     const scale=spec.scale[0]+rand()*(spec.scale[1]-spec.scale[0]);
-    positions.push([x,0,z,scale,rand()*Math.PI*2]);
-    if(spec.name.startsWith("tree-")){
-     treeTrunks.push({x,z,radius:.46});
+    const yaw=rand()*Math.PI*2;
+    const bounds=window.WPNormandyDressing?.footprint?.(assets[spec.name],x,z,scale,yaw);
+    if(bounds&&spec.name==="rock-largea"){
+     const rock=[bounds[0],bounds[1],bounds[2]*.90,bounds[3]*.90];
+     if(blocked(rock[0],rock[1],Math.max(rock[2],rock[3])*.5))continue;
+     solidProps.push(rock);
+    }else if(bounds&&spec.name==="fence-simple"){
+     if(blocked(bounds[0],bounds[1],Math.max(bounds[2],bounds[3])*.4))continue;
+     solidProps.push(bounds);
     }
+    positions.push([x,worldHeight(x,z),z,scale,yaw]);
+    if(spec.name.startsWith("tree-"))
+     treeTrunks.push({x,z,radius:Math.max(.35,Math.min(.73,scale*.125))});
    }
    added+=kit.appendInstances(world,assets[spec.name],positions,spec.palette);
    copies+=positions.length;
@@ -499,7 +534,7 @@ function loadLicensedScenery(){
     scenery.dressingError="Optional CC0 decoration module unavailable";
     scenery.dressingReady=true;return;
    }
-   decoration.load(kit,Geometry,currentWorldData,blocked,flags).then(result=>{
+   decoration.load(kit,Geometry,currentWorldData,blocked,flags,boxes).then(result=>{
     currentWorldData=result.data;
     upload(staticMesh,currentWorldData);
     mediumVertexCount=lowVertexCount+result.mediumTriangles*3;
@@ -507,12 +542,13 @@ function loadLicensedScenery(){
     // nor players acquire invisible cover on less capable graphics tiers.
     if(window.WPWW2Environment){
      const environment=new Geometry();environment.data=currentWorldData.slice();
-     const env=window.WPWW2Environment.append(environment,blocked,flags);
+     const env=window.WPWW2Environment.append(environment,blocked,flags,boxes);
+     highSolids.push(...(env.colliders||[]));
      currentWorldData=environment.data;upload(staticMesh,currentWorldData);
      scenery.ww2EnvironmentTriangles=env.triangles;
      scenery.ww2EnvironmentProps=env.props;
     }
-    // High-only sculpted rural ground; near all roads/foundations kept level.
+    // High mesh refines the same topography used by collision.
     if(window.WPWW2Terrain){
      const hills=new Geometry();hills.data=currentWorldData.slice();
      const terrain=window.WPWW2Terrain.append(hills,flags,boxes);
@@ -520,7 +556,8 @@ function loadLicensedScenery(){
      scenery.terrainTriangles=terrain.triangles;
      scenery.shadowedTerrainCells=terrain.shadowedCells;
     }
-    artStructures.push(...result.colliders);
+    mediumSolids.push(...(result.mediumColliders||[]));
+    highSolids.push(...result.colliders);
     scenery.instances+=result.placements.length;
     scenery.triangles+=result.triangles;
     scenery.dressings=result.placements.length;
@@ -538,8 +575,8 @@ function loadLicensedScenery(){
  }).catch(err=>{
   scenery.error=String(err);
   if($("assetstatus"))$("assetstatus").textContent="LIGHTWEIGHT SCENERY ACTIVE · OPTIONAL ART UNAVAILABLE";
-  // If an import fails, keep the code-built baseline without partial collision.
-  treeTrunks.length=0;
+  // If importing fails, procedural rock and tree colliders remain authoritative.
+  solidProps.length=0;
  });
 }
 
@@ -564,7 +601,7 @@ function spawnEnemies(){
   for(const [dx,dz] of positions){
    const x=f.x+dx,z=f.z+dz;
    if(blocked(x,z,.8))continue;
-   game.enemies.push({x,z,hp:80,maxHp:80,sector:n,cd:.5+rnd()*1.7,
+   game.enemies.push({x,z,groundY:worldHeight(x,z),hp:80,maxHp:80,sector:n,cd:.5+rnd()*1.7,
      facing:rnd()*Math.PI*2,moveSpeed:0,
     alert:0,lastX:x,lastZ:z,strafe:rnd()>.5?1:-1,phase:rnd()*6,hit:0,
     morale:1,reaction:0,crouch:false,cover:null,coverRetry:0});
@@ -606,13 +643,17 @@ function reset(){
   grenades:[],tracers:[],strikes:[],support:1,order:"follow",flash:0,
   lastShot:null,stealthHits:0,headshots:0,casualties:[],
    difficulty:$("difficulty").value,quality:$("quality").value,scaler:1,adapt:0});
+ collisionQuality=game.quality;
  if(game.quality==="high")ensureHighProgram();
  requestPhotographicMaterials(game.quality);
  spawnEnemies();spawnAllies();
  if(window.WPTacticalNav)window.WPTacticalNav.reset();
  window.WPBattleTactics?.reset();
  if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.reset();
- if(window.WPArmoredFleet)window.WPArmoredFleet.reset();
+ if(window.WPArmoredFleet){
+  window.WPArmoredFleet.reset();
+  window.WPArmoredFleet.setGround(worldHeight);
+ }
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
   name,{ammo:w.capacity,reserve:w.reserve}
  ]));
@@ -665,8 +706,12 @@ function end(victory){
  $("deploy").textContent="REDEPLOY →";
 }
 function move(x,z,dx,dz){
- if(!blocked(x+dx,z,.44))x+=dx;
- if(!blocked(x,z+dz,.44))z+=dz;
+ const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.22));
+ for(let i=0;i<steps;i++){
+  const sx=dx/steps,sz=dz/steps;
+  if(!blocked(x+sx,z,.44)&&terrainPassable(x,z,x+sx,z,.44))x+=sx;
+  if(!blocked(x,z+sz,.44)&&terrainPassable(x,z,x,z+sz,.44))z+=sz;
+ }
  return [x,z];
 }
 function navigateCombatant(actor,gx,gz,speed,dt){
@@ -703,7 +748,7 @@ function shoot(){
   !!(input.keys.KeyW||input.keys.KeyS||input.keys.KeyA||input.keys.KeyD);
  const spread=w.spread*(player.aim?.24:.83)*(player.crouch?.70:1)*
   (moving?1.24:1)*(window.WPWeaponHandling?.spreadMultiplier(player)||1),
-  eyeY=player.crouch?1.02:1.67;
+  eyeY=worldHeight(player.x,player.z)+(player.crouch?1.02:1.67);
  const shot=ballistics.trace({source:{x:player.x,y:eyeY,z:player.z},
   weapon:player.weapon,yaw:player.yaw,pitch:player.pitch,
   spreadYaw:(rnd()-.5)*spread,spreadPitch:(rnd()-.5)*spread*.72,
@@ -800,7 +845,7 @@ function grenade(){
  // Timed grenade flight; never teleport explosives through farm buildings.
  const angle=Math.max(-.45,Math.min(.45,player.pitch));
  game.grenades.push({x:safe?nx:player.x,z:safe?nz:player.z,
-  y:player.crouch?1.05:1.48,vx:dx*9.7,vz:dz*9.7,vy:4.9+angle*3.3,
+  y:worldHeight(player.x,player.z)+(player.crouch?1.05:1.48),vx:dx*9.7,vz:dz*9.7,vy:4.9+angle*3.3,
   life:1.65,detonated:false});
  msg("FRAG OUT · GET TO COVER",1.1);
 }
@@ -918,7 +963,10 @@ function simulate(dt){
  const oldX=player.x,oldZ=player.z;
  if(!window.WPArmoredFleet?.isDriving())
   [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
- else window.WPArmoredFleet.move(dt,input,player,blocked);
+ else window.WPArmoredFleet.move(dt,input,player,(nx,nz,r)=>{
+  const v=window.WPArmoredFleet.current();
+  return blocked(nx,nz,r)||!terrainPassable(v.x,v.z,nx,nz,r,"vehicle");
+ });
  const traveled=Math.hypot(player.x-oldX,player.z-oldZ);
  player.stepPhase=(player.stepPhase||0)+traveled*9;
  player.stepStrength=Math.max(0,Math.min(1,
@@ -941,8 +989,9 @@ function simulate(dt){
   if(blocked(g.x,nextZ,.16))g.vz=-g.vz*.3;
   else g.z=nextZ;
   g.vy-=11.8*dt;g.y+=g.vy*dt;
-  if(g.y<.19){
-   g.y=.19;g.vy=g.vy<-.65?-g.vy*.23:0;
+  const ground=worldHeight(g.x,g.z)+.19;
+  if(g.y<ground){
+   g.y=ground;g.vy=g.vy<-.65?-g.vy*.23:0;
    const drag=Math.max(0,1-4.2*dt);g.vx*=drag;g.vz*=drag;
   }
   g.life-=dt;
@@ -1001,6 +1050,7 @@ function simulate(dt){
    if(range<d&&seen){victim=candidate;d=range;}
   }
   const visible=!!victim;
+  e.groundY=worldHeight(e.x,e.z);
   if(visible){e.alert=2.1;e.lastX=victim.x;e.lastZ=victim.z;}
   else e.alert=Math.max(0,e.alert-dt);
   const tx=visible?victim.x:e.lastX,tz=visible?victim.z:e.lastZ;
@@ -1054,6 +1104,7 @@ function simulate(dt){
  hud();
 }
 function dynamicGeometry(){
+ player.groundY=worldHeight(player.x,player.z);
  const m=new Geometry();
  const art=window.WPBattleArt,skinner=window.WPSkinning;
  let skinnedActors=0,skinnedTriangles=0;
@@ -1068,6 +1119,7 @@ function dynamicGeometry(){
  const selected=new Set(candidates.slice(0,maxActors));
  const present=(actor,team)=>{
   const distance=Math.hypot(actor.x-player.x,actor.z-player.z);
+  actor.groundY=worldHeight(actor.x,actor.z);
   if(rig.ready&&skinner&&distance<viewDist&&selected.has(actor)){
    const chosen=rig.historical[team]||rig.model;
    const drawn=skinner.append(m,chosen,actor,team,game.elapsed);
@@ -1087,11 +1139,12 @@ function dynamicGeometry(){
  for(let i=game.casualties.length-1;i>=0&&shown<maxBodies;i--){
   const b=game.casualties[i];
   if(Math.hypot(b.x-player.x,b.z-player.z)>26)continue;
+  const ground=worldHeight(b.x,b.z);
   const facing=-b.facing;
-  m.box(b.x,.20,b.z,.57,.25,1.21,COLORS.ground,facing);
-  m.box(b.x+Math.sin(facing)*.62,.19,b.z+Math.cos(facing)*.62,.45,.30,.42,COLORS.helmet,facing);
-  m.box(b.x-Math.sin(facing)*.32,.32,b.z-Math.cos(facing)*.32,.46,.22,.42,COLORS.sand,facing);
-  m.box(b.x+.32,.12,b.z+.12,.07,.08,1.03,COLORS.dark,facing);
+  m.box(b.x,ground+.20,b.z,.57,.25,1.21,COLORS.ground,facing);
+  m.box(b.x+Math.sin(facing)*.62,ground+.19,b.z+Math.cos(facing)*.62,.45,.30,.42,COLORS.helmet,facing);
+  m.box(b.x-Math.sin(facing)*.32,ground+.32,b.z-Math.cos(facing)*.32,.46,.22,.42,COLORS.sand,facing);
+  m.box(b.x+.32,ground+.12,b.z+.12,.07,.08,1.03,COLORS.dark,facing);
   shown++;
  }
  game.corpsesDrawn=shown;
@@ -1121,13 +1174,16 @@ function dynamicGeometry(){
  }
  if(window.WPBattleAtmosphere)
   window.WPBattleAtmosphere.render(m,game.quality,player.x,player.z);
- if(window.WPArmoredFleet)window.WPArmoredFleet.draw(m,window.WPAssetKit,game.quality,player,game.elapsed);
+ if(window.WPArmoredFleet){
+  window.WPArmoredFleet.setGround(worldHeight);
+  window.WPArmoredFleet.draw(m,window.WPAssetKit,game.quality,player,game.elapsed);
+ }
  // Model-specific Lee-Enfield, Sten and Bren view models (or compatibility gun).
  game.recoilVisual=player.recoilVisual||0;
  if(art&&!window.WPArmoredFleet?.isDriving())art.weapon(m,player,game);
  else if(!window.WPArmoredFleet?.isDriving()){
   const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw),yaw=-player.yaw;
-  const py=(player.crouch?1.02:1.67)-.4;
+  const py=worldHeight(player.x,player.z)+(player.crouch?1.02:1.67)-.4;
   m.box(player.x+dx*.85,py,player.z+dz*.85,.2,.17,.85,COLORS.metal,yaw);
  }
  return m.data;
@@ -1175,7 +1231,7 @@ function render(){
  const shake=(player.concussion||0)*.024;
  const driving=window.WPArmoredFleet?.current();
  const eyeHeight=driving?(driving.id==="armor"?3.15:2.35):(player.crouch?1.02:1.67);
- const eye=[player.x,eyeHeight+stepBob+
+ const eye=[player.x,worldHeight(player.x,player.z)+eyeHeight+stepBob+
   Math.sin(game.elapsed*37)*shake,player.z],forward=[
   -Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),
   Math.cos(player.yaw)*Math.cos(player.pitch)];
@@ -1370,6 +1426,11 @@ window.WP3DDiagnostics=()=>({
   ww2EnvironmentTriangles:scenery.ww2EnvironmentTriangles||0,
   ww2EnvironmentProps:scenery.ww2EnvironmentProps||0,
   terrainTriangles:scenery.terrainTriangles||0,
+  physicalTerrainTriangles:window.WPWW2Terrain?.baseTriangles||0,
+  terrainAtPlayer:worldHeight(player.x,player.z),
+  terrainGrade:window.WPWW2Terrain?.slope(player.x,player.z,flags,boxes).grade||0,
+  solidProps:solidProps.length,proceduralSolids:coreSolids.length,
+  activeDressingColliders:tierSolids().length,collisionQuality,
   shadowedTerrainCells:scenery.shadowedTerrainCells||0,
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
@@ -1414,12 +1475,22 @@ if(typeof location!=="undefined"&&typeof location.search==="string"&&
    if(data.weapon){player.weapon=data.weapon;player.ammo=WEAPONS[data.weapon].capacity;}
    Object.assign(player,{recoilReturn:0,recoilBloom:0,recoilVisual:0,lastRecoil:player.weapon});
    if(Array.isArray(data.enemies)){
-    game.enemies=data.enemies.map(e=>({x:e.x,z:e.z,hp:e.hp??80,
+    game.enemies=data.enemies.map(e=>({x:e.x,z:e.z,groundY:worldHeight(e.x,e.z),hp:e.hp??80,
      maxHp:e.hp??80,facing:e.facing||0,alert:e.alert||0,lastX:e.x,lastZ:e.z,
      hit:0,sector:0,cd:1000,suppression:0,phase:0}));
    }
    game.lastShot=null;hud();
   },
+  terrainProbe(x,z,r=.44){
+   return {x,z,y:worldHeight(x,z),blocked:blocked(x,z,r),
+    slope:window.WPWW2Terrain?.slope(x,z,flags,boxes).grade||0,
+    quality:collisionQuality};
+  },
+  collisionExamples(){
+   return {rocks:solidProps.map(b=>Array.from(b)),core:coreSolids.map(b=>Array.from(b)),
+    medium:mediumSolids.map(b=>Array.from(b)),high:highSolids.map(b=>Array.from(b))};
+  },
+  traverse(x,z,dx,dz){return move(x,z,dx,dz);},
   shootOnce(){player.cd=0;shoot();return game.lastShot;}
  });
 }
