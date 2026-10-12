@@ -31,7 +31,7 @@ function flatten(x,z,flags,buildings){
 function raw(x,z,flags,buildings){
  const broad=noise(x*.046+8,z*.045-6),local=noise(x*.10+4,z*.10-2);
  const waves=Math.sin(x*.083+z*.022)*Math.cos(z*.076-x*.019);
- const ridge=2.05*Math.exp(-Math.pow((x-19)/5,2)-Math.pow((z+34)/12,2));
+ const ridge=3.05*Math.exp(-Math.pow((x-19)/4.1,2)-Math.pow((z+34)/11,2));
  const landscape=1.72*(broad-.5)+.65*waves+.42*(local-.5)+ridge;
  return BASE_Y+(1-flatten(x,z,flags,buildings))*landscape;
 }
