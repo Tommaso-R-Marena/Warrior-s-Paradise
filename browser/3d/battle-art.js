@@ -76,7 +76,7 @@ function fieldEquipment(g,actor,team){
  const colors=TEAM[team]||TEAM.axis;
  const yaw=actor.facing||0,c=Math.cos(yaw),s=Math.sin(yaw);
  const part=(px,py,pz,w,h,d,col)=>{
-  g.box(actor.x+px*c+pz*s,py,actor.z-px*s+pz*c,w,h,d,col,yaw);
+  g.box(actor.x+px*c+pz*s,py+(actor.groundY||0),actor.z-px*s+pz*c,w,h,d,col,yaw);
  };
  const duck=actor.crouch?.12:0;
  part(0,2.15-duck,.02,.64,.19,.60,colors.helmet);
