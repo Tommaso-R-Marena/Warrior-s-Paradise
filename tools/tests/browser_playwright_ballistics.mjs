@@ -17,7 +17,7 @@ try{
    // Aimed headshot follows physical elevation, rather than using a
    // misleading constant aiming pitch from the former flat world.
    const pitch=d.pitch==="head"?Math.atan2(
-    (window.WP3DQA.terrainProbe(enemyX,enemyZ).y+2.15)-
+    (window.WP3DQA.terrainProbe(enemyX,enemyZ).y+2.31)-
     (window.WP3DQA.terrainProbe(x,z).y+1.67),enemyZ-z):d.pitch;
    window.WP3DQA.combatScenario({x,z,weapon:d.weapon,pitch,
     aim:true,yaw:0,clearDecoration:true,
@@ -40,7 +40,7 @@ try{
   "A longer rifle shot must do strictly less damage than the capped close-range maximum");
  const head=await doShot({range:12,pitch:"head"});
  assert(head.shot.hit&&head.shot.zone==="head"&&head.shot.damage>near.shot.damage,
-  "A real elevated aim must produce a lethal headshot, not a generic body hit");
+  "A real elevated aim must produce a lethal headshot, not a generic body hit: "+JSON.stringify(head));
  const tooFar=await doShot({range:70});
  assert(!tooFar.shot.hit&&tooFar.after.hp===tooFar.before.hp,
   "Rifle must do exactly zero health damage beyond gameplay max range");
