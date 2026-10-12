@@ -265,6 +265,13 @@ const boxes=[
 const flags=[{x:-12,z:-5,title:"FARM APPROACH"},{x:11,z:11,title:"CROSSROADS"},{x:31,z:29,title:"RADIO POST"}];
 const treeTrunks=[];
 const artStructures=[];
+const solidProps=[],coreSolids=[],mediumSolids=[],highSolids=[];
+let collisionQuality="low";
+const worldHeight=(x,z)=>window.WPWW2Terrain?.surface(x,z,flags,boxes)||0;
+const terrainPassable=(x,z,nx,nz,r,kind="infantry")=>
+ !window.WPWW2Terrain||window.WPWW2Terrain.traversable(x,z,nx,nz,r,flags,boxes,kind);
+const tierSolids=()=>collisionQuality==="high"?highSolids:
+ collisionQuality==="medium"?mediumSolids:[];
 const covers=flags.flatMap(f=>[
  [f.x-6,f.z-7,4,.85],[f.x+6,f.z+6,4,.85],
  [f.x-6,f.z+5,.85,4],[f.x+5,f.z-6,.85,4]
@@ -272,7 +279,10 @@ const covers=flags.flatMap(f=>[
 const within=(x,z,b,pad=0)=>Math.abs(x-b[0])<(b[2]/2+pad)&&Math.abs(z-b[1])<(b[3]/2+pad);
 function blocked(x,z,r=.42){
  if(x<-47+r||x>47-r||z<-47+r||z>47-r)return true;
- return boxes.some(b=>within(x,z,b,r))||covers.some(b=>within(x,z,b,r))||artStructures.some(b=>within(x,z,b,r))||treeTrunks.some(t=>Math.hypot(x-t.x,z-t.z)<t.radius+r);
+ return boxes.some(b=>within(x,z,b,r))||covers.some(b=>within(x,z,b,r))||
+ artStructures.some(b=>within(x,z,b,r))||solidProps.some(b=>within(x,z,b,r))||
+ coreSolids.some(b=>within(x,z,b,r))||tierSolids().some(b=>within(x,z,b,r))||
+ treeTrunks.some(t=>Math.hypot(x-t.x,z-t.z)<t.radius+r);
 }
 function openLOS(ax,az,bx,bz){
  const d=Math.hypot(bx-ax,bz-az),segments=Math.ceil(d/.55);
@@ -280,17 +290,25 @@ function openLOS(ax,az,bx,bz){
   const t=i/segments;if(boxes.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.12))||
       covers.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
       artStructures.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
+      solidProps.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
+      coreSolids.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
+      tierSolids().some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
       treeTrunks.some(tr=>Math.hypot(ax+(bx-ax)*t-tr.x,az+(bz-az)*t-tr.z)<tr.radius))return false;
  }
  return true;
 }
 function buildWorld(){
  const m=new Geometry();
- m.quad([-49,-.1,-49],[-49,-.1,49],[49,-.1,49],[49,-.1,-49],COLORS.grass);
+ // The first mesh is the exact same triangulation used by ground collision.
+ if(window.WPWW2Terrain)window.WPWW2Terrain.append(m,flags,boxes,"base");
+ else m.quad([-49,-.1,-49],[-49,-.1,49],[49,-.1,49],[49,-.1,-49],COLORS.grass);
  for(let i=0;i<340;i++){
   const x=-46+rnd()*92,z=-46+rnd()*92,r=.35+rnd()*1.65;
   const col=rnd()>.45?COLORS.grass2:COLORS.ground;
-  m.quad([x,.001,z],[x-r,.001,z+r*.45],[x+.18,.001,z+r],[x+r,.001,z],col);
+  m.quad([x,worldHeight(x,z)+.018,z],
+   [x-r,worldHeight(x-r,z+r*.45)+.018,z+r*.45],
+   [x+.18,worldHeight(x+.18,z+r)+.018,z+r],
+   [x+r,worldHeight(x+r,z)+.018,z],col);
  }
  // Country road with diagonal segments; no dynamic tessellation required.
  for(let i=-8;i<8;i++){
@@ -337,21 +355,27 @@ function buildWorld(){
   const x=-45+rnd()*90,z=-45+rnd()*90;
   if(blocked(x,z,2.2)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<6))continue;
   const h=3.4+rnd()*2.3;
-  m.box(x,h*.25,z,.35,h*.5,.35,COLORS.trunk);
-  m.cone(x,h*.38,z,.9+rnd()*.5,h*.51,i%3?COLORS.leaf:COLORS.leaf2,7);
-  m.cone(x,h*.57,z,.75,h*.4,COLORS.leaf2,7);
+  const ground=worldHeight(x,z);
+  m.box(x,ground+h*.25,z,.35,h*.5,.35,COLORS.trunk);
+  treeTrunks.push({x,z,radius:.22});
+  m.cone(x,ground+h*.38,z,.9+rnd()*.5,h*.51,i%3?COLORS.leaf:COLORS.leaf2,7);
+  m.cone(x,ground+h*.57,z,.75,h*.4,COLORS.leaf2,7);
  }
  for(let i=0;i<85;i++){
   const x=-43+rnd()*86,z=-43+rnd()*86;
   if(blocked(x,z,1.7)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<3))continue;
-  const type=i%5;
+  const type=i%5,ground=worldHeight(x,z);
   if(type===0){
-   for(let j=0;j<4;j++)m.box(x+(j-1.5)*.95,.33,z,1.05,.65,.70,COLORS.sand);
+   coreSolids.push([x,z,3.8,.70]);
+   for(let j=0;j<4;j++)m.box(x+(j-1.5)*.95,ground+.33,z,1.05,.65,.70,COLORS.sand);
   }else if(type===1){
-   m.box(x,.45,z,.8,.9,.8,COLORS.wood);
-   m.box(x,.45,z+.43,.9,.12,.12,COLORS.timber);
+   coreSolids.push([x,z,.82,1.12]);
+   m.box(x,ground+.45,z,.8,.9,.8,COLORS.wood);
+   m.box(x,ground+.45,z+.43,.9,.12,.12,COLORS.timber);
   }else{
-   m.box(x,.18,z,.3+rnd()*.8,.35,.7,COLORS.stone);
+   const w=.3+rnd()*.8;
+   coreSolids.push([x,z,w,.70]);
+   m.box(x,ground+.18,z,w,.35,.7,COLORS.stone);
   }
  }
  for(const [x,z,w,d] of covers){
@@ -367,8 +391,10 @@ function buildWorld(){
  for(let i=0;i<18;i++){
   const x=-43+i*4,z=-43+(i%3)*1.5;
   if(blocked(x,z,1.2))continue;
-  m.box(x,.72,z,.12,1.44,.12,COLORS.timber);
-  m.box(x,1.03,z+1.2,.09,.09,2.5,COLORS.wood);
+  const ground=worldHeight(x,z);
+  coreSolids.push([x,z+1.2,.18,2.7]);
+  m.box(x,ground+.72,z,.12,1.44,.12,COLORS.timber);
+  m.box(x,ground+1.03,z+1.2,.09,.09,2.5,COLORS.wood);
  }
  for(let i=0;i<35;i++){
   const x=-42+rnd()*84,z=-41+rnd()*82,r=.45+rnd()*.8;
