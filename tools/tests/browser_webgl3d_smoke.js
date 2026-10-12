@@ -124,7 +124,7 @@ function run(width,height,webgl=true){
  assert.notEqual(el("mag").textContent,after,"reload never completed");
  el("grenade").send("pointerdown");
  const launched=win.WP3DDiagnostics().grenades[0];
- assert(launched&&launched.y>1&&launched.life>1.5,
+ assert(launched&&launched.y-win.WP3DDiagnostics().terrainAtPlayer>.95&&launched.life>1.5,
   "Frag should spawn near the player's hand with a timed fuse");
  el("swap").send("pointerdown");
  frame(185);
