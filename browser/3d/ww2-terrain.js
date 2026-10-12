@@ -35,9 +35,15 @@ function raw(x,z,flags,buildings){
  const landscape=1.72*(broad-.5)+.65*waves+.42*(local-.5)+ridge;
  return BASE_Y+(1-flatten(x,z,flags,buildings))*landscape;
 }
+let cachedFlags=null,cachedBuildings=null,cachedSamples=null;
 function node(ix,iz,flags,buildings){
- const step=2*HALF/BASE;
- return raw(-HALF+ix*step,-HALF+iz*step,flags,buildings);
+ if(cachedFlags!==flags||cachedBuildings!==buildings||!cachedSamples){
+  const nodes=new Float64Array((BASE+1)*(BASE+1)),step=2*HALF/BASE;
+  for(let z=0;z<=BASE;z++)for(let x=0;x<=BASE;x++)
+   nodes[z*(BASE+1)+x]=raw(-HALF+x*step,-HALF+z*step,flags,buildings);
+  cachedFlags=flags;cachedBuildings=buildings;cachedSamples=nodes;
+ }
+ return cachedSamples[iz*(BASE+1)+ix];
 }
 function surface(x,z,flags=[],buildings=[]){
  if(!Number.isFinite(x)||!Number.isFinite(z))throw Error("Invalid heightfield coordinates");
