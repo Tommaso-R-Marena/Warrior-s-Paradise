@@ -1104,6 +1104,7 @@ function simulate(dt){
  hud();
 }
 function dynamicGeometry(){
+ player.groundY=worldHeight(player.x,player.z);
  const m=new Geometry();
  const art=window.WPBattleArt,skinner=window.WPSkinning;
  let skinnedActors=0,skinnedTriangles=0;
@@ -1182,7 +1183,7 @@ function dynamicGeometry(){
  if(art&&!window.WPArmoredFleet?.isDriving())art.weapon(m,player,game);
  else if(!window.WPArmoredFleet?.isDriving()){
   const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw),yaw=-player.yaw;
-  const py=(player.crouch?1.02:1.67)-.4;
+  const py=worldHeight(player.x,player.z)+(player.crouch?1.02:1.67)-.4;
   m.box(player.x+dx*.85,py,player.z+dz*.85,.2,.17,.85,COLORS.metal,yaw);
  }
  return m.data;
