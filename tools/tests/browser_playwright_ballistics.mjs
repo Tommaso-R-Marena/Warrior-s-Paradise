@@ -67,6 +67,32 @@ try{
  assert(firing.finishedBloom<firing.immediateBloom*.05&&
    firing.finishedReturn<firing.immediateReturn*.05,
   "Weapon kick and bloom must recover after not firing");
+ const terrainCheck=await page.evaluate(async()=>{
+   // Actual deployed physics, not a static stand-in: all procedural rocks,
+   // imported Kenney boulders and base terrain share contact-space coordinates.
+   await new Promise(resolve=>{
+    if(window.WP3DDiagnostics().assetsLoaded){resolve();return;}
+    const t=setInterval(()=>{if(window.WP3DDiagnostics().assetsLoaded){clearInterval(t);resolve();}},30);
+    setTimeout(()=>{clearInterval(t);resolve();},4500);
+   });
+   const qa=window.WP3DQA,d=window.WP3DDiagnostics(),all=qa.collisionExamples();
+   const core=all.core[0],boulder=all.rocks[0];
+   function blocked(box){return !!box&&qa.terrainProbe(box[0],box[1],.20).blocked;}
+   const from=core?[core[0]-core[2]/2-1.2,core[1]]:null;
+   const walked=from?qa.traverse(from[0],from[1],core[2]/2+2,0):null;
+   return {actualGround:d.physicalTerrainTriangles,elevation:d.terrainAtPlayer,
+    coreCount:all.core.length,boulders:all.rocks.length,
+    proceduralBlocked:blocked(core),importedBlocked:blocked(boulder),
+    sweptFrom:from,sweptTo:walked,rockCenter:core,
+    graphics:d.collisionQuality,activeDressing:d.activeDressingColliders};
+ });
+ assert(terrainCheck.actualGround===722,"Game does not use authoritative physical mesh");
+ assert(terrainCheck.coreCount>=15&&terrainCheck.proceduralBlocked,
+  "Baseline rocks and battlefield obstacles must be solid");
+ assert(terrainCheck.boulders>0&&terrainCheck.importedBlocked,
+  "At least one imported Kenney boulder must use the actual GLB collision bounds");
+ assert(terrainCheck.activeDressing===0&&terrainCheck.graphics==="low",
+  "Low graphics cannot have invisible High-detail obstacle collisions");
  assert(!errors.length,"Chromium console errors: "+JSON.stringify(errors));
  console.log("PASS ACTUAL CHROMIUM FIRE",JSON.stringify({
   surpriseDamage:surprise.shot.damage,headshot:head.shot.damage,
