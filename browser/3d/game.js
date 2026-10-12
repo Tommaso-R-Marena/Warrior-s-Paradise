@@ -534,7 +534,7 @@ function loadLicensedScenery(){
     scenery.dressingError="Optional CC0 decoration module unavailable";
     scenery.dressingReady=true;return;
    }
-   decoration.load(kit,Geometry,currentWorldData,blocked,flags).then(result=>{
+   decoration.load(kit,Geometry,currentWorldData,blocked,flags,boxes).then(result=>{
     currentWorldData=result.data;
     upload(staticMesh,currentWorldData);
     mediumVertexCount=lowVertexCount+result.mediumTriangles*3;
