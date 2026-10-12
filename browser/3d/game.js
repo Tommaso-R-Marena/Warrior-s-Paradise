@@ -600,7 +600,7 @@ function spawnEnemies(){
   for(const [dx,dz] of positions){
    const x=f.x+dx,z=f.z+dz;
    if(blocked(x,z,.8))continue;
-   game.enemies.push({x,z,hp:80,maxHp:80,sector:n,cd:.5+rnd()*1.7,
+   game.enemies.push({x,z,groundY:worldHeight(x,z),hp:80,maxHp:80,sector:n,cd:.5+rnd()*1.7,
      facing:rnd()*Math.PI*2,moveSpeed:0,
     alert:0,lastX:x,lastZ:z,strafe:rnd()>.5?1:-1,phase:rnd()*6,hit:0,
     morale:1,reaction:0,crouch:false,cover:null,coverRetry:0});
@@ -642,6 +642,7 @@ function reset(){
   grenades:[],tracers:[],strikes:[],support:1,order:"follow",flash:0,
   lastShot:null,stealthHits:0,headshots:0,casualties:[],
    difficulty:$("difficulty").value,quality:$("quality").value,scaler:1,adapt:0});
+ collisionQuality=game.quality;
  if(game.quality==="high")ensureHighProgram();
  requestPhotographicMaterials(game.quality);
  spawnEnemies();spawnAllies();
@@ -701,8 +702,12 @@ function end(victory){
  $("deploy").textContent="REDEPLOY →";
 }
 function move(x,z,dx,dz){
- if(!blocked(x+dx,z,.44))x+=dx;
- if(!blocked(x,z+dz,.44))z+=dz;
+ const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.22));
+ for(let i=0;i<steps;i++){
+  const sx=dx/steps,sz=dz/steps;
+  if(!blocked(x+sx,z,.44)&&terrainPassable(x,z,x+sx,z,.44))x+=sx;
+  if(!blocked(x,z+sz,.44)&&terrainPassable(x,z,x,z+sz,.44))z+=sz;
+ }
  return [x,z];
 }
 function navigateCombatant(actor,gx,gz,speed,dt){
@@ -739,7 +744,7 @@ function shoot(){
   !!(input.keys.KeyW||input.keys.KeyS||input.keys.KeyA||input.keys.KeyD);
  const spread=w.spread*(player.aim?.24:.83)*(player.crouch?.70:1)*
   (moving?1.24:1)*(window.WPWeaponHandling?.spreadMultiplier(player)||1),
-  eyeY=player.crouch?1.02:1.67;
+  eyeY=worldHeight(player.x,player.z)+(player.crouch?1.02:1.67);
  const shot=ballistics.trace({source:{x:player.x,y:eyeY,z:player.z},
   weapon:player.weapon,yaw:player.yaw,pitch:player.pitch,
   spreadYaw:(rnd()-.5)*spread,spreadPitch:(rnd()-.5)*spread*.72,
@@ -836,7 +841,7 @@ function grenade(){
  // Timed grenade flight; never teleport explosives through farm buildings.
  const angle=Math.max(-.45,Math.min(.45,player.pitch));
  game.grenades.push({x:safe?nx:player.x,z:safe?nz:player.z,
-  y:player.crouch?1.05:1.48,vx:dx*9.7,vz:dz*9.7,vy:4.9+angle*3.3,
+  y:worldHeight(player.x,player.z)+(player.crouch?1.05:1.48),vx:dx*9.7,vz:dz*9.7,vy:4.9+angle*3.3,
   life:1.65,detonated:false});
  msg("FRAG OUT · GET TO COVER",1.1);
 }
@@ -954,7 +959,10 @@ function simulate(dt){
  const oldX=player.x,oldZ=player.z;
  if(!window.WPArmoredFleet?.isDriving())
   [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
- else window.WPArmoredFleet.move(dt,input,player,blocked);
+ else window.WPArmoredFleet.move(dt,input,player,(nx,nz,r)=>{
+  const v=window.WPArmoredFleet.current();
+  return blocked(nx,nz,r)||!terrainPassable(v.x,v.z,nx,nz,r,"vehicle");
+ });
  const traveled=Math.hypot(player.x-oldX,player.z-oldZ);
  player.stepPhase=(player.stepPhase||0)+traveled*9;
  player.stepStrength=Math.max(0,Math.min(1,
@@ -977,8 +985,9 @@ function simulate(dt){
   if(blocked(g.x,nextZ,.16))g.vz=-g.vz*.3;
   else g.z=nextZ;
   g.vy-=11.8*dt;g.y+=g.vy*dt;
-  if(g.y<.19){
-   g.y=.19;g.vy=g.vy<-.65?-g.vy*.23:0;
+  const ground=worldHeight(g.x,g.z)+.19;
+  if(g.y<ground){
+   g.y=ground;g.vy=g.vy<-.65?-g.vy*.23:0;
    const drag=Math.max(0,1-4.2*dt);g.vx*=drag;g.vz*=drag;
   }
   g.life-=dt;
@@ -1104,6 +1113,7 @@ function dynamicGeometry(){
  const selected=new Set(candidates.slice(0,maxActors));
  const present=(actor,team)=>{
   const distance=Math.hypot(actor.x-player.x,actor.z-player.z);
+  actor.groundY=worldHeight(actor.x,actor.z);
   if(rig.ready&&skinner&&distance<viewDist&&selected.has(actor)){
    const chosen=rig.historical[team]||rig.model;
    const drawn=skinner.append(m,chosen,actor,team,game.elapsed);
@@ -1123,11 +1133,12 @@ function dynamicGeometry(){
  for(let i=game.casualties.length-1;i>=0&&shown<maxBodies;i--){
   const b=game.casualties[i];
   if(Math.hypot(b.x-player.x,b.z-player.z)>26)continue;
+  const ground=worldHeight(b.x,b.z);
   const facing=-b.facing;
-  m.box(b.x,.20,b.z,.57,.25,1.21,COLORS.ground,facing);
-  m.box(b.x+Math.sin(facing)*.62,.19,b.z+Math.cos(facing)*.62,.45,.30,.42,COLORS.helmet,facing);
-  m.box(b.x-Math.sin(facing)*.32,.32,b.z-Math.cos(facing)*.32,.46,.22,.42,COLORS.sand,facing);
-  m.box(b.x+.32,.12,b.z+.12,.07,.08,1.03,COLORS.dark,facing);
+  m.box(b.x,ground+.20,b.z,.57,.25,1.21,COLORS.ground,facing);
+  m.box(b.x+Math.sin(facing)*.62,ground+.19,b.z+Math.cos(facing)*.62,.45,.30,.42,COLORS.helmet,facing);
+  m.box(b.x-Math.sin(facing)*.32,ground+.32,b.z-Math.cos(facing)*.32,.46,.22,.42,COLORS.sand,facing);
+  m.box(b.x+.32,ground+.12,b.z+.12,.07,.08,1.03,COLORS.dark,facing);
   shown++;
  }
  game.corpsesDrawn=shown;
@@ -1211,7 +1222,7 @@ function render(){
  const shake=(player.concussion||0)*.024;
  const driving=window.WPArmoredFleet?.current();
  const eyeHeight=driving?(driving.id==="armor"?3.15:2.35):(player.crouch?1.02:1.67);
- const eye=[player.x,eyeHeight+stepBob+
+ const eye=[player.x,worldHeight(player.x,player.z)+eyeHeight+stepBob+
   Math.sin(game.elapsed*37)*shake,player.z],forward=[
   -Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),
   Math.cos(player.yaw)*Math.cos(player.pitch)];
@@ -1406,6 +1417,11 @@ window.WP3DDiagnostics=()=>({
   ww2EnvironmentTriangles:scenery.ww2EnvironmentTriangles||0,
   ww2EnvironmentProps:scenery.ww2EnvironmentProps||0,
   terrainTriangles:scenery.terrainTriangles||0,
+  physicalTerrainTriangles:window.WPWW2Terrain?.baseTriangles||0,
+  terrainAtPlayer:worldHeight(player.x,player.z),
+  terrainGrade:window.WPWW2Terrain?.slope(player.x,player.z,flags,boxes).grade||0,
+  solidProps:solidProps.length,proceduralSolids:coreSolids.length,
+  activeDressingColliders:tierSolids().length,collisionQuality,
   shadowedTerrainCells:scenery.shadowedTerrainCells||0,
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
