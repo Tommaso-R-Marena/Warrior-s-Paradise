@@ -85,7 +85,15 @@ try{
    function blocked(box){return !!box&&qa.terrainProbe(box[0],box[1],.20).blocked;}
    const from=core?[core[0]-core[2]/2-1.2,core[1]]:null;
    const walked=from?qa.traverse(from[0],from[1],core[2]/2+2,0):null;
-   return {actualGround:d.physicalTerrainTriangles,elevation:d.terrainAtPlayer,
+   // Exercise real swept player movement through a rock, not only isBlocked().
+   const rockSweep=box=>{
+    if(!box)return false;
+    const edge=box[0]-box[2]/2;
+    const end=qa.traverse(edge-1.2,box[1],box[2]+2.4,0);
+    return end[0]<box[0]-Math.min(.25,box[2]*.15);
+   };
+   return {sweptCoreStopped:rockSweep(core),sweptGLBRockStopped:rockSweep(boulder),
+    actualGround:d.physicalTerrainTriangles,elevation:d.terrainAtPlayer,
     coreCount:all.core.length,boulders:all.rocks.length,
     proceduralBlocked:blocked(core),importedBlocked:blocked(boulder),
     sweptFrom:from,sweptTo:walked,rockCenter:core,
@@ -96,6 +104,8 @@ try{
   "Baseline rocks and battlefield obstacles must be solid");
  assert(terrainCheck.boulders>0&&terrainCheck.importedBlocked,
   "At least one imported Kenney boulder must use the actual GLB collision bounds");
+ assert(terrainCheck.sweptCoreStopped&&terrainCheck.sweptGLBRockStopped,
+  "Swept player movement must not tunnel through procedural or imported boulders");
  assert(terrainCheck.activeDressing===0&&terrainCheck.graphics==="low",
   "Low graphics cannot have invisible High-detail obstacle collisions");
  assert(!errors.length,"Chromium console errors: "+JSON.stringify(errors));
