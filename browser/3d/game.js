@@ -265,7 +265,7 @@ const boxes=[
 const flags=[{x:-12,z:-5,title:"FARM APPROACH"},{x:11,z:11,title:"CROSSROADS"},{x:31,z:29,title:"RADIO POST"}];
 const treeTrunks=[];
 const artStructures=[];
-const solidProps=[],coreSolids=[],mediumSolids=[],highSolids=[];
+const solidProps=[],coreSolids=[],mediumSolids=[],highSolids=[],terrainRocks=[];
 let collisionQuality="low";
 const worldHeight=(x,z)=>window.WPWW2Terrain?.surface(x,z,flags,boxes)||0;
 const terrainPassable=(x,z,nx,nz,r,kind="infantry")=>
@@ -374,7 +374,8 @@ function buildWorld(){
    m.box(x,ground+.45,z+.43,.9,.12,.12,COLORS.timber);
   }else{
    const w=.3+rnd()*.8;
-   coreSolids.push([x,z,w,.70]);
+   const rock=[x,z,w,.70,.35,ground];
+   coreSolids.push(rock);terrainRocks.push(rock);
    m.box(x,ground+.18,z,w,.35,.7,COLORS.stone);
   }
  }
@@ -472,9 +473,11 @@ function loadLicensedScenery(){
     const yaw=rand()*Math.PI*2;
     const bounds=window.WPNormandyDressing?.footprint?.(assets[spec.name],x,z,scale,yaw);
     if(bounds&&spec.name==="rock-largea"){
-     const rock=[bounds[0],bounds[1],bounds[2]*.90,bounds[3]*.90];
+     const rock=[bounds[0],bounds[1],bounds[2]*.90,bounds[3]*.90,
+      Math.max(.25,(assets[spec.name].max[1]-assets[spec.name].min[1])*scale*.90),
+      worldHeight(x,z)];
      if(blocked(rock[0],rock[1],Math.max(rock[2],rock[3])*.5))continue;
-     solidProps.push(rock);
+     solidProps.push(rock);terrainRocks.push(rock);
     }else if(bounds&&spec.name==="fence-simple"){
      if(blocked(bounds[0],bounds[1],Math.max(bounds[2],bounds[3])*.4))continue;
      solidProps.push(bounds);
@@ -576,7 +579,7 @@ function loadLicensedScenery(){
   scenery.error=String(err);
   if($("assetstatus"))$("assetstatus").textContent="LIGHTWEIGHT SCENERY ACTIVE · OPTIONAL ART UNAVAILABLE";
   // If importing fails, procedural rock and tree colliders remain authoritative.
-  solidProps.length=0;
+  solidProps.length=0;terrainRocks.length=0;
  });
 }
 
@@ -753,7 +756,8 @@ function shoot(){
   weapon:player.weapon,yaw:player.yaw,pitch:player.pitch,
   spreadYaw:(rnd()-.5)*spread,spreadPitch:(rnd()-.5)*spread*.72,
   targets:game.enemies,
-  obstacles:{buildings:boxes,covers,structures:artStructures,trunks:treeTrunks}});
+  obstacles:{buildings:boxes,covers,structures:artStructures,trunks:treeTrunks,
+    rocks:terrainRocks,groundHeight:worldHeight}});
  const end=shot.endpoint;
  addTracer(player.x,player.z,end.x,end.z,"friendly",eyeY,end.y);
  game.lastShot={weapon:player.weapon,damage:shot.damage,zone:shot.zone,
@@ -1430,6 +1434,7 @@ window.WP3DDiagnostics=()=>({
   terrainAtPlayer:worldHeight(player.x,player.z),
   terrainGrade:window.WPWW2Terrain?.slope(player.x,player.z,flags,boxes).grade||0,
   solidProps:solidProps.length,proceduralSolids:coreSolids.length,
+   projectileRockCover:terrainRocks.length,
   activeDressingColliders:tierSolids().length,collisionQuality,
   shadowedTerrainCells:scenery.shadowedTerrainCells||0,
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
@@ -1487,7 +1492,7 @@ if(typeof location!=="undefined"&&typeof location.search==="string"&&
     quality:collisionQuality};
   },
   collisionExamples(){
-   return {rocks:solidProps.map(b=>Array.from(b)),core:coreSolids.map(b=>Array.from(b)),
+   return {rocks:solidProps.map(b=>Array.from(b)),projectileRocks:terrainRocks.map(b=>Array.from(b)),core:coreSolids.map(b=>Array.from(b)),
     medium:mediumSolids.map(b=>Array.from(b)),high:highSolids.map(b=>Array.from(b))};
   },
   traverse(x,z,dx,dz){return move(x,z,dx,dz);},
