@@ -86,6 +86,7 @@ class WebGL3DTests(unittest.TestCase):
                      ROOT / "tools/tests/browser_gpu_profiler_smoke.js",
                      ROOT / "tools/tests/browser_ww2_environment_smoke.js",
                      ROOT / "tools/tests/browser_ww2_vehicles_smoke.js",
+                     ROOT / "tools/tests/browser_swept_vehicle_collision_smoke.js",
                      ROOT / "tools/tests/browser_battle_atmosphere_smoke.js",
                      ROOT / "tools/tests/browser_tactical_navigation_smoke.js"):
             p = subprocess.run([node, "--check", str(file)], capture_output=True,
