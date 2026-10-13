@@ -579,7 +579,9 @@ function loadLicensedScenery(){
   scenery.error=String(err);
   if($("assetstatus"))$("assetstatus").textContent="LIGHTWEIGHT SCENERY ACTIVE · OPTIONAL ART UNAVAILABLE";
   // If importing fails, procedural rock and tree colliders remain authoritative.
-  solidProps.length=0;terrainRocks.length=0;
+  solidProps.length=0;
+  terrainRocks.length=0;
+  terrainRocks.push(...coreSolids.filter(b=>b.length>=6));
  });
 }
 
