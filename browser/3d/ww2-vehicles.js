@@ -16,7 +16,7 @@ let occupied=null,fired=0,hit=0;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 function reset(){
  records.length=0;for(const d of defs)records.push({...d,speed:0,reload:0,shotFlash:0,alive:true,groundY:0});
- occupied=null;fired=0;hit=0;status.trianglesLast=0;
+ occupied=null;fired=0;hit=0;collisionRejected=0;collisionSamples=0;status.trianglesLast=0;
 }
 reset();
 async function load(kit){
@@ -56,6 +56,40 @@ function toggle(player,blocked){
  occupied=v.id;player.x=v.x;player.z=v.z;player.yaw=v.yaw;
  return true;
 }
+// Projected SAT axes avoid treating every long hull as a giant circular wall.
+function overlappingHull(a,x,z,yaw,b){
+ const axes=[
+  [Math.cos(yaw),Math.sin(yaw)],[-Math.sin(yaw),Math.cos(yaw)],
+  [Math.cos(b.yaw),Math.sin(b.yaw)],[-Math.sin(b.yaw),Math.cos(b.yaw)]
+ ];
+ const diffX=b.x-x,diffZ=b.z-z;
+ for(const [ux,uz] of axes){
+  const projected=Math.abs(diffX*ux+diffZ*uz);
+  const ar=Math.abs(ux*Math.cos(yaw)+uz*Math.sin(yaw))*a.width*.5+
+   Math.abs(-ux*Math.sin(yaw)+uz*Math.cos(yaw))*a.length*.5;
+  const br=Math.abs(ux*Math.cos(b.yaw)+uz*Math.sin(b.yaw))*b.width*.5+
+   Math.abs(-ux*Math.sin(b.yaw)+uz*Math.cos(b.yaw))*b.length*.5;
+  if(projected>ar+br+.14)return false;
+ }
+ return true;
+}
+let collisionRejected=0,collisionSamples=0;
+function footprintClear(v,x,z,yaw,blocked){
+ const c=Math.cos(yaw),s=Math.sin(yaw),right=[c,s],forward=[-s,c];
+ const edgeWidth=v.width*.46,edgeLength=v.length*.46;
+ const divisions=Math.max(2,Math.ceil(v.length/.82));
+ const radius=.14;
+ for(let i=0;i<=divisions;i++){
+  const along=-edgeLength+2*edgeLength*i/divisions;
+  for(const across of [-edgeWidth,0,edgeWidth]){
+   const px=x+right[0]*across+forward[0]*along;
+   const pz=z+right[1]*across+forward[1]*along;
+   collisionSamples++;
+   if(blocked(px,pz,radius))return false;
+  }
+ }
+ return !records.some(other=>other!==v&&other.alive&&overlappingHull(v,x,z,yaw,other));
+}
 function move(dt,input,player,blocked){
  const v=current();if(!v||!v.alive)return false;
  const forward=((input.keys.KeyW||input.keys.ArrowUp)?1:0)-
@@ -67,17 +101,23 @@ function move(dt,input,player,blocked){
  const change=Math.min(1,dt*(Math.abs(forward)>.1?accel/Math.max(1,v.max):1.6));
  v.speed+=(target-v.speed)*change;
  if(Math.abs(v.speed)<.035)v.speed=0;
- // Steering radius increases with speed; stationary vehicles cannot spin freely.
- v.yaw+=turn*dt*(v.id==="jeep"?.70:.32)*Math.min(1,Math.abs(v.speed)/2)*
-  Math.sign(v.speed||1);
- const nx=v.x-Math.sin(v.yaw)*v.speed*dt,nz=v.z+Math.cos(v.yaw)*v.speed*dt;
- const footprint=Math.max(v.width*.48,.65);
- const other=records.some(o=>o!==v&&o.alive&&Math.hypot(o.x-nx,o.z-nz)<
-  Math.max(v.width,o.width)*.72);
- if(!other&&!blocked(nx,nz,footprint)){v.x=nx;v.z=nz;}
- else v.speed=0;
+ // Continuous hull sweep: check physical width AND length while both moving
+ // and steering. Prevents tunnelling through thin fences or meter-scale rocks.
+ const yawDelta=turn*dt*(v.id==="jeep"?.70:.32)*
+  Math.min(1,Math.abs(v.speed)/2)*Math.sign(v.speed||1);
+ const travel=v.speed*dt,steps=Math.max(1,Math.ceil(Math.max(Math.abs(travel)/.18,
+  Math.abs(yawDelta)*v.length/.13)));
+ const startX=v.x,startZ=v.z,startYaw=v.yaw;
+ for(let i=0;i<steps;i++){
+  const nextYaw=startYaw+yawDelta*(i+1)/steps;
+  const nx=v.x-Math.sin(nextYaw)*travel/steps;
+  const nz=v.z+Math.cos(nextYaw)*travel/steps;
+  if(!footprintClear(v,nx,nz,nextYaw,blocked)){
+   collisionRejected++;v.speed=0;break;
+  }
+  v.x=nx;v.z=nz;v.yaw=nextYaw;
+ }
  player.x=v.x;player.z=v.z;
- // Keep independent aiming direction for cannon turret/mouse camera.
  return true;
 }
 function fire(player,enemies,visible,onHit,onTracer,onBlast){
@@ -232,6 +272,6 @@ function setGround(height){
 function info(){return {ready:status.ready,loaded:status.loaded,errors:{...status.errors},
  driving:occupied,vehicle:current()?.name||"",enemyAlive:records.find(v=>v.id==="enemy")?.alive,
  vehicles:records.map(v=>({id:v.id,name:v.name,x:v.x,z:v.z,hp:v.hp,speed:v.speed,alive:v.alive})),
- shots:fired,hits:hit,renderedTriangles:status.trianglesLast};}
-root.WPArmoredFleet=Object.freeze({reset,load,toggle,isDriving,current,near,move,fire,tick,draw,info,setGround});
+ shots:fired,hits:hit,collisionRejected,collisionSamples,renderedTriangles:status.trianglesLast};}
+root.WPArmoredFleet=Object.freeze({reset,load,toggle,isDriving,current,near,move,fire,tick,draw,info,setGround,footprintClear,overlappingHull});
 })(window);
