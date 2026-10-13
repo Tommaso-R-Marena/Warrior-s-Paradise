@@ -86,6 +86,7 @@ class WebGL3DTests(unittest.TestCase):
                      ROOT / "tools/tests/browser_gpu_profiler_smoke.js",
                      ROOT / "tools/tests/browser_ww2_environment_smoke.js",
                      ROOT / "tools/tests/browser_ww2_vehicles_smoke.js",
+                     ROOT / "tools/tests/browser_swept_vehicle_collision_smoke.js",
                      ROOT / "tools/tests/browser_battle_atmosphere_smoke.js",
                      ROOT / "tools/tests/browser_tactical_navigation_smoke.js"):
             p = subprocess.run([node, "--check", str(file)], capture_output=True,
@@ -109,6 +110,9 @@ class WebGL3DTests(unittest.TestCase):
         environs = subprocess.run([node, str(ROOT / "tools/tests/browser_ww2_environment_smoke.js")],
                                   capture_output=True,text=True,timeout=20,check=False)
         self.assertEqual(environs.returncode,0,environs.stdout+environs.stderr)
+        sweep = subprocess.run([node, str(ROOT / "tools/tests/browser_swept_vehicle_collision_smoke.js")],
+                               capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(sweep.returncode,0,sweep.stdout+sweep.stderr)
         vehicles = subprocess.run([node, str(ROOT / "tools/tests/browser_ww2_vehicles_smoke.js")],
                                   capture_output=True, text=True, timeout=20, check=False)
         self.assertEqual(vehicles.returncode, 0, vehicles.stdout + vehicles.stderr)
