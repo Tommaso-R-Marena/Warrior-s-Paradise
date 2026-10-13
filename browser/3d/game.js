@@ -969,10 +969,8 @@ function simulate(dt){
  const oldX=player.x,oldZ=player.z;
  if(!window.WPArmoredFleet?.isDriving())
   [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
- else window.WPArmoredFleet.move(dt,input,player,(nx,nz,r)=>{
-  const v=window.WPArmoredFleet.current();
-  return blocked(nx,nz,r)||!terrainPassable(v.x,v.z,nx,nz,r,"vehicle");
- });
+ else window.WPArmoredFleet.move(dt,input,player,blocked,(sx,sz,nx,nz,r)=>
+  terrainPassable(sx,sz,nx,nz,r,"vehicle"));
  const traveled=Math.hypot(player.x-oldX,player.z-oldZ);
  player.stepPhase=(player.stepPhase||0)+traveled*9;
  player.stepStrength=Math.max(0,Math.min(1,
