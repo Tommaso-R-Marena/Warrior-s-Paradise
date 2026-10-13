@@ -12,7 +12,7 @@ const defs=[
   width:3.0,length:5.6,height:2.5,max:0,hp:300}
 ];
 const records=[],models={},status={ready:false,loaded:0,errors:{},trianglesLast:0};
-let occupied=null,fired=0,hit=0;
+let occupied=null,fired=0,hit=0,collisionRejected=0,collisionSamples=0;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 function reset(){
  records.length=0;for(const d of defs)records.push({...d,speed:0,reload:0,shotFlash:0,alive:true,groundY:0});
@@ -73,7 +73,6 @@ function overlappingHull(a,x,z,yaw,b){
  }
  return true;
 }
-let collisionRejected=0,collisionSamples=0;
 function footprintClear(v,x,z,yaw,blocked){
  const c=Math.cos(yaw),s=Math.sin(yaw),right=[c,s],forward=[-s,c];
  const edgeWidth=v.width*.46,edgeLength=v.length*.46;
