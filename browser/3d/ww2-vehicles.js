@@ -89,7 +89,7 @@ function footprintClear(v,x,z,yaw,blocked){
  }
  return !records.some(other=>other!==v&&other.alive&&overlappingHull(v,x,z,yaw,other));
 }
-function move(dt,input,player,blocked){
+function move(dt,input,player,blocked,traversable){
  const v=current();if(!v||!v.alive)return false;
  const forward=((input.keys.KeyW||input.keys.ArrowUp)?1:0)-
   ((input.keys.KeyS||input.keys.ArrowDown)?1:0)-(input.joyY||0);
@@ -111,7 +111,8 @@ function move(dt,input,player,blocked){
   const nextYaw=startYaw+yawDelta*(i+1)/steps;
   const nx=v.x-Math.sin(nextYaw)*travel/steps;
   const nz=v.z+Math.cos(nextYaw)*travel/steps;
-  if(!footprintClear(v,nx,nz,nextYaw,blocked)){
+  if(!footprintClear(v,nx,nz,nextYaw,blocked)||
+     (traversable&&!traversable(v.x,v.z,nx,nz,Math.max(v.width*.48,.65)))){
    collisionRejected++;v.speed=0;break;
   }
   v.x=nx;v.z=nz;v.yaw=nextYaw;
