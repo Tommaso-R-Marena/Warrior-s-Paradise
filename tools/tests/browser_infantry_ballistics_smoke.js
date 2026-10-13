@@ -55,4 +55,20 @@ assert.equal(b.canSee({x:0,z:0,facing:0},{x:0,z:-12,hp:80},()=>true),false,
  "Enemy cannot instantly acquire a quiet rear-sector target");
 assert.equal(b.canSee({x:0,z:0,facing:0},{x:0,z:4,hp:80},()=>false),false,
  "NPC still needs actual line of sight");
-console.log("PASS ballistic realism: stealth, head/body zones, cover, near misses, 3 weapon curves and hard distance caps");
+// Boulders now stop projectiles at their actual top elevation. A standing
+// soldier can fire over a waist-high rock but not through a tall boulder.
+const highRock=fire("rifle",[enemy(12)],{obstacles:{
+ rocks:[[0,6,2,2,1.85,0]],groundHeight:()=>0}});
+assert.equal(highRock.hit,null);
+assert.equal(highRock.blockedBy,"rock","Rock must be solid ballistic cover");
+const lowRock=fire("rifle",[enemy(12)],{obstacles:{
+ rocks:[[0,6,2,2,.6,0]],groundHeight:()=>0}});
+assert(lowRock.hit,"A low stone should not become an invisible full-height wall");
+const elevatedBoulder=fire("rifle",[enemy(12)],{obstacles:{
+ rocks:[[0,6,2,2,1.4,.6]],groundHeight:()=>0}});
+assert.equal(elevatedBoulder.blockedBy,"rock","A rock on a hill must retain its physical elevation");
+const hill=fire("rifle",[enemy(12)],{obstacles:{
+ groundHeight:(x,z)=>z>6&&z<9?2.5:0}});
+assert.equal(hill.hit,null,"Elevated ground must intercept direct fire");
+assert.equal(hill.blockedBy,"terrain");
+console.log("PASS ballistic realism: surprise hits, range, tangible rock cover and topographic hill obstruction");
