@@ -14,6 +14,9 @@ try{
  await page.waitForFunction(()=>window.WP3DDiagnostics?.().playing&&!!window.WP3DQA,null,{timeout:15000});
  const initial=await page.evaluate(()=>window.WP3DDiagnostics());
  assert(initial.armor.driving==="armor","SHERMAN deployment did not put the player in the tank");
+ assert(await page.locator("#tank-sight").isVisible(),"Real browser must show Sherman gunsight");
+ assert((await page.locator("#tank-gun-status").textContent()).length>2,
+  "Tank aim/reload status must be visible");
  assert(initial.armor.vehicles.find(v=>v.id==="armor").ammo.ap===16,"Tank ammunition not initialized");
  const x=initial.position.x,z=initial.position.z;
  await page.keyboard.down("w");
@@ -55,9 +58,13 @@ try{
  await page.keyboard.press("e");
  const exited=await page.evaluate(()=>window.WP3DDiagnostics());
  assert(!exited.armor.driving,"E did not exit the Sherman");
+ assert(!(await page.locator("#tank-sight").isVisible()),
+  "Tank sight must close when the driver dismounts");
  await page.keyboard.press("e");
  const reentered=await page.evaluate(()=>window.WP3DDiagnostics());
  assert(reentered.armor.driving==="armor","E did not reenter the parked Sherman");
+ assert(await page.locator("#tank-sight").isVisible(),
+  "Tank sights must restore after reentering the Sherman");
  // Check real physical enemy armor movement in the same deployed world. The
  // enemy must first rotate to the player and then traverse without ignoring rocks.
  await page.keyboard.press("e");
