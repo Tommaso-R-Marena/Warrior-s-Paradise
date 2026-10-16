@@ -8,6 +8,8 @@ on:
       - "tools/tests/browser_playwright_benchmark.mjs"
       - "tools/tests/browser_playwright_ballistics.mjs"
       - "tools/tests/browser_playwright_topography.mjs"
+      - "tools/tests/browser_playwright_tanks.mjs"
+      - "tools/tests/browser_tank_combat_smoke.js"
       - "tools/tests/browser_playwright_paired.mjs"
       - ".github/workflows/browser-playwright.yml"
   push:
@@ -17,6 +19,8 @@ on:
       - "tools/tests/browser_playwright_benchmark.mjs"
       - "tools/tests/browser_playwright_ballistics.mjs"
       - "tools/tests/browser_playwright_topography.mjs"
+      - "tools/tests/browser_playwright_tanks.mjs"
+      - "tools/tests/browser_tank_combat_smoke.js"
       - ".github/workflows/browser-playwright.yml"
   workflow_dispatch:
 
@@ -60,6 +64,12 @@ jobs:
             sleep 2
             curl -fsS http://127.0.0.1:8766/3d/ >/dev/null
           fi
+      - name: Verify tank engine, cannon rounds and Panzer AI in Node
+        run: node tools/tests/browser_tank_combat_smoke.js
+      - name: Test the deployed Sherman in real Chromium
+        run: node tools/tests/browser_playwright_tanks.mjs
+        env:
+          WP_TEST_URL: http://127.0.0.1:8765/3d/
       - name: Test movement, firefights, assets, and capture actual frame times
         run: node tools/tests/browser_playwright_benchmark.mjs
         env:

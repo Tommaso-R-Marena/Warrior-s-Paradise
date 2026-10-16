@@ -16,7 +16,9 @@ function append(g,blocked,flags=[],buildings=[]){
  for(let i=0;i<255&&triangles<LIMIT-12;i++){
   const x=-44+random()*88,z=-44+random()*88;
   const nr=.34+random()*.40;
-  if(blocked(x,z,nr+1.3)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<5.8))continue;
+  // Grass blades extend only a few decimeters. Reserve their actual footprint,
+  // not a two-meter clearance used for solid rocks and vehicle collision.
+  if(blocked(x,z,.42)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<5.8))continue;
   const y=terrain(x,z)+.025,plantH=.20+random()*.36;
   const baseHue=GREENS[Math.floor(random()*GREENS.length)];
   for(let j=0;j<5;j++){

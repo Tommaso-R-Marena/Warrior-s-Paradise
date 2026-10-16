@@ -304,6 +304,13 @@ const boxes=[
  [35,-27,10,12],[-8,38,10,11]
 ];
 const flags=[{x:-12,z:-5,title:"FARM APPROACH"},{x:11,z:11,title:"CROSSROADS"},{x:31,z:29,title:"RADIO POST"}];
+// World generation must never place physical props inside player-usable
+// vehicle hulls or the initial maneuver corridor around their parking sites.
+// This does not exempt vehicles from genuine collision once driving.
+const vehiclePads=[[-41,-31,4.3],[-40,-23,5.0],[34,16,5.0]];
+const insideVehiclePad=(x,z,r=0)=>vehiclePads.some(([px,pz,rad])=>
+ Math.hypot(x-px,z-pz)<rad+r);
+const placementBlocked=(x,z,r=0)=>blocked(x,z,r)||insideVehiclePad(x,z,r);
 const treeTrunks=[];
 const artStructures=[];
 const solidProps=[],coreSolids=[],mediumSolids=[],highSolids=[],terrainRocks=[];
@@ -399,7 +406,7 @@ function buildWorld(){
  }
  for(let i=0;i<28;i++){
   const x=-45+rnd()*90,z=-45+rnd()*90;
-  if(blocked(x,z,2.2)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<6))continue;
+  if(placementBlocked(x,z,2.2)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<6))continue;
   const h=3.4+rnd()*2.3;
   const ground=worldHeight(x,z);
   m.box(x,ground+h*.25,z,.35,h*.5,.35,COLORS.trunk);
@@ -409,7 +416,7 @@ function buildWorld(){
  }
  for(let i=0;i<85;i++){
   const x=-43+rnd()*86,z=-43+rnd()*86;
-  if(blocked(x,z,1.7)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<3))continue;
+  if(placementBlocked(x,z,1.7)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<3))continue;
   const type=i%5,ground=worldHeight(x,z);
   if(type===0){
    coreSolids.push([x,z,3.8,.70]);
@@ -437,7 +444,7 @@ function buildWorld(){
  // Rough fencing and scattered shell-scarred earth.
  for(let i=0;i<18;i++){
   const x=-43+i*4,z=-43+(i%3)*1.5;
-  if(blocked(x,z,1.2))continue;
+  if(placementBlocked(x,z,1.2))continue;
   const ground=worldHeight(x,z);
   coreSolids.push([x,z+1.2,.18,2.7]);
   m.box(x,ground+.72,z,.12,1.44,.12,COLORS.timber);
@@ -513,7 +520,7 @@ function loadLicensedScenery(){
    let tries=0;
    while(positions.length<spec.count&&tries++<spec.count*32){
     const x=-44+rand()*88,z=-44+rand()*88;
-    if(blocked(x,z,2.2)||Math.hypot(x+36,z+33)<8||
+    if(placementBlocked(x,z,2.2)||Math.hypot(x+36,z+33)<8||
       flags.some(f=>Math.hypot(x-f.x,z-f.z)<7))continue;
     const scale=spec.scale[0]+rand()*(spec.scale[1]-spec.scale[0]);
     const yaw=rand()*Math.PI*2;
@@ -522,10 +529,10 @@ function loadLicensedScenery(){
      const rock=[bounds[0],bounds[1],bounds[2]*.90,bounds[3]*.90,
       Math.max(.25,(assets[spec.name].max[1]-assets[spec.name].min[1])*scale*.90),
       worldHeight(x,z)];
-     if(blocked(rock[0],rock[1],Math.max(rock[2],rock[3])*.5))continue;
+     if(placementBlocked(rock[0],rock[1],Math.max(rock[2],rock[3])*.5))continue;
      solidProps.push(rock);terrainRocks.push(rock);
     }else if(bounds&&spec.name==="fence-simple"){
-     if(blocked(bounds[0],bounds[1],Math.max(bounds[2],bounds[3])*.4))continue;
+     if(placementBlocked(bounds[0],bounds[1],Math.max(bounds[2],bounds[3])*.4))continue;
      solidProps.push(bounds);
     }
     positions.push([x,worldHeight(x,z),z,scale,yaw]);
@@ -583,7 +590,7 @@ function loadLicensedScenery(){
     scenery.dressingError="Optional CC0 decoration module unavailable";
     scenery.dressingReady=true;return;
    }
-   decoration.load(kit,Geometry,currentWorldData,blocked,flags,boxes).then(result=>{
+   decoration.load(kit,Geometry,currentWorldData,placementBlocked,flags,boxes).then(result=>{
     currentWorldData=result.data;
     upload(staticMesh,currentWorldData);
     mediumVertexCount=lowVertexCount+result.mediumTriangles*3;
@@ -591,7 +598,7 @@ function loadLicensedScenery(){
     // nor players acquire invisible cover on less capable graphics tiers.
     if(window.WPWW2Environment){
      const environment=new Geometry();environment.data=currentWorldData.slice();
-     const env=window.WPWW2Environment.append(environment,blocked,flags,boxes);
+     const env=window.WPWW2Environment.append(environment,placementBlocked,flags,boxes);
      highSolids.push(...(env.colliders||[]));
      currentWorldData=environment.data;upload(staticMesh,currentWorldData);
      scenery.ww2EnvironmentTriangles=env.triangles;
@@ -656,7 +663,7 @@ const player={x:-36,z:-33,yaw:-.77,pitch:0,hp:100,maxHp:100,ammo:10,reserve:70,
 const game={playing:false,finished:false,sector:0,capture:0,kills:0,elapsed:0,
  enemies:[],allies:[],grenades:[],tracers:[],strikes:[],support:1,order:"follow",
  flash:0,quality:"medium",difficulty:"regular",fps:45,scaler:1,adapt:0,lastShot:null,stealthHits:0,headshots:0,casualties:[]};
-const input={keys:{},fire:false,joyX:0,joyY:0,movePointer:null,lookPointer:null,
+const input={keys:{},fire:false,cannonLatched:false,joyX:0,joyY:0,movePointer:null,lookPointer:null,
  lookX:0,lookY:0};
 function spawnEnemies(){
  game.enemies=[];
@@ -719,6 +726,9 @@ function reset(){
  if(window.WPArmoredFleet){
   window.WPArmoredFleet.reset();
   window.WPArmoredFleet.setGround(worldHeight);
+  if($("deployment")?.value==="sherman"){
+   window.WPArmoredFleet.mount(player,"armor");
+  }
  }
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
   name,{ammo:w.capacity,reserve:w.reserve}
@@ -726,29 +736,45 @@ function reset(){
  if(window.WPBattleSound)window.WPBattleSound.boot();
  if(window.WP3DProbe)window.WP3DProbe.reset();
  gpuProfiler?.reset();
- $("menu").hidden=true;input.fire=false;
+ $("menu").hidden=true;input.fire=false;input.cannonLatched=false;
  const fine=typeof window.matchMedia==="function"&&window.matchMedia("(pointer: fine)").matches;
  if(fine&&canvas.requestPointerLock)try{canvas.requestPointerLock();}catch{}
- const hint=$("movement-hint");if(hint){hint.hidden=false;hint.textContent="WASD / ARROWS TO MOVE · MOUSE TO LOOK · SHIFT SPRINT · F3 STATS";}
+ const hint=$("movement-hint");if(hint){hint.hidden=false;hint.textContent=window.WPArmoredFleet?.current()?.id==="armor"?
+  "SHERMAN · WASD / THUMB TO DRIVE · MOUSE / RIGHT THUMB AIM · FIRE CANNON · R SHELL · E EXIT":
+  "WASD / ARROWS TO MOVE · MOUSE TO LOOK · SHIFT SPRINT · F3 STATS";}
  
  msg("CAPTURE THE FORWARD FARM",2);hud();resize();
 }
 function msg(s,time=1.4){$("status").textContent=s;game.notice=time;}
 function hud(){
  $("hp").textContent="HP "+Math.ceil(Math.max(0,player.hp));
- $("mag").textContent=player.reload>0?"RELOADING":player.ammo+" / "+player.reserve;
+ const crew=window.WPArmoredFleet?.current();
+ $("mag").textContent=crew?.id==="armor"?
+  (crew.shellType||"ap").toUpperCase()+" "+(crew.ammo[crew.shellType]||0)+
+   (crew.reload>0?" · "+crew.reload.toFixed(1)+"s":" · READY"):
+  player.reload>0?"RELOADING":player.ammo+" / "+player.reserve;
  $("frags").textContent="FRAG × "+player.frags;
  const flag=flags[game.sector];
  $("mission").textContent=flag?"SECURE "+flag.title:"MISSION COMPLETE";
  $("objective").textContent=flag?"SECTOR "+(game.sector+1)+" / 3 · "+Math.floor(game.capture*100)+"% SECURED":"ALL SECTORS CAPTURED";
- $("info").textContent=WEAPONS[player.weapon].name+" · "+(player.crouch?"CROUCHED":player.aim?"ADS":"HIP FIRE")+" · "+game.kills+" KILLS";
+ $("info").textContent=crew?.id==="armor"?
+  "75MM CANNON · "+(crew.shellType||"ap").toUpperCase()+" · "+Math.ceil(crew.hp)+" ARMOR HP · "+game.kills+" KILLS":
+  crew?.id==="jeep"?"WILLYS MB · WHEEL-STEERED TRANSPORT":
+  WEAPONS[player.weapon].name+" · "+(player.crouch?"CROUCHED":player.aim?"ADS":"HIP FIRE")+" · "+game.kills+" KILLS";
+ if($("fire"))$("fire").textContent=crew?.id==="armor"?"CANNON":"FIRE";
+ if($("reload"))$("reload").textContent=crew?.id==="armor"?"SHELL":"RLD";
+ if($("reload"))$("reload").setAttribute?.("aria-label",crew?.id==="armor"?"Switch AP and HE tank shells":"Reload firearm");
  $("squadstate").textContent="FIRETEAM "+game.allies.filter(a=>a.hp>0).length+"/2 · "+game.order.toUpperCase();
  $("supportstate").textContent="ARTILLERY × "+game.support;
  if($("vehicle-state")){
   const driving=window.WPArmoredFleet?.current();
+  const nearby=window.WPArmoredFleet?.nearest?.(player);
   $("vehicle-state").textContent=driving?
-   "DRIVING "+driving.name+" · "+Math.round(Math.abs(driving.speed)*3.6)+" KM/H":
-   "E / VEHICLE: ENTER NEARBY TRANSPORT";
+   "CREWING "+driving.name+" · "+Math.round(Math.abs(driving.speed)*3.6)+" KM/H"+
+    (driving.id==="armor"?" · "+Math.ceil(driving.hp)+" HP · "+(driving.shellType||"ap").toUpperCase()+
+    " · "+(driving.reload>0?driving.reload.toFixed(1)+"S RELOAD":"CANNON READY"):""):
+   nearby?"E / VEHICLE: "+nearby.name+" · "+Math.round(nearby.distance)+"M AWAY":
+   "E / VEHICLE: FIND A FRIENDLY JEEP OR SHERMAN";
  }
  $("capture-fill").style.width=Math.floor(game.capture*100)+"%";
  if(flag){
@@ -798,10 +824,32 @@ function shoot(){
  const fleet=window.WPArmoredFleet;
  if(fleet?.isDriving()){
   if(fleet.current()?.id==="armor"){
+   // A loaded cannon responds to one trigger pull, not continuous held fire.
+   if(input.cannonLatched)return;
    const fired=fleet.fire(player,game.enemies,lineHit,victim=>{
     if(victim.hp<=0){game.kills++;msg("ARMOR: TARGET DOWN",1);}
-   },addTracer,(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type));
-   if(fired)window.WPBattleSound?.explosion(player.x,player.z,player);
+   },addTracer,(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type),{
+    heightAt:worldHeight,
+    blocked,
+    traversable:(sx,sz,nx,nz,r)=>terrainPassable(sx,sz,nx,nz,r,"vehicle"),
+    obstacles:[
+     ...boxes.map(b=>[...b,6.3,worldHeight(b[0],b[1])]),
+     ...covers.map(b=>[...b,1.03,worldHeight(b[0],b[1])]),
+     ...artStructures.map(b=>[...b,3.8,worldHeight(b[0],b[1])]),
+     ...solidProps.map(b=>[...b.slice(0,4),b[4]??1.5,b[5]??worldHeight(b[0],b[1])]),
+     ...coreSolids.map(b=>[...b.slice(0,4),b[4]??1.2,b[5]??worldHeight(b[0],b[1])])
+    ]
+   });
+   if(fired){
+    input.cannonLatched=true;
+    window.WP3DProbe?.event("shot");
+    window.WPBattleSound?.explosion(player.x,player.z,player);
+    const strike=fleet.current()?.lastImpact;
+    msg(strike?.type==="armor"?"ARMOR HIT · PANZER "+strike.armorHp+" HP":
+      strike?.type==="infantry"?"TANK SHELL · INFANTRY HIT":
+      strike?.type==="cover"||strike?.type==="terrain"?"SHELL IMPACT · COVER":
+      "75MM CANNON FIRED",.9);
+   }
   }
   return;
  }
@@ -924,11 +972,20 @@ function enterVehicle(){
  if(!game.playing||!window.WPArmoredFleet)return;
  if(window.WPArmoredFleet.toggle(player,blocked)){
   const v=window.WPArmoredFleet.current();
-  msg(v?"DRIVING "+v.name+" · E TO DISEMBARK":"DISEMBARKED · FIRETEAM ON FOOT",1.6);
+  input.cannonLatched=false;
+  msg(v?"CREWING "+v.name+" · E TO DISEMBARK":"DISEMBARKED · FIRETEAM ON FOOT",1.6);
+  const hint=$("movement-hint");
+  if(hint)hint.textContent=v?"WASD / THUMB DRIVE · MOUSE / RIGHT THUMB AIM · FIRE CANNON · R SHELL · E EXIT":
+   "WASD TO MOVE · MOUSE TO AIM · E TO ENTER VEHICLE";
  }else msg("NO SAFE VEHICLE ENTRY / EXIT NEARBY",1);
 }
 function swap(){
  if(!game.playing)return;
+ if(window.WPArmoredFleet?.isDriving()){
+  const selected=window.WPArmoredFleet.selectShell();
+  if(selected)msg("SHERMAN · "+selected.toUpperCase()+" ROUND SELECTED",1.2);
+  return;
+ }
  const names=Object.keys(WEAPONS),idx=names.indexOf(player.weapon);
  game.loadouts[player.weapon]={ammo:player.ammo,reserve:player.reserve};
  player.weapon=names[(idx+1)%names.length];
@@ -1008,7 +1065,11 @@ function simulate(dt){
  if(window.WPArmoredFleet)window.WPArmoredFleet.tick(dt,player,lineHit,damage=>{
   player.hurt=.7;msg("ENEMY ARMOR · SEEK COVER",1);
   if(player.hp<=0)end(false);
- },(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type));
+ },(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type),{
+  blocked,
+  heightAt:worldHeight,
+  traversable:(sx,sz,nx,nz,r)=>terrainPassable(sx,sz,nx,nz,r,"vehicle")
+ });
  player.concussion=Math.max(0,(player.concussion||0)-dt*.7);
  player.cd=Math.max(0,player.cd-dt);player.hurt=Math.max(0,player.hurt-dt*2);
  window.WPWeaponHandling?.tick(player,dt);
@@ -1391,7 +1452,8 @@ document.addEventListener("keydown",e=>{
  if(game.playing&&["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","KeyW","KeyA","KeyS","KeyD"].includes(e.code))e.preventDefault();
  if(e.code==="F3"){e.preventDefault();if(window.WP3DProbe)window.WP3DProbe.toggle();return;}
  if(e.repeat)return;
- if(e.code==="KeyR")reload();
+ if(e.code==="KeyR"&&window.WPArmoredFleet?.current()?.id==="armor")swap();
+ else if(e.code==="KeyR")reload();
  if(e.code==="KeyV")heal();
  if(e.code==="KeyE")enterVehicle();
  if(e.code==="KeyG")grenade();
@@ -1412,17 +1474,17 @@ canvas.addEventListener("pointerdown",e=>{
  if(!game.playing||e.pointerType==="touch")return;
  if(e.button===2){setAim(true);return;}
  if(e.button===0){
-  input.fire=true;
+  input.fire=true;shoot();
   if(canvas.requestPointerLock)try{canvas.requestPointerLock();}catch{}
  }
 });
 document.addEventListener("pointerup",e=>{
- if(e.button===0&&e.pointerType!=="touch")input.fire=false;
+ if(e.button===0&&e.pointerType!=="touch"){input.fire=false;input.cannonLatched=false;}
  if(e.button===2)setAim(false);
 });
-window.addEventListener("blur",()=>{input.keys={};input.fire=false;setAim(false);input.joyX=0;input.joyY=0;});
+window.addEventListener("blur",()=>{input.keys={};input.fire=false;input.cannonLatched=false;setAim(false);input.joyX=0;input.joyY=0;});
 document.addEventListener("visibilitychange",()=>{
- if(document.hidden){input.fire=false;setAim(false);input.joyX=0;input.joyY=0;}
+ if(document.hidden){input.fire=false;input.cannonLatched=false;setAim(false);input.joyX=0;input.joyY=0;}
 });
 const stick=$("left-stick"),nub=$("nub"),look=$("right-look");
 function updateStick(e){
@@ -1467,9 +1529,9 @@ function button(id,on,off){
   el.addEventListener("pointerup",off);el.addEventListener("pointercancel",off);
  }
 }
-button("fire",()=>{input.fire=true;},()=>{input.fire=false;});
+button("fire",()=>{input.fire=true;shoot();},()=>{input.fire=false;input.cannonLatched=false;});
 button("aim",()=>setAim(true),()=>setAim(false));
-button("reload",reload);button("grenade",grenade);button("heal",heal);button("swap",swap);
+button("reload",()=>window.WPArmoredFleet?.current()?.id==="armor"?swap():reload());button("grenade",grenade);button("heal",heal);button("swap",swap);
 button("orders",orderSquad);button("support",callArtillery);
  button("vehicle",enterVehicle);
 button("crouch",()=>{player.crouch=!player.crouch;});

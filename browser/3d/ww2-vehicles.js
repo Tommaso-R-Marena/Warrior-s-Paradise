@@ -4,19 +4,23 @@
  */
 (function(root){"use strict";
 const defs=[
- {id:"jeep",name:"Willys MB 4×4",asset:"willys_mb",team:"ally",x:-41,z:-31,yaw:1.0,
+ {id:"jeep",name:"Willys MB 4×4",asset:"willys_mb",team:"ally",x:-41,z:-31,yaw:-.72,
   width:1.7,length:3.35,height:1.8,max:12,hp:120},
- {id:"armor",name:"M4 Sherman (75 mm)",asset:"m4_sherman_shape",team:"ally",x:-40,z:-23,yaw:.5,
+ {id:"armor",name:"M4 Sherman (75 mm)",asset:"m4_sherman_shape",team:"ally",x:-40,z:-23,yaw:-1.04,
   width:3.0,length:5.6,height:2.5,max:6.1,hp:320},
  {id:"enemy",name:"Panzer IV (H)",asset:"panzer_iv_shape",team:"axis",x:34,z:16,yaw:-1.9,
   width:3.0,length:5.6,height:2.5,max:0,hp:300}
 ];
 const records=[],models={},status={ready:false,loaded:0,errors:{},trianglesLast:0};
 let occupied=null,fired=0,hit=0,collisionRejected=0,collisionSamples=0;
+const shells=[],SHELL_SPEED=105,MAX_RANGE=58;
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const angleDelta=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 function reset(){
- records.length=0;for(const d of defs)records.push({...d,speed:0,reload:0,shotFlash:0,alive:true,groundY:0});
- occupied=null;fired=0;hit=0;collisionRejected=0;collisionSamples=0;status.trianglesLast=0;
+ records.length=0;for(const d of defs)records.push({...d,speed:0,reload:0,shotFlash:0,alive:true,
+  groundY:0,turretYaw:d.yaw,ammo:{ap:16,he:8},shellType:"ap",lastImpact:null});
+ occupied=null;fired=0;hit=0;collisionRejected=0;collisionSamples=0;status.trianglesLast=0;shells.length=0;
 }
 reset();
 async function load(kit){
@@ -32,12 +36,29 @@ async function load(kit){
  status.ready=true;
 }
 function isDriving(){return occupied!==null}
+function mount(player,id="armor"){
+ const v=records.find(a=>a.id===id&&a.team==="ally"&&a.alive);
+ if(!v||occupied)return false;
+ occupied=v.id;player.x=v.x;player.z=v.z;player.yaw=v.turretYaw;
+ return true;
+}
+function selectShell(type){
+ const v=current();
+ if(!v||v.id!=="armor")return false;
+ v.shellType=type==="he"||type==="ap"?type:(v.shellType==="ap"?"he":"ap");
+ return v.shellType;
+}
 function current(){return records.find(r=>r.id===occupied)||null}
-function near(player){
- let best=null,d=4.3;
+function nearest(player){
+ let best=null,d=Infinity;
  for(const v of records)if(v.alive&&v.team==="ally"){
   const away=distance(v,player);if(away<d){best=v;d=away;}
- }return best;
+ }
+ return best?{id:best.id,name:best.name,distance:d}:null;
+}
+function near(player){
+ const next=nearest(player);
+ return next&&next.distance<4.6?records.find(v=>v.id===next.id):null;
 }
 function toggle(player,blocked){
  if(occupied){
@@ -53,8 +74,7 @@ function toggle(player,blocked){
  }
  const v=near(player);
  if(!v)return false;
- occupied=v.id;player.x=v.x;player.z=v.z;player.yaw=v.yaw;
- return true;
+ return mount(player,v.id);
 }
 // Projected SAT axes avoid treating every long hull as a giant circular wall.
 function overlappingHull(a,x,z,yaw,b){
@@ -102,8 +122,10 @@ function move(dt,input,player,blocked,traversable){
  if(Math.abs(v.speed)<.035)v.speed=0;
  // Continuous hull sweep: check physical width AND length while both moving
  // and steering. Prevents tunnelling through thin fences or meter-scale rocks.
- const yawDelta=turn*dt*(v.id==="jeep"?.70:.32)*
+ // Tracked vehicles pivot in place; wheel-steered jeeps must be rolling.
+ const turning= v.id==="armor"?(.22+.78*Math.min(1,Math.abs(v.speed)/2)):
   Math.min(1,Math.abs(v.speed)/2)*Math.sign(v.speed||1);
+ const yawDelta=turn*dt*(v.id==="jeep"?.70:.42)*turning;
  const travel=v.speed*dt,steps=Math.max(1,Math.ceil(Math.max(Math.abs(travel)/.18,
   Math.abs(yawDelta)*v.length/.13)));
  const startX=v.x,startZ=v.z,startYaw=v.yaw;
@@ -118,45 +140,155 @@ function move(dt,input,player,blocked,traversable){
   v.x=nx;v.z=nz;v.yaw=nextYaw;
  }
  player.x=v.x;player.z=v.z;
+ if(v.id==="armor")v.turretYaw=player.yaw;
  return true;
 }
-function fire(player,enemies,visible,onHit,onTracer,onBlast){
+// Shell trace uses a small 3D projectile arc, checked along the entire path.
+// It resolves the earliest building, heightfield, rock, infantry or armor impact.
+function traceShell(v,player,enemies,world){
+ const heading=Number.isFinite(player.yaw)?player.yaw:v.turretYaw;
+ const pitch=clamp(Number.isFinite(player.pitch)?player.pitch:0,-.36,.36);
+ const dx=-Math.sin(heading),dz=Math.cos(heading);
+ const x0=v.x+dx*2.55,z0=v.z+dz*2.55,y0=(v.groundY||0)+2.32;
+ const invCos=1/Math.max(.25,Math.cos(pitch)**2);
+ const enemyArmor=records.find(a=>a.id==="enemy"&&a.alive);
+ const obstacles=world?.obstacles||[];
+ const terrain=world?.heightAt||(()=>-100);
+ const max=MAX_RANGE;
+ for(let t=.35;t<=max;t+=.38){
+  const x=x0+dx*t,z=z0+dz*t;
+  const y=y0+Math.tan(pitch)*t-4.905*t*t*invCos/(SHELL_SPEED*SHELL_SPEED);
+  if(world){
+   if(Math.abs(x)>46.5||Math.abs(z)>46.5)return {x,z,y,type:"boundary",distance:t};
+   if(y<=terrain(x,z)+.065)return {x,z,y,type:"terrain",distance:t};
+   for(const b of obstacles){
+    const [bx,bz,w,d,h=1.1,base=terrain(bx,bz)]=b;
+    if(Math.abs(x-bx)<=w*.5&&Math.abs(z-bz)<=d*.5&&y>=base&&y<=base+h)
+     return {x,z,y,type:"cover",distance:t};
+   }
+  }
+  if(enemyArmor&&Math.abs(x-enemyArmor.x)<enemyArmor.width*.48&&
+      Math.abs(z-enemyArmor.z)<enemyArmor.length*.47&&
+      y>(enemyArmor.groundY||0)+.25&&y<(enemyArmor.groundY||0)+2.95)
+    return {x,z,y,type:"armor",target:enemyArmor,distance:t};
+  for(const e of enemies){
+   if(e.hp<=0)continue;
+   const ground=Number.isFinite(e.groundY)?e.groundY:world?.heightAt?.(e.x,e.z)||0;
+   if(Math.hypot(x-e.x,z-e.z)<.50&&y>=ground+.12&&y<=ground+2.55)
+    return {x,z,y,type:"infantry",target:e,distance:t};
+  }
+ }
+ return {x:x0+dx*max,z:z0+dz*max,
+  y:y0+Math.tan(pitch)*max-4.905*max*max*invCos/(SHELL_SPEED*SHELL_SPEED),
+  type:"miss",distance:max};
+}
+function fire(player,enemies,visible,onHit,onTracer,onBlast,world){
  const v=current();
  if(!v||v.id!=="armor"||!v.alive||v.reload>0)return false;
- v.reload=3.4;v.shotFlash=.16;fired++;
- let victim=null,near=42;
- const dx=-Math.sin(player.yaw),dz=Math.cos(player.yaw);
- for(const e of enemies){
-  if(e.hp<=0)continue;
-  const rx=e.x-v.x,rz=e.z-v.z,t=rx*dx+rz*dz;
-  if(t<3||t>near||Math.abs(rx*dz-rz*dx)>1.3||!visible(v.x,v.z,e.x,e.z))continue;
-  victim=e;near=t;
+ const type=v.shellType||"ap";
+ if(v.ammo[type]<=0)return false;
+ v.ammo[type]--;v.reload=type==="he"?4.1:3.35;
+ v.shotFlash=.23;v.turretYaw=player.yaw;fired++;
+ const direction={dx:-Math.sin(player.yaw),dz:Math.cos(player.yaw)};
+ let impact;
+ if(world)impact=traceShell(v,player,enemies,world);
+ else{
+  // Compatibility for isolated legacy unit tests; gameplay always supplies world.
+  let victim=null,near=42;
+  for(const e of enemies){
+   if(e.hp<=0)continue;
+   const rx=e.x-v.x,rz=e.z-v.z,t=rx*direction.dx+rz*direction.dz;
+   if(t<3||t>near||Math.abs(rx*direction.dz-rz*direction.dx)>1.3||
+      !visible(v.x,v.z,e.x,e.z))continue;
+   victim=e;near=t;
+  }
+  impact=victim?{x:victim.x,z:victim.z,y:1.4,type:"infantry",target:victim}:
+   {x:v.x+direction.dx*38,z:v.z+direction.dz*38,y:1.4,type:"miss"};
  }
- const impact=victim?{x:victim.x,z:victim.z}:{
-  x:Math.max(-43,Math.min(43,v.x+dx*38)),
-  z:Math.max(-43,Math.min(43,v.z+dz*38))};
- if(onTracer)onTracer(v.x,v.z,impact.x,impact.z,"friendly");
- if(onBlast)onBlast(impact.x,impact.z,"artillery");
- if(victim){victim.hp-=145;victim.hit=.5;victim.suppression=2;hit++;if(onHit)onHit(victim);}
+ // AP focuses on a direct impact. HE has a radius, reduced at range.
+ const injured=new Set();
+ const wound=(enemy,damage)=>{
+  if(enemy.hp<=0||damage<=0)return;
+  enemy.hp-=damage;enemy.hit=.55;enemy.suppression=2;
+  if(!injured.has(enemy)){injured.add(enemy);hit++;onHit?.(enemy);}
+ };
+ if(impact.type==="armor"&&impact.target){
+  const armor=impact.target;
+  const incoming=player.yaw;
+  const alignment=Math.cos(angleDelta(incoming,armor.yaw));
+  const damage=type==="ap"?(alignment>.48?170:alignment<-.48?92:126):39;
+  armor.hp=Math.max(0,armor.hp-damage);
+  if(armor.hp===0){armor.alive=false;armor.speed=0;}
+  hit++;
+ }
+ if(impact.type==="infantry"&&impact.target)
+  wound(impact.target,type==="ap"?165:110);
+ if(type==="he"&&impact.type!=="miss"){
+  for(const e of enemies){
+   if(e.hp<=0||injured.has(e))continue;
+   const dist=Math.hypot(e.x-impact.x,e.z-impact.z);
+   if(dist>4.4)continue;
+   const impactHeight=world?.heightAt?.(impact.x,impact.z)||0;
+   const targetHeight=Number.isFinite(e.groundY)?e.groundY:0;
+   if(Math.abs(targetHeight-impactHeight)>3.8)continue;
+   if(world&&visible&&!visible(impact.x,impact.z,e.x,e.z))continue;
+   wound(e,Math.round(105*(1-dist/5)));
+  }
+ }
+ v.lastImpact={type:impact.type,x:impact.x,z:impact.z,y:impact.y,
+  shell:type,armorHp:records.find(a=>a.id==="enemy")?.hp||0};
+ const muzzle={x:v.x+direction.dx*2.55,z:v.z+direction.dz*2.55,y:(v.groundY||0)+2.32};
+ shells.push({a:muzzle,b:{x:impact.x,z:impact.z,y:impact.y},
+  age:0,life:.48,type});
+ if(shells.length>12)shells.shift();
+ onTracer?.(muzzle.x,muzzle.z,impact.x,impact.z,"friendly",muzzle.y,impact.y);
+ if(impact.type!=="miss")onBlast?.(impact.x,impact.z,type==="he"?"artillery":"frag");
  return true;
 }
-function tick(dt,player,hasLOS,onPlayerHit,onBlast){
+function tick(dt,player,hasLOS,onPlayerHit,onBlast,world){
  for(const v of records){
   v.reload=Math.max(0,v.reload-dt);v.shotFlash=Math.max(0,v.shotFlash-dt);
  }
- // Stationary scripted defensive tank: line-of-sight and distance constrained.
+ for(let i=shells.length-1;i>=0;i--){
+  shells[i].age+=dt;
+  if(shells[i].age>=shells[i].life)shells.splice(i,1);
+ }
  const enemy=records.find(v=>v.id==="enemy");
- if(!enemy?.alive||enemy.reload>0||!player||player.hp<=0)return;
+ if(!enemy?.alive||!player||player.hp<=0)return;
  const d=distance(enemy,player);
- if(d>23||d<7||!hasLOS(enemy.x,enemy.z,player.x,player.z))return;
- enemy.reload=5.1;
- const damage=isDriving()&&current()?.id==="armor"?5:10;
+ // Axis armor acquires and moves toward the player, but must respect physical
+ // hull clearance and traversable slopes exactly like player armor does.
+ enemy.turretYaw=Math.atan2(enemy.x-player.x,player.z-enemy.z);
+ if(world?.blocked&&d>16&&d<57){
+  const desired=enemy.turretYaw;
+  const steer=clamp(angleDelta(desired,enemy.yaw),-.38*dt,.38*dt);
+  const nyaw=enemy.yaw+steer;
+  const speed=1.75,travel=Math.abs(angleDelta(desired,nyaw))>.30?0:Math.min(speed*dt,.16);
+  const nx=enemy.x-Math.sin(nyaw)*travel,nz=enemy.z+Math.cos(nyaw)*travel;
+  if(footprintClear(enemy,nx,nz,nyaw,world.blocked)&&
+     (!world.traversable||world.traversable(enemy.x,enemy.z,nx,nz,enemy.width*.48))){
+   enemy.x=nx;enemy.z=nz;enemy.yaw=nyaw;enemy.speed=speed;
+  }else{
+   enemy.speed=0;collisionRejected++;
+   // Bounded avoidance steering with the same hull acceptance checks.
+   for(const dir of [-1,1]){
+    const turn=enemy.yaw+dir*.28*dt;
+    if(footprintClear(enemy,enemy.x,enemy.z,turn,world.blocked)){
+     enemy.yaw=turn;break;
+    }
+   }
+  }
+  if(world.heightAt)enemy.groundY=world.heightAt(enemy.x,enemy.z);
+ }else enemy.speed=0;
+ if(enemy.reload>0||d>27||d<7||!hasLOS(enemy.x,enemy.z,player.x,player.z))return;
+ enemy.reload=5.1;enemy.shotFlash=.22;
+ const damage=isDriving()&&current()?.id==="armor"?9:12;
  if(isDriving()&&current()){
   const target=current();target.hp-=damage;
   if(target.hp<=0){target.alive=false;occupied=null;player.hp-=35;}
  }else player.hp-=damage;
- if(onBlast)onBlast(player.x+1.5,player.z-1,"frag");
- if(onPlayerHit)onPlayerHit(damage);
+ onBlast?.(player.x+1.5,player.z-1,"frag");
+ onPlayerHit?.(damage);
 }
 function drawArmor(g,v,quality,aimYaw){
  const high=quality==="high",med=quality==="medium";
@@ -273,15 +405,19 @@ function draw(g,kit,quality,player,time){
    triangles+=kit.appendInstances(g,model,[[originX,y+(v.groundY||0),originZ,scale,modelYaw]]);
    imported++;
   }else if(v.id!=="jeep"&&quality!=="low"){
-   triangles+=drawArmor(g,v,quality,v.id==="armor"&&occupied==="armor"?player.yaw:null);
+   triangles+=drawArmor(g,v,quality,
+    v.id==="armor"&&occupied==="armor"?player.yaw:v.turretYaw);
   }else{
    // Functional always-present silhouette for phone and absent imported art.
    const c=v.team==="axis"?[.34,.37,.30]:[.30,.36,.27];
    g.box(v.x,1.0+(v.groundY||0),v.z,v.width,1.0,v.length,c,-v.yaw);
    g.box(v.x,1.65+(v.groundY||0),v.z-.45,v.width*.77,.60,v.length*.52,c,-v.yaw);
    if(v.id!=="jeep"){
-    g.box(v.x,2.13+(v.groundY||0),v.z,.95,.45,1.40,[.25,.30,.24],v.yaw);
-    g.box(v.x-Math.sin(v.yaw)*1.6,2.07+(v.groundY||0),v.z+Math.cos(v.yaw)*1.6,.14,.14,2.3,[.15,.17,.15],-v.yaw);
+    const tyaw=v.id==="armor"&&occupied==="armor"?player.yaw:v.turretYaw;
+    const hx=-Math.sin(tyaw),hz=Math.cos(tyaw);
+    g.box(v.x,2.13+(v.groundY||0),v.z,.95,.45,1.40,[.25,.30,.24],-tyaw);
+    g.box(v.x+hx*1.65,2.16+(v.groundY||0),v.z+hz*1.65,
+     .19,.17,2.65,[.15,.17,.15],-tyaw);
    }else{
     g.box(v.x,1.72+(v.groundY||0),v.z-.28,v.width*.93,.08,.12,[.19,.19,.17],v.yaw);
    }
@@ -307,7 +443,33 @@ function draw(g,kit,quality,player,time){
    accessory(0,1.37,-1.73,.52,.52,.11,rubber);
    accessory(.01,1.45,-1.80,.19,.19,.13,frame);
   }
-  if(v.shotFlash>0)g.cone(v.x,2.5+(v.groundY||0),v.z,0.16,.55,[.96,.66,.22],5);
+  if(v.shotFlash>0){
+   const yaw=v.turretYaw||v.yaw;
+   const mx=v.x-Math.sin(yaw)*3.15,mz=v.z+Math.cos(yaw)*3.15;
+   g.cone(mx,2.32+(v.groundY||0),mz,.23,.67,[.98,.71,.27],7);
+   triangles+=7;
+  }
+  // Engine exhaust and displaced dust respond to actual hull movement.
+  if(Math.abs(v.speed)>.4&&quality!=="low"&&dist<30){
+   const phase=Math.sin(time*17+v.x*.7);
+   const yaw=v.yaw;
+   const x=v.x+Math.sin(yaw)*(v.length*.44),z=v.z-Math.cos(yaw)*(v.length*.44);
+   g.cone(x,(v.groundY||0)+.11,z,.19+Math.abs(phase)*.08,.35,
+    [.43,.41,.35],5);triangles+=5;
+  }
+ }
+ // Bounded shell streaks show which direction the vehicle actually fired.
+ for(const s of shells){
+  if(Math.hypot(s.a.x-player.x,s.a.z-player.z)>65)continue;
+  const t=clamp(s.age/s.life,0,1),head=.14+.86*t;
+  const p=[s.a.x+(s.b.x-s.a.x)*head,
+   s.a.y+(s.b.y-s.a.y)*head,s.a.z+(s.b.z-s.a.z)*head];
+  const tail=[s.a.x+(s.b.x-s.a.x)*Math.max(0,head-.09),
+   s.a.y+(s.b.y-s.a.y)*Math.max(0,head-.09),
+   s.a.z+(s.b.z-s.a.z)*Math.max(0,head-.09)];
+  g.quad(tail,p,[p[0],p[1]+.065,p[2]],
+   [tail[0],tail[1]+.065,tail[2]],s.type==="he"?[.99,.58,.23]:[.96,.86,.52]);
+  triangles+=2;
  }
  status.trianglesLast=triangles;
  return triangles;
@@ -317,7 +479,10 @@ function setGround(height){
 }
 function info(){return {ready:status.ready,loaded:status.loaded,errors:{...status.errors},
  driving:occupied,vehicle:current()?.name||"",enemyAlive:records.find(v=>v.id==="enemy")?.alive,
- vehicles:records.map(v=>({id:v.id,name:v.name,x:v.x,z:v.z,hp:v.hp,speed:v.speed,alive:v.alive})),
- shots:fired,hits:hit,collisionRejected,collisionSamples,renderedTriangles:status.trianglesLast};}
-root.WPArmoredFleet=Object.freeze({reset,load,toggle,isDriving,current,near,move,fire,tick,draw,info,setGround,footprintClear,overlappingHull});
+ vehicles:records.map(v=>({id:v.id,name:v.name,x:v.x,z:v.z,yaw:v.yaw,turretYaw:v.turretYaw,
+ hp:v.hp,speed:v.speed,alive:v.alive,reload:v.reload,ammo:{...v.ammo},shellType:v.shellType,
+ lastImpact:v.lastImpact})),
+ shots:fired,hits:hit,activeShells:shells.length,collisionRejected,collisionSamples,
+ renderedTriangles:status.trianglesLast};}
+root.WPArmoredFleet=Object.freeze({reset,load,toggle,mount,selectShell,nearest,isDriving,current,near,move,fire,tick,draw,info,setGround,footprintClear,overlappingHull,traceShell});
 })(window);
