@@ -1475,7 +1475,12 @@ if(typeof location!=="undefined"&&typeof location.search==="string"&&
    if(!game.playing||!data||!Number.isFinite(data.x)||!Number.isFinite(data.z))
     throw Error("QA combat scenario requires deployment and coordinates");
    if(data.weapon&&!WEAPONS[data.weapon])throw Error("Unknown weapon");
-   if(data.clearDecoration){treeTrunks.length=0;artStructures.length=0;}
+   if(data.clearDecoration){
+    // QA-only: provide a reproducible clear firing lane for firearm regression
+    // tests without accidentally hiding real scenery collision in normal play.
+    treeTrunks.length=0;artStructures.length=0;solidProps.length=0;
+    coreSolids.length=0;mediumSolids.length=0;highSolids.length=0;
+   }
    Object.assign(player,{x:data.x,z:data.z,yaw:data.yaw||0,pitch:data.pitch||0,
     crouch:!!data.crouch,aim:data.aim!==false,cd:0,reload:0});
    if(data.weapon){player.weapon=data.weapon;player.ammo=WEAPONS[data.weapon].capacity;}
