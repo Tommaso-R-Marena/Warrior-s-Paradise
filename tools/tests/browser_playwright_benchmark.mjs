@@ -56,6 +56,8 @@ async function run(name,viewport,quality,mobile){
     terrainTriangles:initial.terrainTriangles,architecturalTiles:initial.architecturalTiles,
     shadowMap:initial.directionalShadows,ww2Environment:initial.ww2EnvironmentProps
    }));
+   assert(initial.contactShadowTriangles>=40,
+    "High actor/vehicle contacts did not enter the dynamic render buffer");
    assert(initial.botanicalClumps>50&&initial.botanicalTriangles<=1750,
     "High terrain flora missing or over geometry budget: "+JSON.stringify({
      clumps:initial.botanicalClumps,triangles:initial.botanicalTriangles,
