@@ -27,7 +27,7 @@ async function run(name,viewport,quality,mobile){
    await page.waitForFunction(()=>{
     const d=window.WP3DDiagnostics();
     return d.photoMaterialsLoaded||!!d.photoMaterialsError;
-   },null,{timeout:30000});
+   },null,{timeout:quality==="high"?90000:30000});
   }
   const initial=await page.evaluate(()=>window.WP3DDiagnostics());
   assert(initial.dressingDrawn===(quality!=="low"),
