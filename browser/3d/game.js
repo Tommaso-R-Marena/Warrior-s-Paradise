@@ -285,9 +285,14 @@ function blocked(x,z,r=.42){
  treeTrunks.some(t=>Math.hypot(x-t.x,z-t.z)<t.radius+r);
 }
 function openLOS(ax,az,bx,bz){
- const d=Math.hypot(bx-ax,bz-az),segments=Math.ceil(d/.55);
+ const d=Math.hypot(bx-ax,bz-az),segments=Math.max(1,Math.ceil(d/.55));
+ const sourceEye=worldHeight(ax,az)+1.55,targetEye=worldHeight(bx,bz)+1.48;
  for(let i=1;i<segments;i++){
-  const t=i/segments;if(boxes.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.12))||
+  const t=i/segments,x=ax+(bx-ax)*t,z=az+(bz-az)*t;
+  // Enemies cannot acquire targets through a topological ridge even when
+  // there are no trees or buildings along the 2D sightline.
+  if(worldHeight(x,z)>sourceEye+(targetEye-sourceEye)*t-.04)return false;
+  if(boxes.some(b=>within(x,z,b,.12))||
       covers.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
       artStructures.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
       solidProps.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
@@ -1495,6 +1500,7 @@ if(typeof location!=="undefined"&&typeof location.search==="string"&&
    return {rocks:solidProps.map(b=>Array.from(b)),projectileRocks:terrainRocks.map(b=>Array.from(b)),core:coreSolids.map(b=>Array.from(b)),
     medium:mediumSolids.map(b=>Array.from(b)),high:highSolids.map(b=>Array.from(b))};
   },
+  sightLine(ax,az,bx,bz){return lineHit(ax,az,bx,bz);},
   traverse(x,z,dx,dz){return move(x,z,dx,dz);},
   shootOnce(){player.cd=0;shoot();return game.lastShot;}
  });
