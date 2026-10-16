@@ -15,6 +15,8 @@ if(!gl){
 const gpuProfiler=window.WPDeviceGpuProfiler?.create(gl)||null;
 window.WPDeviceGpuCaptureController=gpuProfiler;
 let skyRenderer=null; // Defer optional shader compilation until High is actually selected.
+let directionalShadows=null; // Never allocate shadow resources for Low/Medium.
+let shadowsSuspended=false; // Hysteresis for slow hardware.
 const VS=[
  "#version 300 es","precision highp float;",
  "layout(location=0) in vec3 aPos;layout(location=1) in vec3 aNormal;",
@@ -98,6 +100,34 @@ const FS=[
 // High alone samples artist-authored tangent normals and roughness.
 // Low/Medium retain the proven shader path, without additional program cost.
 const highSource=FS.replace(
+ "void main(){",
+ [
+  "uniform sampler2D uShadowMap;uniform mat4 uLightVP;",
+  "uniform vec2 uShadowTexel;uniform float uShadowEnabled;",
+  "float shadowVisibility(vec3 position,vec3 normal){",
+  " if(uShadowEnabled<.5)return 1.;",
+  " vec3 projection=(uLightVP*vec4(position+normal*.045,1.)).xyz*.5+.5;",
+  " if(projection.x<.01||projection.x>.99||projection.y<.01||projection.y>.99||projection.z<0.||projection.z>1.)return 1.;",
+  " float bias=max(.00065,.0019*(1.-max(0.,dot(normal,normalize(vec3(.53,.88,-.36))))));",
+  " float visibility=0.;",
+  " for(int i=0;i<4;i++){",
+  "  vec2 p=vec2(float(i%2)-.5,float(i/2)-.5)*uShadowTexel*2.;",
+  "  visibility+=projection.z-bias<=texture(uShadowMap,projection.xy+p).r?1.:0.;",
+  " }",
+  " return mix(.46,1.,visibility*.25);",
+  "}",
+  "void main(){"
+ ].join("\n")
+).replace(
+ "float exposure=.38+.69*sun;",
+ "float exposure=(.38+.69*sun)*shadowVisibility(vPos,n);"
+).replace(
+ "float terrain=step(.65,n.y)*(1.-smoothstep(.25,.9,vPos.y));",
+ "float terrain=step(.68,n.y)*(1.-smoothstep(6.4,7.5,vPos.y));"
+).replace(
+ "rgb=mix(rgb,textured,intensity*.78);",
+ "rgb=mix(rgb,textured*(.61+.39*sun)*shadowVisibility(vPos,shadedN),intensity*.78);"
+).replace(
  "float bumpSun=max(0.,dot(normalize(vec3((bump.r-.5)*1.25,.96,(bump.g-.5)*1.25)),normalize(vec3(.53,.88,-.36))));",
  [
   "vec3 mapN=normalize(vec3(bump.rg*2.-1.,max(.25,bump.b*2.-1.)));",
@@ -156,7 +186,7 @@ function ensureHighProgram(){
   gl.attachShader(highProgram,glsl);
   gl.linkProgram(highProgram);
   if(!gl.getProgramParameter(highProgram,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(highProgram));
-  highUniforms=Object.fromEntries(["uVP","uEye","uDetailLevel","uUseAtlas","uDiffuse","uBump","uWindTime"]
+  highUniforms=Object.fromEntries(["uVP","uEye","uDetailLevel","uUseAtlas","uDiffuse","uBump","uWindTime","uShadowMap","uLightVP","uShadowTexel","uShadowEnabled"]
    .map(name=>[name,gl.getUniformLocation(highProgram,name)]));
  }catch(error){highProgram=null;highUniforms=null;}
  // Shader setup must not affect Low/Medium scene measurements.
@@ -207,6 +237,7 @@ function upload(target,data){
  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),
   target.dynamic?gl.DYNAMIC_DRAW:gl.STATIC_DRAW);
  target.count=data.length/9;
+ if(typeof staticMesh!=="undefined"&&target===staticMesh)directionalShadows?.invalidate();
 }
 function draw(target,vertexCount=target.count){
  if(!vertexCount)return;
@@ -581,6 +612,13 @@ function loadLicensedScenery(){
      currentWorldData=detail.data;upload(staticMesh,currentWorldData);
      scenery.architecturalTiles=roofing.tiles;
      scenery.architecturalTriangles=roofing.triangles;
+    }
+    if(window.WPBotanicalDetail){
+     const botanical=new Geometry();botanical.data=currentWorldData.slice();
+     const flora=window.WPBotanicalDetail.append(botanical,blocked,flags,boxes);
+     currentWorldData=botanical.data;upload(staticMesh,currentWorldData);
+     scenery.botanicalClumps=flora.clumps;
+     scenery.botanicalTriangles=flora.triangles;
     }
     mediumSolids.push(...(result.mediumColliders||[]));
     highSolids.push(...result.colliders);
@@ -1275,6 +1313,15 @@ function render(){
   }
  }
  const isHigh=game.quality==="high"&&!!highProgram&&!!highUniforms;
+ if(isHigh){
+  // After scene warmup, suspend expensive shadow sampling if even High
+  // resolution scaling cannot maintain interactive frame pacing.
+  if(game.elapsed>3&&game.fps<19)shadowsSuspended=true;
+  else if(game.fps>43)shadowsSuspended=false;
+  if(!directionalShadows&&window.WPDirectionalShadows)
+   directionalShadows=window.WPDirectionalShadows.create(gl);
+  if(!shadowsSuspended)directionalShadows?.renderStatic(staticMesh,lastWidth,lastHeight);
+ }
  gl.useProgram(isHigh?highProgram:program);
  const uniforms=isHigh?highUniforms:{
   uVP:vpLocation,uEye:eyeLocation,uDetailLevel:detailLocation,
@@ -1288,6 +1335,13 @@ function render(){
   gl.uniform1f(uniforms.uUseAtlas,materialTextures?1:0);
  }
  if(materialTextures&&atlasKit)atlasKit.bind(gl,{diffuse:uniforms.uDiffuse,normal:uniforms.uBump},materialTextures);
+ if(isHigh){
+  if(directionalShadows)directionalShadows.bind({
+   map:uniforms.uShadowMap,light:uniforms.uLightVP,
+   texel:uniforms.uShadowTexel,enabled:uniforms.uShadowEnabled
+  },!shadowsSuspended);
+  else if(uniforms.uShadowEnabled)gl.uniform1f(uniforms.uShadowEnabled,0);
+ }
  // Low retains the previous licensed battlefield without the new scene-density cost.
  draw(staticMesh,game.quality==="low"?lowVertexCount:game.quality==="medium"?mediumVertexCount:staticMesh.count);
  upload(liveMesh,dynamicGeometry());
@@ -1465,6 +1519,9 @@ window.WP3DDiagnostics=()=>({
   atmosphericSky:skyRenderer?.stats()||{ready:false,draws:0},
   architecturalTiles:scenery.architecturalTiles||0,
   architecturalTriangles:scenery.architecturalTriangles||0,
+  botanicalClumps:scenery.botanicalClumps||0,botanicalTriangles:scenery.botanicalTriangles||0,
+  directionalShadows:directionalShadows?.stats()||{ready:false,staticPasses:0},
+  shadowsSuspended,
   terrainTriangles:scenery.terrainTriangles||0,
   physicalTerrainTriangles:window.WPWW2Terrain?.baseTriangles||0,
   terrainAtPlayer:worldHeight(player.x,player.z),

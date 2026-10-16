@@ -26,18 +26,18 @@ async function sample(which,quality,repeat){
    if(d.dressingInstances<1||d.dressingTriangles>4800)
     throw Error("CC0 dressing not ready for paired FPS test: "+d.dressingError);
   }
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(850);
   await page.evaluate(()=>window.WP3DProbe.reset());
   const start=Date.now();
-  await page.waitForFunction(()=>window.WP3DProbe.report().sampling.frames>=8,
-   null,{timeout:20000}).catch(()=>{});
+  await page.waitForFunction(()=>window.WP3DProbe.report().sampling.frames>=24,
+   null,{timeout:45000}).catch(()=>{});
   const report=await page.evaluate(()=>window.WP3DProbe.report());
   const result={which,quality,repeat,frames:report.sampling.frames,
    fps:report.performance.avgFps,p95:report.performance.p95FrameMs,
    renderCpuMs:report.performance.avgRenderCpuMs,elapsedMs:Date.now()-start,
    errors};
   if(errors.length)throw Error(which+" "+quality+" browser crash: "+errors.join("; "));
-  if(!Number.isFinite(result.fps)||result.frames<3)
+  if(!Number.isFinite(result.fps)||result.frames<12)
    throw Error(which+" "+quality+" failed to render at least 3 actual frames: "+JSON.stringify(result));
   outputs.push(result);console.log("AB_FRAME_RESULT",JSON.stringify(result));
  }finally{await ctx.close()}
