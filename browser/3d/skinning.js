@@ -116,6 +116,19 @@ function parse(buffer){
   bindMatrices:Array.from({length:jointCount},(_,i)=>Array.from(ibm.out.slice(16*i,16*i+16))),
   mesh:renderables,animations,triangleCount:renderables.reduce((n,p)=>n+p.indices.length/3,0),names};
 }
+// Shortest-arc quaternion SLERP eliminates linear-quaternion foot and shoulder pops.
+function slerpQuaternion(a,b,t){
+ let cosine=a.reduce((sum,x,i)=>sum+x*b[i],0),end=b;
+ if(cosine<0){cosine=-cosine;end=b.map(x=>-x);}
+ cosine=Math.max(-1,Math.min(1,cosine));
+ if(cosine>.9995){
+  const q=a.map((x,i)=>x+(end[i]-x)*t),len=Math.hypot(...q)||1;
+  return q.map(v=>v/len);
+ }
+ const theta=Math.acos(cosine),sinTheta=Math.sin(theta);
+ const u=Math.sin((1-t)*theta)/sinTheta,v=Math.sin(t*theta)/sinTheta;
+ return a.map((x,i)=>x*u+end[i]*v);
+}
 function sample(track,seconds){
  const ts=track.times,vals=track.values,n=track.n;
  if(!ts.length)return null;
@@ -123,9 +136,11 @@ function sample(track,seconds){
  while(i+1<ts.length&&ts[i+1]<=seconds)i++;
  const j=Math.min(i+1,ts.length-1);
  const t=track.interpolation==="STEP"||i===j?0:Math.max(0,Math.min(1,(seconds-ts[i])/Math.max(1e-6,ts[j]-ts[i])));
- let v=Array.from({length:n},(_,k)=>vals[i*n+k]*(1-t)+vals[j*n+k]*t);
- if(track.path==="rotation"){const magnitude=Math.hypot(...v)||1;v=v.map(x=>x/magnitude)}
- return v;
+ if(track.path==="rotation"){
+  const a=Array.from(vals.slice(i*n,i*n+n)),b=Array.from(vals.slice(j*n,j*n+n));
+  return slerpQuaternion(a,b,t);
+ }
+ return Array.from({length:n},(_,k)=>vals[i*n+k]*(1-t)+vals[j*n+k]*t);
 }
 function pose(model,time=0,mode="walk",animIndex=-1){
  const local=new Array(model.nodes.length),world=new Array(model.nodes.length);
@@ -152,6 +167,18 @@ function pose(model,time=0,mode="walk",animIndex=-1){
    const ni=model.names.get(name);if(ni===undefined)continue;
    override.set(ni,{rotation:quatMul(model.nodes[ni].rotation||[0,0,0,1],axisQ(axis,angle))});
   }
+ }
+ // Animation-layer motion: subtle breathing on idle/aim and torso follow-through.
+ // Composes with historical authored clips instead of replacing locomotion.
+ const breathing=Math.sin(time*2.15)*.012;
+ const lean=mode==="run"?.023:mode==="walk"?.009:0;
+ for(const name of ["Spine","Spine1","Chest","mixamorig:Spine","mixamorig:Spine1"]){
+  const id=model.names.get(name);if(id===undefined)continue;
+  const node=model.nodes[id],ov=override.get(id)||{};
+  const base=ov.rotation||node.rotation||[0,0,0,1];
+  ov.rotation=quatMul(base,axisQ([1,0,0],breathing+lean*Math.sin(time*7.2)));
+  override.set(id,ov);
+  break;
  }
  const seen=new Set();
  function visit(id,mat,depth){
@@ -220,5 +247,5 @@ async function load(name="character_medium"){
  const bytes=Uint8Array.from(atob(txt),c=>c.charCodeAt(0));
  const result=parse(bytes.buffer);result.isHistorical=folder==="oga";return result;
 }
-root.WPSkinning=Object.freeze({load,parse,pose,append});
+root.WPSkinning=Object.freeze({load,parse,pose,append,slerpQuaternion});
 })(window);
