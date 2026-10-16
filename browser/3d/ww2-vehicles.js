@@ -49,11 +49,16 @@ function selectShell(type){
  return v.shellType;
 }
 function current(){return records.find(r=>r.id===occupied)||null}
-function near(player){
- let best=null,d=4.3;
+function nearest(player){
+ let best=null,d=Infinity;
  for(const v of records)if(v.alive&&v.team==="ally"){
   const away=distance(v,player);if(away<d){best=v;d=away;}
- }return best;
+ }
+ return best?{id:best.id,name:best.name,distance:d}:null;
+}
+function near(player){
+ const next=nearest(player);
+ return next&&next.distance<4.6?records.find(v=>v.id===next.id):null;
 }
 function toggle(player,blocked){
  if(occupied){
@@ -400,15 +405,19 @@ function draw(g,kit,quality,player,time){
    triangles+=kit.appendInstances(g,model,[[originX,y+(v.groundY||0),originZ,scale,modelYaw]]);
    imported++;
   }else if(v.id!=="jeep"&&quality!=="low"){
-   triangles+=drawArmor(g,v,quality,v.id==="armor"&&occupied==="armor"?player.yaw:null);
+   triangles+=drawArmor(g,v,quality,
+    v.id==="armor"&&occupied==="armor"?player.yaw:v.turretYaw);
   }else{
    // Functional always-present silhouette for phone and absent imported art.
    const c=v.team==="axis"?[.34,.37,.30]:[.30,.36,.27];
    g.box(v.x,1.0+(v.groundY||0),v.z,v.width,1.0,v.length,c,-v.yaw);
    g.box(v.x,1.65+(v.groundY||0),v.z-.45,v.width*.77,.60,v.length*.52,c,-v.yaw);
    if(v.id!=="jeep"){
-    g.box(v.x,2.13+(v.groundY||0),v.z,.95,.45,1.40,[.25,.30,.24],v.yaw);
-    g.box(v.x-Math.sin(v.yaw)*1.6,2.07+(v.groundY||0),v.z+Math.cos(v.yaw)*1.6,.14,.14,2.3,[.15,.17,.15],-v.yaw);
+    const tyaw=v.id==="armor"&&occupied==="armor"?player.yaw:v.turretYaw;
+    const hx=-Math.sin(tyaw),hz=Math.cos(tyaw);
+    g.box(v.x,2.13+(v.groundY||0),v.z,.95,.45,1.40,[.25,.30,.24],-tyaw);
+    g.box(v.x+hx*1.65,2.16+(v.groundY||0),v.z+hz*1.65,
+     .19,.17,2.65,[.15,.17,.15],-tyaw);
    }else{
     g.box(v.x,1.72+(v.groundY||0),v.z-.28,v.width*.93,.08,.12,[.19,.19,.17],v.yaw);
    }
@@ -434,7 +443,33 @@ function draw(g,kit,quality,player,time){
    accessory(0,1.37,-1.73,.52,.52,.11,rubber);
    accessory(.01,1.45,-1.80,.19,.19,.13,frame);
   }
-  if(v.shotFlash>0)g.cone(v.x,2.5+(v.groundY||0),v.z,0.16,.55,[.96,.66,.22],5);
+  if(v.shotFlash>0){
+   const yaw=v.turretYaw||v.yaw;
+   const mx=v.x-Math.sin(yaw)*3.15,mz=v.z+Math.cos(yaw)*3.15;
+   g.cone(mx,2.32+(v.groundY||0),mz,.23,.67,[.98,.71,.27],7);
+   triangles+=7;
+  }
+  // Engine exhaust and displaced dust respond to actual hull movement.
+  if(Math.abs(v.speed)>.4&&quality!=="low"&&dist<30){
+   const phase=Math.sin(time*17+v.x*.7);
+   const yaw=v.yaw;
+   const x=v.x+Math.sin(yaw)*(v.length*.44),z=v.z-Math.cos(yaw)*(v.length*.44);
+   g.cone(x,(v.groundY||0)+.11,z,.19+Math.abs(phase)*.08,.35,
+    [.43,.41,.35],5);triangles+=5;
+  }
+ }
+ // Bounded shell streaks show which direction the vehicle actually fired.
+ for(const s of shells){
+  if(Math.hypot(s.a.x-player.x,s.a.z-player.z)>65)continue;
+  const t=clamp(s.age/s.life,0,1),head=.14+.86*t;
+  const p=[s.a.x+(s.b.x-s.a.x)*head,
+   s.a.y+(s.b.y-s.a.y)*head,s.a.z+(s.b.z-s.a.z)*head];
+  const tail=[s.a.x+(s.b.x-s.a.x)*Math.max(0,head-.09),
+   s.a.y+(s.b.y-s.a.y)*Math.max(0,head-.09),
+   s.a.z+(s.b.z-s.a.z)*Math.max(0,head-.09)];
+  g.quad(tail,p,[p[0],p[1]+.065,p[2]],
+   [tail[0],tail[1]+.065,tail[2]],s.type==="he"?[.99,.58,.23]:[.96,.86,.52]);
+  triangles+=2;
  }
  status.trianglesLast=triangles;
  return triangles;
@@ -444,7 +479,10 @@ function setGround(height){
 }
 function info(){return {ready:status.ready,loaded:status.loaded,errors:{...status.errors},
  driving:occupied,vehicle:current()?.name||"",enemyAlive:records.find(v=>v.id==="enemy")?.alive,
- vehicles:records.map(v=>({id:v.id,name:v.name,x:v.x,z:v.z,hp:v.hp,speed:v.speed,alive:v.alive})),
- shots:fired,hits:hit,collisionRejected,collisionSamples,renderedTriangles:status.trianglesLast};}
-root.WPArmoredFleet=Object.freeze({reset,load,toggle,isDriving,current,near,move,fire,tick,draw,info,setGround,footprintClear,overlappingHull});
+ vehicles:records.map(v=>({id:v.id,name:v.name,x:v.x,z:v.z,yaw:v.yaw,turretYaw:v.turretYaw,
+ hp:v.hp,speed:v.speed,alive:v.alive,reload:v.reload,ammo:{...v.ammo},shellType:v.shellType,
+ lastImpact:v.lastImpact})),
+ shots:fired,hits:hit,activeShells:shells.length,collisionRejected,collisionSamples,
+ renderedTriangles:status.trianglesLast};}
+root.WPArmoredFleet=Object.freeze({reset,load,toggle,mount,selectShell,nearest,isDriving,current,near,move,fire,tick,draw,info,setGround,footprintClear,overlappingHull,traceShell});
 })(window);
