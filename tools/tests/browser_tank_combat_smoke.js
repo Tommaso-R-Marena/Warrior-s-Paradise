@@ -47,10 +47,26 @@ fleet.reset();p=player();assert(fleet.mount(p,"armor"));
 const friendly=fleet.current(),enemy=fleet.info().vehicles.find(v=>v.id==="enemy");
 friendly.x=enemy.x-20;friendly.z=enemy.z;friendly.groundY=0;
 p.x=friendly.x;p.z=friendly.z;p.yaw=-Math.PI/2;p.pitch=0;
-assert(fleet.fire(p,[],()=>true,()=>{},()=>{},()=>{},world),"The main cannon could not engage enemy armor");
+// Simulate turret traversal without moving the AI vehicle.
+for(let i=0;i<100;i++)fleet.tick(1/60,p,()=>false,()=>{},()=>{},null);
+assert(Math.abs(fleet.current().turretYaw-p.yaw)<.025,
+ "Gun cannot slew to its commanded heading");
+assert(fleet.fire(p,[],()=>true,()=>{},()=>{},()=>{},world),
+ "The main cannon could not engage enemy armor");
 const after=fleet.info().vehicles.find(v=>v.id==="enemy");
 assert(after.hp<enemy.hp&&after.alive,"AP projectile should damage enemy tank");
+assert(fleet.info().activeImpacts>0,"Physical shell hits should produce visible impact smoke");
 assert.equal(friendly.lastImpact.type,"armor");
+// Sustained AP hits produce a persistent physical wreck, not a removed model.
+fleet.tick(3.5,p,()=>false,()=>{},()=>{},null);
+fleet.fire(p,[],()=>true,()=>{},()=>{},()=>{},world);
+fleet.tick(3.5,p,()=>false,()=>{},()=>{},null);
+fleet.fire(p,[],()=>true,()=>{},()=>{},()=>{},world);
+assert(!fleet.info().enemyAlive,"Panzer wreck was not destroyed by sustained fire");
+const wreck=fleet.info().vehicles.find(v=>v.id==="enemy");
+const physicalWreck=fleet.footprintClear(fleet.current(),wreck.x,wreck.z,wreck.yaw,
+ ()=>false);
+assert(!physicalWreck,"Destroyed Panzer must still obstruct the battlefield");
 fleet.reset();
 const movingPlayer={x:8,z:15,yaw:0,hp:100};
 const before=fleet.info().vehicles.find(v=>v.id==="enemy");
@@ -70,4 +86,8 @@ const html=fs.readFileSync(path.resolve(__dirname,"../../browser/3d/index.html")
 assert(html.includes('id="deployment"'));
 assert(sourceGame.includes('window.WPArmoredFleet.mount(player,"armor")'));
 assert(sourceGame.includes('fleet.fire(player,game.enemies,lineHit'));
+assert(sourceGame.includes('id==="armor"?"0":""'),"Tank-only reticle suppression missing");
+const overlay=fs.readFileSync(path.resolve(__dirname,"../../browser/3d/index.html"),"utf8");
+for(const id of ["tank-sight","tank-hpbar","tank-gun-status","tank-gear"])
+ assert(overlay.includes('id="'+id+'"'),"Tank UI missing: "+id);
 console.log("PASS mobile/desktop tank physics, turret, AP/HE, shell cover, enemy armor, reload, Panzer advance");

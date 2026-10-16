@@ -77,3 +77,41 @@
 #performance-open:focus-visible{outline:2px solid #f9d37c;outline-offset:2px}
 @media(max-width:650px){#performance-open{padding:6px;min-height:34px;font-size:10px}}
 .perf-actions{flex-wrap:wrap}
+
+/* Sherman station: real-state gunsight, no Canvas overdraw and no controls blocked. */
+.tank-sight{position:absolute;inset:0;pointer-events:none;z-index:2;color:#efe9ce;
+ font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-weight:750;
+ text-shadow:0 1px 4px #000,0 0 12px #000b;letter-spacing:.1em}
+.tank-sight[hidden]{display:none!important}
+.tank-vignette{position:absolute;inset:0;background:radial-gradient(ellipse 48% 57% at 50% 50%,
+ transparent 48%,#17221a12 70%,#141a1490 100%)}
+.tank-sight-top,.tank-gun-status,.tank-ammo-status,.tank-gear{position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap}
+.tank-sight-top{top:15%;font-size:11px;color:#ece2b9;border-bottom:1px solid #e5d4a064;padding:4px 15px}
+.tank-gun-status{top:calc(50% + 71px);font-size:12px;color:#d4edcb;background:#1c2a20a6;border:1px solid #d8e3bd39;padding:5px 12px;border-radius:4px}
+.tank-sight.slewing .tank-gun-status{color:#ffcb7e;border-color:#e1b47777}
+.tank-reticle{position:absolute;left:50%;top:50%;width:146px;height:146px;
+ transform:translate(-50%,-50%);border:1px solid #d0d6b450;border-radius:50%}
+.tank-reticle:before{content:"";position:absolute;width:3px;height:3px;background:#f1edcb;
+ border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}
+.tank-reticle:after{content:"";position:absolute;inset:11px;border:1px dashed #a7b29d48;border-radius:50%}
+.tank-reticle i,.tank-reticle b,.tank-reticle em{position:absolute;display:block;background:#dce1c7ab}
+.tank-reticle i{height:1px;left:-27px;right:-27px;top:50%}
+.tank-reticle b{width:1px;top:-21px;bottom:-21px;left:50%}
+.tank-reticle em{width:26px;height:1px;left:50%;top:calc(50% + 26px);transform:translateX(-50%)}
+.tank-ammo-status{bottom:18%;font-size:11px;border:1px solid #efdfad4e;background:#1a2821a8;padding:6px 13px}
+.tank-gear{bottom:13%;font-size:10px;color:#e5dcb9}
+.tank-gauge{position:absolute;bottom:12%;left:max(18px,env(safe-area-inset-left));width:158px;font-size:10px}
+.tank-gauge>div{height:7px;background:#1b211bcc;border:1px solid #eee3be70;margin-top:7px;border-radius:2px;overflow:hidden}
+#tank-hpbar{display:block;width:100%;height:100%;background:linear-gradient(90deg,#ac6e43,#d9c784,#b6d29e);transition:width .15s}
+.tank-sight:not([hidden])~#crosshair{opacity:0}
+@media(pointer:coarse){
+ .tank-sight-top{top:18%;font-size:9px}
+ .tank-reticle{width:98px;height:98px}
+ .tank-reticle i{left:-13px;right:-13px}
+ .tank-reticle b{top:-13px;bottom:-13px}
+ .tank-gun-status{top:calc(50% + 52px);font-size:10px}
+ .tank-ammo-status{bottom:29%;font-size:10px}
+ .tank-gear{bottom:24%}
+ .tank-gauge{bottom:21%;left:12px;width:98px;font-size:8px}
+}
+@media (max-height:520px){.tank-sight-top{top:9%}.tank-gear{bottom:10%}.tank-ammo-status{bottom:17%}}

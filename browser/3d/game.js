@@ -787,6 +787,26 @@ function hud(){
  $("fps").textContent="3D · "+game.quality.toUpperCase()+" · "+Math.round(game.fps)+" FPS";
  $("hurt").style.opacity=player.hurt>.02?String(Math.min(.42,player.hurt*.22)):"0";
  $("crosshair").classList.toggle("aiming",player.aim);
+ $("crosshair").style.opacity=crew?.id==="armor"?"0":"";
+ const sight=$("tank-sight");
+ if(sight){
+  const tank=crew?.id==="armor"?crew:null;
+  sight.hidden=!tank;
+  if(tank){
+   const lag=Math.atan2(Math.sin(player.yaw-tank.turretYaw),
+    Math.cos(player.yaw-tank.turretYaw));
+   const onTarget=Math.abs(lag)<.035;
+   sight.classList.toggle("slewing",!onTarget);
+   $("tank-gun-status").textContent=tank.reload>.05?
+    "RELOADING "+tank.reload.toFixed(1)+"s":
+    !tank.ammo[tank.shellType]?"NO "+tank.shellType.toUpperCase()+" ROUNDS":
+    onTarget?"75 MM · READY":"TURRET SLEW "+Math.round(Math.abs(lag)*180/Math.PI)+"°";
+   $("tank-gear").textContent=Math.abs(tank.speed)<.15?"NEUTRAL":
+    tank.speed>0?"FORWARD":"REVERSE";
+   $("tank-hpbar").style.width=(Math.max(0,tank.hp)/tank.maxHp*100).toFixed(1)+"%";
+   $("tank-sight-range").textContent="AP "+tank.ammo.ap+"   HE "+tank.ammo.he;
+  }
+ }
 }
 function end(victory){
  game.playing=false;game.finished=true;input.fire=false;player.aim=false;
@@ -1100,7 +1120,8 @@ function simulate(dt){
  if(window.WP3DProbe)window.WP3DProbe.movement(player.x,player.z,mag,pace,dt);
  if(window.WPBattleSound){
   const speed=Math.hypot(player.x-oldX,player.z-oldZ)/Math.max(.001,dt);
-  window.WPBattleSound.footsteps(game.elapsed,speed,player.crouch);
+  if(!window.WPArmoredFleet?.isDriving())
+   window.WPBattleSound.footsteps(game.elapsed,speed,player.crouch);
   window.WPBattleSound.distant(game.elapsed);
  }
  if(input.fire)shoot();
