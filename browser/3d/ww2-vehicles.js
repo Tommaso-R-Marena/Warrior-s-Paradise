@@ -263,7 +263,7 @@ function tick(dt,player,hasLOS,onPlayerHit,onBlast,world){
   const desired=enemy.turretYaw;
   const steer=clamp(angleDelta(desired,enemy.yaw),-.38*dt,.38*dt);
   const nyaw=enemy.yaw+steer;
-  const speed=1.75,travel=Math.min(speed*dt,.16);
+  const speed=1.75,travel=Math.abs(angleDelta(desired,nyaw))>.30?0:Math.min(speed*dt,.16);
   const nx=enemy.x-Math.sin(nyaw)*travel,nz=enemy.z+Math.cos(nyaw)*travel;
   if(footprintClear(enemy,nx,nz,nyaw,world.blocked)&&
      (!world.traversable||world.traversable(enemy.x,enemy.z,nx,nz,enemy.width*.48))){
