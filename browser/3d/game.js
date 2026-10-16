@@ -285,9 +285,13 @@ function blocked(x,z,r=.42){
  treeTrunks.some(t=>Math.hypot(x-t.x,z-t.z)<t.radius+r);
 }
 function openLOS(ax,az,bx,bz){
- const d=Math.hypot(bx-ax,bz-az),segments=Math.ceil(d/.55);
+ const d=Math.hypot(bx-ax,bz-az),segments=Math.max(1,Math.ceil(d/.55));
+ const eyeA=worldHeight(ax,az)+1.55,eyeB=worldHeight(bx,bz)+1.48;
  for(let i=1;i<segments;i++){
-  const t=i/segments;if(boxes.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.12))||
+  const t=i/segments,px=ax+(bx-ax)*t,pz=az+(bz-az)*t;
+  // A ridge is real occlusion, not transparent visual scenery.
+  if(worldHeight(px,pz)>(eyeA+(eyeB-eyeA)*t)-.04)return false;
+  if(boxes.some(b=>within(px,pz,b,.12))||
       covers.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
       artStructures.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
       solidProps.some(b=>within(ax+(bx-ax)*t,az+(bz-az)*t,b,.05))||
@@ -753,7 +757,9 @@ function shoot(){
   weapon:player.weapon,yaw:player.yaw,pitch:player.pitch,
   spreadYaw:(rnd()-.5)*spread,spreadPitch:(rnd()-.5)*spread*.72,
   targets:game.enemies,
-  obstacles:{buildings:boxes,covers,structures:artStructures,trunks:treeTrunks}});
+  obstacles:{buildings:boxes,covers,
+   structures:[...artStructures,...solidProps,...coreSolids,...tierSolids()],
+   trunks:treeTrunks,terrain:worldHeight}});
  const end=shot.endpoint;
  addTracer(player.x,player.z,end.x,end.z,"friendly",eyeY,end.y);
  game.lastShot={weapon:player.weapon,damage:shot.damage,zone:shot.zone,
