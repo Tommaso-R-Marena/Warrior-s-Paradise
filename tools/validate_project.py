@@ -67,6 +67,7 @@ REQUIRED = [
     "browser/3d/contact-shadows.js",
     "browser/3d/directional-shadows.js",
     "tools/tests/browser_cinematic_fidelity_smoke.js",
+    "tools/tests/browser_grounding_materials_smoke.js",
     "tools/tests/browser_graphics_fidelity_smoke.js",
     "tools/tests/browser_battle_atmosphere_smoke.js",
     "tools/tests/browser_tactical_navigation_smoke.js",
