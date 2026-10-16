@@ -64,6 +64,7 @@ REQUIRED = [
     "browser/3d/battle-sky.js",
     "browser/3d/architectural-detail.js",
     "browser/3d/botanical-detail.js",
+    "browser/3d/contact-shadows.js",
     "browser/3d/directional-shadows.js",
     "tools/tests/browser_cinematic_fidelity_smoke.js",
     "tools/tests/browser_graphics_fidelity_smoke.js",
