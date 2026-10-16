@@ -123,7 +123,7 @@ const highSource=FS.replace(
   "float towardSun=pow(max(0.,dot(lookRay,normalize(vec3(.53,.88,-.36)))),8.);",
   "vec3 fogTint=mix(vec3(.66,.73,.70),vec3(.77,.70,.61),towardSun*.48);",
   "rgb=mix(rgb,fogTint,min(.83,fog*.86+lowMist));"
- ].join("\\n")
+ ].join("\n")
 );
 function shader(type,source){
  const o=gl.createShader(type);gl.shaderSource(o,source);gl.compileShader(o);
