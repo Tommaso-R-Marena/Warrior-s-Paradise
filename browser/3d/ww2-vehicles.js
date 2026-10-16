@@ -325,16 +325,17 @@ const high=quality==="high",med=quality==="medium";
  // Match physics: positive vehicle yaw moves toward negative world X.
  const yaw=-v.yaw,cs=Math.cos(yaw),sn=Math.sin(yaw);
  const pivotZ=v.team==="ally"?-.55:-.4;
+ const material=c=>high?[c[0],c[1],-Math.max(.004,c[2])]:c;
  function gunBox(dx,y,dz,w,h,d,c){
   const cyaw=Number.isFinite(aimYaw)?-aimYaw:yaw;
   const cp=Math.cos(cyaw),sp=Math.sin(cyaw);
   const rel=dz-pivotZ-(dz>.45?v.recoil||0:0);
   const ox=v.x+sn*pivotZ,oz=v.z+cs*pivotZ;
-  g.box(ox+cp*dx+sp*rel,y+(v.groundY||0),oz-sp*dx+cp*rel,w,h,d,c,cyaw);n+=12;
+  g.box(ox+cp*dx+sp*rel,y+(v.groundY||0),oz-sp*dx+cp*rel,w,h,d,material(c),cyaw);n+=12;
  }
  let n=0;
  function box(dx,y,dz,w,h,d,c=hull,angle=0){
-  g.box(v.x+cs*dx+sn*dz,y+(v.groundY||0),v.z-sn*dx+cs*dz,w,h,d,c,yaw+angle);n+=12;
+  g.box(v.x+cs*dx+sn*dz,y+(v.groundY||0),v.z-sn*dx+cs*dz,w,h,d,material(c),yaw+angle);n+=12;
  }
  // Hull, mantlet, tracks and roadwheel arrangement follow distinct
  // Allied rounded Sherman versus German boxy Panzer IV silhouettes.
@@ -408,10 +409,10 @@ const high=quality==="high",med=quality==="medium";
    for(let facet=0;facet<8;facet++){
     const a=spin+facet*Math.PI/4,b=a+Math.PI/4;
     // The dark rubber rim and weathered steel inner face are distinct.
-    g.tri(vertex(a,outer),vertex(b,outer),vertex(b,inner),track);n++;
-    g.tri(vertex(a,outer),vertex(b,inner),vertex(a,inner),accent);n++;
+    g.tri(vertex(a,outer),vertex(b,outer),vertex(b,inner),material(track));n++;
+    g.tri(vertex(a,outer),vertex(b,inner),vertex(a,inner),material(accent));n++;
     g.tri(vertex(a,inner),vertex(b,inner),vertex(a,0),
-     facet%2===0?metal:accent);n++;
+     material(facet%2===0?metal:accent));n++;
    }
   }
   for(let j=0;j<5;j++){
