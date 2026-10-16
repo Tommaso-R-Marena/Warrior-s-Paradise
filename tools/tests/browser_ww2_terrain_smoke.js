@@ -52,4 +52,21 @@ assert.equal(t.traversable(10,10,10.2,10.2,.44,flags,boxes),true,
 assert.equal(t.traversable(10,10,10.2,10.2,1.35,flags,boxes,"vehicle"),true,
  "Vehicle should traverse level road");
 assert.equal(t.traversable(steep.x,steep.z,steep.x+.12,steep.z,1.2,flags,boxes,"vehicle"),false);
-console.log("PASS topographic collision: shared mesh, real relief, steep-ground limits, level road, and LOD agreement");
+// A hillside must occlude a projectile, including targets whose hitboxes sit
+// at a raised physical Y coordinate instead of the former flat world floor.
+const bulletScope={};
+vm.runInNewContext(fs.readFileSync(path.resolve(__dirname,"../../browser/3d/infantry-ballistics.js"),"utf8"),
+ {window:bulletScope,Math,Number,Error},{timeout:15000});
+const ballistic=bulletScope.WPInfantryBallistics;
+const e={x:0,z:12,hp:80,groundY:0,alert:0};
+const common={source:{x:0,y:1.67,z:0},weapon:"rifle",yaw:0,pitch:0,
+ targets:[e]};
+const straight=ballistic.trace({...common,obstacles:{groundHeight:()=>0}});
+assert.equal(straight.hit,e,"Unobstructed flat-ground shot should still hit");
+const hidden=ballistic.trace({...common,obstacles:{groundHeight:(x,z)=>z>5&&z<8?2.7:0}});
+assert.equal(hidden.hit,null,"A terrain ridge must absorb a bullet");
+assert.equal(hidden.blockedBy,"terrain");
+const high=ballistic.trace({...common,pitch:.12,
+ targets:[{...e,groundY:2}],obstacles:{groundHeight:()=>0}});
+assert(high.hit&&high.damage>0,"Elevated target must use matching collision height");
+console.log("PASS topography: shared mesh, steep-ground limits, elevated hitboxes and terrain-blocked bullets");
