@@ -4,9 +4,9 @@
  */
 (function(root){"use strict";
 const defs=[
- {id:"jeep",name:"Willys MB 4×4",asset:"willys_mb",team:"ally",x:-41,z:-31,yaw:1.0,
+ {id:"jeep",name:"Willys MB 4×4",asset:"willys_mb",team:"ally",x:-41,z:-31,yaw:-.72,
   width:1.7,length:3.35,height:1.8,max:12,hp:120},
- {id:"armor",name:"M4 Sherman (75 mm)",asset:"m4_sherman_shape",team:"ally",x:-40,z:-23,yaw:.5,
+ {id:"armor",name:"M4 Sherman (75 mm)",asset:"m4_sherman_shape",team:"ally",x:-40,z:-23,yaw:-1.04,
   width:3.0,length:5.6,height:2.5,max:6.1,hp:320},
  {id:"enemy",name:"Panzer IV (H)",asset:"panzer_iv_shape",team:"axis",x:34,z:16,yaw:-1.9,
   width:3.0,length:5.6,height:2.5,max:0,hp:300}
