@@ -663,7 +663,7 @@ const player={x:-36,z:-33,yaw:-.77,pitch:0,hp:100,maxHp:100,ammo:10,reserve:70,
 const game={playing:false,finished:false,sector:0,capture:0,kills:0,elapsed:0,
  enemies:[],allies:[],grenades:[],tracers:[],strikes:[],support:1,order:"follow",
  flash:0,quality:"medium",difficulty:"regular",fps:45,scaler:1,adapt:0,lastShot:null,stealthHits:0,headshots:0,casualties:[]};
-const input={keys:{},fire:false,joyX:0,joyY:0,movePointer:null,lookPointer:null,
+const input={keys:{},fire:false,cannonLatched:false,joyX:0,joyY:0,movePointer:null,lookPointer:null,
  lookX:0,lookY:0};
 function spawnEnemies(){
  game.enemies=[];
@@ -736,7 +736,7 @@ function reset(){
  if(window.WPBattleSound)window.WPBattleSound.boot();
  if(window.WP3DProbe)window.WP3DProbe.reset();
  gpuProfiler?.reset();
- $("menu").hidden=true;input.fire=false;
+ $("menu").hidden=true;input.fire=false;input.cannonLatched=false;
  const fine=typeof window.matchMedia==="function"&&window.matchMedia("(pointer: fine)").matches;
  if(fine&&canvas.requestPointerLock)try{canvas.requestPointerLock();}catch{}
  const hint=$("movement-hint");if(hint){hint.hidden=false;hint.textContent=window.WPArmoredFleet?.current()?.id==="armor"?
@@ -824,6 +824,8 @@ function shoot(){
  const fleet=window.WPArmoredFleet;
  if(fleet?.isDriving()){
   if(fleet.current()?.id==="armor"){
+   // A loaded cannon responds to one trigger pull, not continuous held fire.
+   if(input.cannonLatched)return;
    const fired=fleet.fire(player,game.enemies,lineHit,victim=>{
     if(victim.hp<=0){game.kills++;msg("ARMOR: TARGET DOWN",1);}
    },addTracer,(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type),{
@@ -839,6 +841,7 @@ function shoot(){
     ]
    });
    if(fired){
+    input.cannonLatched=true;
     window.WP3DProbe?.event("shot");
     window.WPBattleSound?.explosion(player.x,player.z,player);
     const strike=fleet.current()?.lastImpact;
@@ -969,6 +972,7 @@ function enterVehicle(){
  if(!game.playing||!window.WPArmoredFleet)return;
  if(window.WPArmoredFleet.toggle(player,blocked)){
   const v=window.WPArmoredFleet.current();
+  input.cannonLatched=false;
   msg(v?"CREWING "+v.name+" · E TO DISEMBARK":"DISEMBARKED · FIRETEAM ON FOOT",1.6);
   const hint=$("movement-hint");
   if(hint)hint.textContent=v?"WASD / THUMB DRIVE · MOUSE / RIGHT THUMB AIM · FIRE CANNON · R SHELL · E EXIT":
@@ -1470,17 +1474,17 @@ canvas.addEventListener("pointerdown",e=>{
  if(!game.playing||e.pointerType==="touch")return;
  if(e.button===2){setAim(true);return;}
  if(e.button===0){
-  input.fire=true;
+  input.fire=true;shoot();
   if(canvas.requestPointerLock)try{canvas.requestPointerLock();}catch{}
  }
 });
 document.addEventListener("pointerup",e=>{
- if(e.button===0&&e.pointerType!=="touch")input.fire=false;
+ if(e.button===0&&e.pointerType!=="touch"){input.fire=false;input.cannonLatched=false;}
  if(e.button===2)setAim(false);
 });
-window.addEventListener("blur",()=>{input.keys={};input.fire=false;setAim(false);input.joyX=0;input.joyY=0;});
+window.addEventListener("blur",()=>{input.keys={};input.fire=false;input.cannonLatched=false;setAim(false);input.joyX=0;input.joyY=0;});
 document.addEventListener("visibilitychange",()=>{
- if(document.hidden){input.fire=false;setAim(false);input.joyX=0;input.joyY=0;}
+ if(document.hidden){input.fire=false;input.cannonLatched=false;setAim(false);input.joyX=0;input.joyY=0;}
 });
 const stick=$("left-stick"),nub=$("nub"),look=$("right-look");
 function updateStick(e){
@@ -1525,7 +1529,7 @@ function button(id,on,off){
   el.addEventListener("pointerup",off);el.addEventListener("pointercancel",off);
  }
 }
-button("fire",()=>{input.fire=true;shoot();},()=>{input.fire=false;});
+button("fire",()=>{input.fire=true;shoot();},()=>{input.fire=false;input.cannonLatched=false;});
 button("aim",()=>setAim(true),()=>setAim(false));
 button("reload",()=>window.WPArmoredFleet?.current()?.id==="armor"?swap():reload());button("grenade",grenade);button("heal",heal);button("swap",swap);
 button("orders",orderSquad);button("support",callArtillery);
