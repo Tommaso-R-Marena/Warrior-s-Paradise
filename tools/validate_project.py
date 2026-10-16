@@ -40,6 +40,8 @@ REQUIRED = [
     "browser/3d/ww2-terrain.js",
     "tools/tests/browser_ww2_terrain_smoke.js",
     "tools/tests/browser_swept_vehicle_collision_smoke.js",
+    "tools/tests/browser_tank_combat_smoke.js",
+    "tools/tests/browser_playwright_tanks.mjs",
     "tools/tests/browser_allied_rig_animation_smoke.js",
     "tools/tests/browser_gpu_profiler_smoke.js",
     "browser/3d/ww2-environment.js",
