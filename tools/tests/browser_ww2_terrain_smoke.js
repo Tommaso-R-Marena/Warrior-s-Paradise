@@ -66,7 +66,7 @@ assert.equal(straight.hit,e,"Unobstructed flat-ground shot should still hit");
 const hidden=ballistic.trace({...common,obstacles:{groundHeight:(x,z)=>z>5&&z<8?2.7:0}});
 assert.equal(hidden.hit,null,"A terrain ridge must absorb a bullet");
 assert.equal(hidden.blockedBy,"terrain");
-const high=ballistic.trace({...common,pitch:.12,
+const uphillShot=ballistic.trace({...common,pitch:.12,
  targets:[{...e,groundY:2}],obstacles:{groundHeight:()=>0}});
-assert(high.hit&&high.damage>0,"Elevated target must use matching collision height");
+assert(uphillShot.hit&&uphillShot.damage>0,"Elevated target must use matching collision height");
 console.log("PASS topography: shared mesh, steep-ground limits, elevated hitboxes and terrain-blocked bullets");
