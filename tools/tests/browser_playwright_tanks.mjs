@@ -58,8 +58,21 @@ try{
  await page.keyboard.press("e");
  const reentered=await page.evaluate(()=>window.WP3DDiagnostics());
  assert(reentered.armor.driving==="armor","E did not reenter the parked Sherman");
+ // Check real physical enemy armor movement in the same deployed world. The
+ // enemy must first rotate to the player and then traverse without ignoring rocks.
+ await page.keyboard.press("e");
+ const panzer=await page.evaluate(()=>{
+  window.WP3DQA.combatScenario({x:9,z:16,yaw:0,pitch:0,enemies:[],clearDecoration:true});
+  const take=()=>window.WP3DDiagnostics().armor.vehicles.find(v=>v.id==="enemy");
+  const before=take();window.WP3DQA.step(580);const after=take();
+  return {before,after,playing:window.WP3DDiagnostics().playing};
+ });
+ const panzerMoved=Math.hypot(panzer.after.x-panzer.before.x,panzer.after.z-panzer.before.z);
+ assert(panzerMoved>.35,
+  "Enemy Panzer IV is stuck in actual battlefield geometry: "+JSON.stringify(panzer));
  assert(!errors.length,"Uncaught browser errors: "+errors.join("; "));
  console.log("PASS REAL TANK BROWSER",JSON.stringify({
   distanceDriven:Number(traveled.toFixed(2)),shellsFired:fired.armor.shots,
+  panzerMoved:Number(panzerMoved.toFixed(2)),
   impact:gun.lastImpact,ammo:gun.ammo,exitAndReentry:true}));
 }finally{await browser.close();}
