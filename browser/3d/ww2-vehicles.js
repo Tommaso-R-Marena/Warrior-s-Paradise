@@ -325,16 +325,17 @@ const high=quality==="high",med=quality==="medium";
  // Match physics: positive vehicle yaw moves toward negative world X.
  const yaw=-v.yaw,cs=Math.cos(yaw),sn=Math.sin(yaw);
  const pivotZ=v.team==="ally"?-.55:-.4;
+ const material=c=>high?[c[0],c[1],-Math.max(.004,c[2])]:c;
  function gunBox(dx,y,dz,w,h,d,c){
   const cyaw=Number.isFinite(aimYaw)?-aimYaw:yaw;
   const cp=Math.cos(cyaw),sp=Math.sin(cyaw);
   const rel=dz-pivotZ-(dz>.45?v.recoil||0:0);
   const ox=v.x+sn*pivotZ,oz=v.z+cs*pivotZ;
-  g.box(ox+cp*dx+sp*rel,y+(v.groundY||0),oz-sp*dx+cp*rel,w,h,d,c,cyaw);n+=12;
+  g.box(ox+cp*dx+sp*rel,y+(v.groundY||0),oz-sp*dx+cp*rel,w,h,d,material(c),cyaw);n+=12;
  }
  let n=0;
  function box(dx,y,dz,w,h,d,c=hull,angle=0){
-  g.box(v.x+cs*dx+sn*dz,y+(v.groundY||0),v.z-sn*dx+cs*dz,w,h,d,c,yaw+angle);n+=12;
+  g.box(v.x+cs*dx+sn*dz,y+(v.groundY||0),v.z-sn*dx+cs*dz,w,h,d,material(c),yaw+angle);n+=12;
  }
  // Hull, mantlet, tracks and roadwheel arrangement follow distinct
  // Allied rounded Sherman versus German boxy Panzer IV silhouettes.
@@ -392,6 +393,27 @@ const high=quality==="high",med=quality==="medium";
    box(side*.88,1.51,1.67,.56,.06,.08,metal);
    box(side*1.0,1.18,-2.05,.19,.16,.26,accent);
    box(side*.66,1.72,-1.68,.33,.24,.43,accent);
+  }
+  // Faceted, hubbed road-wheel silhouettes in the YZ plane, aligned with the
+  // actual tracked chassis. Fixed 6x2 wheels and 8 sectors per side; no meshes
+  // loaded at runtime or extra draw calls.
+  for(const side of [-1,1])for(let station=0;station<6;station++){
+   const stationZ=-1.95+station*.77;
+   const wheelCenterY=.52,outer=.285,inner=.128;
+   const axle=side*1.755;
+   const vertex=(a,r)=>{
+    const lx=axle,ly=wheelCenterY+Math.cos(a)*r,lz=stationZ+Math.sin(a)*r;
+    return [v.x+cs*lx+sn*lz,(v.groundY||0)+ly,v.z-sn*lx+cs*lz];
+   };
+   const spin=(v.treadPhase||0)*.62/outer+station*.23;
+   for(let facet=0;facet<8;facet++){
+    const a=spin+facet*Math.PI/4,b=a+Math.PI/4;
+    // The dark rubber rim and weathered steel inner face are distinct.
+    g.tri(vertex(a,outer),vertex(b,outer),vertex(b,inner),material(track));n++;
+    g.tri(vertex(a,outer),vertex(b,inner),vertex(a,inner),material(accent));n++;
+    g.tri(vertex(a,inner),vertex(b,inner),vertex(a,0),
+     material(facet%2===0?metal:accent));n++;
+   }
   }
   for(let j=0;j<5;j++){
    box(-.66+j*.33,1.82,-1.44,.065,.05,.75,track);
@@ -531,7 +553,8 @@ function setGround(height){
 function info(){return {ready:status.ready,loaded:status.loaded,errors:{...status.errors},
  driving:occupied,vehicle:current()?.name||"",enemyAlive:records.find(v=>v.id==="enemy")?.alive,
  vehicles:records.map(v=>({id:v.id,name:v.name,x:v.x,z:v.z,yaw:v.yaw,turretYaw:v.turretYaw,
- hp:v.hp,speed:v.speed,alive:v.alive,reload:v.reload,ammo:{...v.ammo},shellType:v.shellType,
+ hp:v.hp,speed:v.speed,alive:v.alive,width:v.width,length:v.length,
+ reload:v.reload,ammo:{...v.ammo},shellType:v.shellType,
  treadPhase:v.treadPhase,recoil:v.recoil,
  lastImpact:v.lastImpact})),
  shots:fired,hits:hit,activeShells:shells.length,activeImpacts:impacts.length,
