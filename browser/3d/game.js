@@ -304,6 +304,13 @@ const boxes=[
  [35,-27,10,12],[-8,38,10,11]
 ];
 const flags=[{x:-12,z:-5,title:"FARM APPROACH"},{x:11,z:11,title:"CROSSROADS"},{x:31,z:29,title:"RADIO POST"}];
+// World generation must never place physical props inside player-usable
+// vehicle hulls or the initial maneuver corridor around their parking sites.
+// This does not exempt vehicles from genuine collision once driving.
+const vehiclePads=[[-41,-31,4.3],[-40,-23,5.0]];
+const insideVehiclePad=(x,z,r=0)=>vehiclePads.some(([px,pz,rad])=>
+ Math.hypot(x-px,z-pz)<rad+r);
+const placementBlocked=(x,z,r=0)=>blocked(x,z,r)||insideVehiclePad(x,z,r);
 const treeTrunks=[];
 const artStructures=[];
 const solidProps=[],coreSolids=[],mediumSolids=[],highSolids=[],terrainRocks=[];
@@ -399,7 +406,7 @@ function buildWorld(){
  }
  for(let i=0;i<28;i++){
   const x=-45+rnd()*90,z=-45+rnd()*90;
-  if(blocked(x,z,2.2)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<6))continue;
+  if(placementBlocked(x,z,2.2)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<6))continue;
   const h=3.4+rnd()*2.3;
   const ground=worldHeight(x,z);
   m.box(x,ground+h*.25,z,.35,h*.5,.35,COLORS.trunk);
@@ -409,7 +416,7 @@ function buildWorld(){
  }
  for(let i=0;i<85;i++){
   const x=-43+rnd()*86,z=-43+rnd()*86;
-  if(blocked(x,z,1.7)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<3))continue;
+  if(placementBlocked(x,z,1.7)||flags.some(f=>Math.hypot(x-f.x,z-f.z)<3))continue;
   const type=i%5,ground=worldHeight(x,z);
   if(type===0){
    coreSolids.push([x,z,3.8,.70]);
@@ -437,7 +444,7 @@ function buildWorld(){
  // Rough fencing and scattered shell-scarred earth.
  for(let i=0;i<18;i++){
   const x=-43+i*4,z=-43+(i%3)*1.5;
-  if(blocked(x,z,1.2))continue;
+  if(placementBlocked(x,z,1.2))continue;
   const ground=worldHeight(x,z);
   coreSolids.push([x,z+1.2,.18,2.7]);
   m.box(x,ground+.72,z,.12,1.44,.12,COLORS.timber);
@@ -513,7 +520,7 @@ function loadLicensedScenery(){
    let tries=0;
    while(positions.length<spec.count&&tries++<spec.count*32){
     const x=-44+rand()*88,z=-44+rand()*88;
-    if(blocked(x,z,2.2)||Math.hypot(x+36,z+33)<8||
+    if(placementBlocked(x,z,2.2)||Math.hypot(x+36,z+33)<8||
       flags.some(f=>Math.hypot(x-f.x,z-f.z)<7))continue;
     const scale=spec.scale[0]+rand()*(spec.scale[1]-spec.scale[0]);
     const yaw=rand()*Math.PI*2;
@@ -522,10 +529,10 @@ function loadLicensedScenery(){
      const rock=[bounds[0],bounds[1],bounds[2]*.90,bounds[3]*.90,
       Math.max(.25,(assets[spec.name].max[1]-assets[spec.name].min[1])*scale*.90),
       worldHeight(x,z)];
-     if(blocked(rock[0],rock[1],Math.max(rock[2],rock[3])*.5))continue;
+     if(placementBlocked(rock[0],rock[1],Math.max(rock[2],rock[3])*.5))continue;
      solidProps.push(rock);terrainRocks.push(rock);
     }else if(bounds&&spec.name==="fence-simple"){
-     if(blocked(bounds[0],bounds[1],Math.max(bounds[2],bounds[3])*.4))continue;
+     if(placementBlocked(bounds[0],bounds[1],Math.max(bounds[2],bounds[3])*.4))continue;
      solidProps.push(bounds);
     }
     positions.push([x,worldHeight(x,z),z,scale,yaw]);
@@ -583,7 +590,7 @@ function loadLicensedScenery(){
     scenery.dressingError="Optional CC0 decoration module unavailable";
     scenery.dressingReady=true;return;
    }
-   decoration.load(kit,Geometry,currentWorldData,blocked,flags,boxes).then(result=>{
+   decoration.load(kit,Geometry,currentWorldData,placementBlocked,flags,boxes).then(result=>{
     currentWorldData=result.data;
     upload(staticMesh,currentWorldData);
     mediumVertexCount=lowVertexCount+result.mediumTriangles*3;
@@ -591,7 +598,7 @@ function loadLicensedScenery(){
     // nor players acquire invisible cover on less capable graphics tiers.
     if(window.WPWW2Environment){
      const environment=new Geometry();environment.data=currentWorldData.slice();
-     const env=window.WPWW2Environment.append(environment,blocked,flags,boxes);
+     const env=window.WPWW2Environment.append(environment,placementBlocked,flags,boxes);
      highSolids.push(...(env.colliders||[]));
      currentWorldData=environment.data;upload(staticMesh,currentWorldData);
      scenery.ww2EnvironmentTriangles=env.triangles;
