@@ -219,10 +219,36 @@ function drawArmor(g,v,quality,aimYaw){
   }
  }
  if(high){
-  // Distinct separate road-wheel and track track-shoe features.
-  for(const side of [-1,1])for(let j=0;j<11;j++){
-   box(side*1.43,.82,-2.40+j*.47,.49,.12,.15,accent);
+  // A bounded high-detail pass: suspension, track grousers, stowage, hatch
+  // bosses, vision blocks, engine deck, tow hooks and hull weathering.
+  for(const side of [-1,1]){
+   for(let j=0;j<11;j++){
+    const z=-2.40+j*.47;
+    box(side*1.43,.82,z,.49,.12,.15,j%2?accent:metal);
+    if(j%2===0)box(side*1.70,.24,z,.09,.15,.28,track);
+   }
+   for(let j=0;j<5;j++)box(side*1.37,.47,-1.80+j*.89,.08,.45,.56,metal);
+   box(side*1.11,1.78,-1.50,.09,.15,1.08,metal);
+   box(side*.88,1.51,1.67,.56,.06,.08,metal);
+   box(side*1.0,1.18,-2.05,.19,.16,.26,accent);
+   box(side*.66,1.72,-1.68,.33,.24,.43,accent);
   }
+  for(let j=0;j<5;j++){
+   box(-.66+j*.33,1.82,-1.44,.065,.05,.75,track);
+   box(-.71+j*.35,1.54,1.33,.07,.04,.49,metal);
+  }
+  // Historical silhouette cues; not yet CAD-verified equipment dimensions.
+  gunBox(.54,2.68,-.75,.10,.18,.20,track);
+  gunBox(-.52,2.64,-.68,.11,.15,.31,accent);
+  gunBox(0,2.86,-.84,.68,.09,.54,hull);
+  gunBox(.58,2.64,.05,.18,.12,.28,metal);
+  for(const side of [-1,1]){
+   gunBox(side*.69,2.44,.20,.15,.13,.10,track);
+   gunBox(side*.70,2.48,-.94,.18,.11,.14,accent);
+  }
+  box(0,1.32,-2.27,1.50,.13,.15,metal);
+  box(-.47,1.69,-2.17,.18,.28,.19,track);
+  box(.48,1.69,-2.17,.18,.28,.19,track);
  }
  return n;
 }
@@ -260,6 +286,26 @@ function draw(g,kit,quality,player,time){
     g.box(v.x,1.72+(v.groundY||0),v.z-.28,v.width*.93,.08,.12,[.19,.19,.17],v.yaw);
    }
    triangles+=72;
+  }
+  if(v.id==="jeep"&&quality==="high"&&dist<36){
+   // High-specific jeep accessories sit on both imported and fallback bodies.
+   const yaw=-v.yaw,cs=Math.cos(yaw),sn=Math.sin(yaw),ground=v.groundY||0;
+   const accessory=(x,y,z,w,h,d,col)=>{
+    g.box(v.x+cs*x+sn*z,ground+y,v.z-sn*x+cs*z,w,h,d,col,yaw);
+    triangles+=12;
+   };
+   const frame=[.18,.20,.17],canvas=[.34,.33,.26],rubber=[.12,.13,.12];
+   // Windshield surround, spare tyre, headlights, folded canvas and grille.
+   for(const side of [-1,1]){
+    accessory(side*.69,1.62,.39,.065,.73,.055,frame);
+    accessory(side*.55,1.03,1.55,.21,.19,.19,[.58,.56,.40]);
+    accessory(side*.64,.54,-.96,.38,.54,.18,rubber);
+   }
+   accessory(0,1.99,.39,1.43,.065,.06,frame);
+   accessory(0,1.47,-1.25,1.30,.18,.34,canvas);
+   for(let j=0;j<7;j++)accessory(-.45+j*.15,.92,1.59,.046,.25,.045,frame);
+   accessory(0,1.37,-1.73,.52,.52,.11,rubber);
+   accessory(.01,1.45,-1.80,.19,.19,.13,frame);
   }
   if(v.shotFlash>0)g.cone(v.x,2.5+(v.groundY||0),v.z,0.16,.55,[.96,.66,.22],5);
  }
