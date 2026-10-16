@@ -90,14 +90,14 @@ function create(gl){
     gl.viewport(0,0,screenWidth,screenHeight);
    }
   },
-  bind(locations){
+  bind(locations,enabled=true){
    gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,texture);
    gl.uniform1i(locations.map,2);
    gl.uniformMatrix4fv(locations.light,false,vp);
    gl.uniform2f(locations.texel,1/SIZE,1/SIZE);
-   gl.uniform1f(locations.enabled,dirty?0:1);
+   gl.uniform1f(locations.enabled,!dirty&&enabled?1:0);
    gl.activeTexture(gl.TEXTURE0);
-   return !dirty;
+   return !dirty&&enabled;
   },
   stats(){return {ready:true,resolution:SIZE,staticPasses:draws,dirty,failures};}
  });
