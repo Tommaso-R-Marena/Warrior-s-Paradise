@@ -29,7 +29,7 @@ const highVS=VS.replace(
  "void main(){vColor=aColor;vPos=aPos;vNorm=aNormal;gl_Position=uVP*vec4(aPos,1.);}",
  "uniform float uWindTime;"+
  "void main(){"+
- "float leaf=step(aColor.r+.055,aColor.g)*step(aColor.b,aColor.g+.10);"+
+ "float leaf=step(aColor.r+.055,aColor.g)*step(aColor.b,aColor.g+.10)*step(0.,aColor.b);"+
  "float strength=leaf*smoothstep(1.7,5.5,aPos.y)*.09;"+
  "vec3 p=aPos+vec3(sin(uWindTime*.82+aPos.x*.25+aPos.z*.31),0.,cos(uWindTime*.68+aPos.z*.32))*strength;"+
  "vColor=aColor;vPos=p;vNorm=aNormal;gl_Position=uVP*vec4(p,1.);}"
@@ -154,6 +154,39 @@ const highSource=FS.replace(
   "float towardSun=pow(max(0.,dot(lookRay,normalize(vec3(.53,.88,-.36)))),8.);",
   "vec3 fogTint=mix(vec3(.66,.73,.70),vec3(.77,.70,.61),towardSun*.48);",
   "rgb=mix(rgb,fogTint,min(.83,fog*.86+lowMist));"
+ ].join("\n")
+).replace(
+ "vec3 n=normalize(vNorm);",
+ "vec3 n=normalize(vNorm);float metalTagged=1.-step(0.,vColor.b);"
+).replace(
+ "float grass=step(vColor.r+.035,vColor.g)*step(vColor.b,vColor.g+.08);",
+ "float grass=(1.-metalTagged)*step(vColor.r+.035,vColor.g)*step(vColor.b,vColor.g+.08);"
+).replace(
+ "float terrain=step(.68,n.y)*(1.-smoothstep(6.4,7.5,vPos.y));",
+ "float terrain=(1.-metalTagged)*step(.68,n.y)*(1.-smoothstep(6.4,7.5,vPos.y));"
+).replace(
+ "float masonry=vertical*step(.10,vColor.r-vColor.g)*step(.9,vPos.y);",
+ "float masonry=(1.-metalTagged)*vertical*step(.10,vColor.r-vColor.g)*step(.9,vPos.y);"
+).replace(
+ "vec3 rgb=vColor*exposure*mix",
+ "vec3 rgb=abs(vColor)*exposure*mix"
+).replace(
+ "float fog=1.-exp(-pow(max(0.,distanceToEye-18.)/78.,1.45));",
+ [
+  // Steel micro-variation and directional specular are High-only. Painted tank
+  // armor must not sample the terrain grass atlas merely for facing upward.
+  "if(metalTagged>.5){",
+  " float paintNoise=valnoise(vPos.xz*3.7+vPos.y*.47);",
+  " float weather=valnoise(vPos.xz*1.2+vPos.y*1.1);",
+  " float flake=hash21(floor(vPos.xz*32.+vPos.y*19.));",
+  " rgb*=.82+.25*paintNoise-.07*smoothstep(.74,.91,weather);",
+  " rgb+=vec3(.045,.048,.042)*(flake-.5);",
+  " vec3 viewDir=normalize(uEye-vPos);",
+  " vec3 reflected=normalize(viewDir+normalize(vec3(.53,.88,-.36)));",
+  " float metalGlint=pow(max(0.,dot(n,reflected)),37.);",
+  " rgb+=vec3(.11,.098,.071)*metalGlint*(.68+.32*paintNoise);",
+  "}",
+  "float fog=1.-exp(-pow(max(0.,distanceToEye-18.)/78.,1.45));"
  ].join("\n")
 );
 function shader(type,source){
