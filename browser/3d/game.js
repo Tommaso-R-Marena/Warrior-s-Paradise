@@ -14,7 +14,7 @@ if(!gl){
 }
 const gpuProfiler=window.WPDeviceGpuProfiler?.create(gl)||null;
 window.WPDeviceGpuCaptureController=gpuProfiler;
-const skyRenderer=window.WPAtmosphericSky?.create(gl)||null;
+let skyRenderer=null; // Defer optional shader compilation until High is actually selected.
 const VS=[
  "#version 300 es","precision highp float;",
  "layout(location=0) in vec3 aPos;layout(location=1) in vec3 aNormal;",
@@ -1264,11 +1264,15 @@ function render(){
   Math.cos(player.yaw)*Math.cos(player.pitch)];
  const proj=perspective((player.aim?42:73)*Math.PI/180,lastWidth/lastHeight,.065,120);
  const view=lookAt(eye,[eye[0]+forward[0],eye[1]+forward[1],eye[2]+forward[2]]);
- if(game.quality==="high"&&game.scaler>.62&&skyRenderer){
-  const yaw=player.yaw,pitch=player.pitch,tanHalf=Math.tan((player.aim?42:73)*Math.PI/360);
-  skyRenderer.render(forward,[-Math.cos(yaw),0,-Math.sin(yaw)],
-   [Math.sin(yaw)*Math.sin(pitch),Math.cos(pitch),-Math.cos(yaw)*Math.sin(pitch)],
-   tanHalf*lastWidth/lastHeight,tanHalf);
+ if(game.quality==="high"&&game.scaler>.62){
+  // Avoid GPU shader compilation and program allocation on Low/Medium phones.
+  if(!skyRenderer&&window.WPAtmosphericSky)skyRenderer=window.WPAtmosphericSky.create(gl);
+  if(skyRenderer){
+   const yaw=player.yaw,pitch=player.pitch,tanHalf=Math.tan((player.aim?42:73)*Math.PI/360);
+   skyRenderer.render(forward,[-Math.cos(yaw),0,-Math.sin(yaw)],
+    [Math.sin(yaw)*Math.sin(pitch),Math.cos(pitch),-Math.cos(yaw)*Math.sin(pitch)],
+    tanHalf*lastWidth/lastHeight,tanHalf);
+  }
  }
  const isHigh=game.quality==="high"&&!!highProgram&&!!highUniforms;
  gl.useProgram(isHigh?highProgram:program);
