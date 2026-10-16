@@ -307,7 +307,7 @@ const flags=[{x:-12,z:-5,title:"FARM APPROACH"},{x:11,z:11,title:"CROSSROADS"},{
 // World generation must never place physical props inside player-usable
 // vehicle hulls or the initial maneuver corridor around their parking sites.
 // This does not exempt vehicles from genuine collision once driving.
-const vehiclePads=[[-41,-31,4.3],[-40,-23,5.0]];
+const vehiclePads=[[-41,-31,4.3],[-40,-23,5.0],[34,16,5.0]];
 const insideVehiclePad=(x,z,r=0)=>vehiclePads.some(([px,pz,rad])=>
  Math.hypot(x-px,z-pz)<rad+r);
 const placementBlocked=(x,z,r=0)=>blocked(x,z,r)||insideVehiclePad(x,z,r);
