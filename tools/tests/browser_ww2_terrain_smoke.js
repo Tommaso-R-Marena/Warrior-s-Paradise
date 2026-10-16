@@ -52,4 +52,23 @@ assert.equal(t.traversable(10,10,10.2,10.2,.44,flags,boxes),true,
 assert.equal(t.traversable(10,10,10.2,10.2,1.35,flags,boxes,"vehicle"),true,
  "Vehicle should traverse level road");
 assert.equal(t.traversable(steep.x,steep.z,steep.x+.12,steep.z,1.2,flags,boxes,"vehicle"),false);
-console.log("PASS topographic collision: shared mesh, real relief, steep-ground limits, level road, and LOD agreement");
+// A genuine elevation is gameplay physics, not merely shaded artwork:
+const bulletScope={};
+vm.runInNewContext(fs.readFileSync(path.resolve(__dirname,"../../browser/3d/infantry-ballistics.js"),"utf8"),
+ {window:bulletScope,Math,Number,Error},{timeout:15000});
+const ballistic=bulletScope.WPInfantryBallistics;
+const target={x:0,z:12,hp:80,groundY:0,alert:0};
+const common={source:{x:0,y:1.67,z:0},weapon:"rifle",yaw:0,pitch:0,
+ targets:[target]};
+const clear=ballistic.trace({...common,obstacles:{terrain:()=>0}});
+assert(clear.hit===target,"Flat line-of-fire should hit an unaware soldier");
+const ridge=ballistic.trace({...common,obstacles:{
+ terrain:(x,z)=>z>5&&z<8?2.7:0
+}});
+assert.equal(ridge.hit,null,"Elevated topography should block a torso bullet");
+assert.equal(ridge.blockedBy,"terrain","A hill must be reported as an obstacle");
+const elevated=ballistic.trace({...common,pitch:.12,
+ targets:[{...target,groundY:2.0}],obstacles:{terrain:()=>0}});
+assert(elevated.hit&&elevated.damage>0,
+ "Soldiers standing on higher terrain must have correctly raised hitboxes");
+console.log("PASS topographic collision: shared mesh, significant relief, steep limits, level roads, bullet occlusion and elevated hitboxes");
