@@ -16,6 +16,7 @@ const gpuProfiler=window.WPDeviceGpuProfiler?.create(gl)||null;
 window.WPDeviceGpuCaptureController=gpuProfiler;
 let skyRenderer=null; // Defer optional shader compilation until High is actually selected.
 let directionalShadows=null; // Never allocate shadow resources for Low/Medium.
+let shadowsSuspended=false; // Hysteresis for slow hardware.
 const VS=[
  "#version 300 es","precision highp float;",
  "layout(location=0) in vec3 aPos;layout(location=1) in vec3 aNormal;",
@@ -1313,9 +1314,13 @@ function render(){
  }
  const isHigh=game.quality==="high"&&!!highProgram&&!!highUniforms;
  if(isHigh){
+  // After scene warmup, suspend expensive shadow sampling if even High
+  // resolution scaling cannot maintain interactive frame pacing.
+  if(game.elapsed>3&&game.fps<19)shadowsSuspended=true;
+  else if(game.fps>43)shadowsSuspended=false;
   if(!directionalShadows&&window.WPDirectionalShadows)
    directionalShadows=window.WPDirectionalShadows.create(gl);
-  directionalShadows?.renderStatic(staticMesh,lastWidth,lastHeight);
+  if(!shadowsSuspended)directionalShadows?.renderStatic(staticMesh,lastWidth,lastHeight);
  }
  gl.useProgram(isHigh?highProgram:program);
  const uniforms=isHigh?highUniforms:{
@@ -1334,7 +1339,7 @@ function render(){
   if(directionalShadows)directionalShadows.bind({
    map:uniforms.uShadowMap,light:uniforms.uLightVP,
    texel:uniforms.uShadowTexel,enabled:uniforms.uShadowEnabled
-  });
+  },!shadowsSuspended);
   else if(uniforms.uShadowEnabled)gl.uniform1f(uniforms.uShadowEnabled,0);
  }
  // Low retains the previous licensed battlefield without the new scene-density cost.
@@ -1516,6 +1521,7 @@ window.WP3DDiagnostics=()=>({
   architecturalTriangles:scenery.architecturalTriangles||0,
   botanicalClumps:scenery.botanicalClumps||0,botanicalTriangles:scenery.botanicalTriangles||0,
   directionalShadows:directionalShadows?.stats()||{ready:false,staticPasses:0},
+  shadowsSuspended,
   terrainTriangles:scenery.terrainTriangles||0,
   physicalTerrainTriangles:window.WPWW2Terrain?.baseTriangles||0,
   terrainAtPlayer:worldHeight(player.x,player.z),
