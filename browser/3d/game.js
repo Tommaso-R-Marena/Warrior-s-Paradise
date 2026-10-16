@@ -719,6 +719,9 @@ function reset(){
  if(window.WPArmoredFleet){
   window.WPArmoredFleet.reset();
   window.WPArmoredFleet.setGround(worldHeight);
+  if($("deployment")?.value==="sherman"){
+   window.WPArmoredFleet.mount(player,"armor");
+  }
  }
  game.loadouts=Object.fromEntries(Object.entries(WEAPONS).map(([name,w])=>[
   name,{ammo:w.capacity,reserve:w.reserve}
@@ -729,26 +732,42 @@ function reset(){
  $("menu").hidden=true;input.fire=false;
  const fine=typeof window.matchMedia==="function"&&window.matchMedia("(pointer: fine)").matches;
  if(fine&&canvas.requestPointerLock)try{canvas.requestPointerLock();}catch{}
- const hint=$("movement-hint");if(hint){hint.hidden=false;hint.textContent="WASD / ARROWS TO MOVE · MOUSE TO LOOK · SHIFT SPRINT · F3 STATS";}
+ const hint=$("movement-hint");if(hint){hint.hidden=false;hint.textContent=window.WPArmoredFleet?.current()?.id==="armor"?
+  "SHERMAN · WASD / THUMB TO DRIVE · MOUSE / RIGHT THUMB AIM · FIRE CANNON · R SHELL · E EXIT":
+  "WASD / ARROWS TO MOVE · MOUSE TO LOOK · SHIFT SPRINT · F3 STATS";}
  
  msg("CAPTURE THE FORWARD FARM",2);hud();resize();
 }
 function msg(s,time=1.4){$("status").textContent=s;game.notice=time;}
 function hud(){
  $("hp").textContent="HP "+Math.ceil(Math.max(0,player.hp));
- $("mag").textContent=player.reload>0?"RELOADING":player.ammo+" / "+player.reserve;
+ const crew=window.WPArmoredFleet?.current();
+ $("mag").textContent=crew?.id==="armor"?
+  (crew.shellType||"ap").toUpperCase()+" "+(crew.ammo[crew.shellType]||0)+
+   (crew.reload>0?" · "+crew.reload.toFixed(1)+"s":" · READY"):
+  player.reload>0?"RELOADING":player.ammo+" / "+player.reserve;
  $("frags").textContent="FRAG × "+player.frags;
  const flag=flags[game.sector];
  $("mission").textContent=flag?"SECURE "+flag.title:"MISSION COMPLETE";
  $("objective").textContent=flag?"SECTOR "+(game.sector+1)+" / 3 · "+Math.floor(game.capture*100)+"% SECURED":"ALL SECTORS CAPTURED";
- $("info").textContent=WEAPONS[player.weapon].name+" · "+(player.crouch?"CROUCHED":player.aim?"ADS":"HIP FIRE")+" · "+game.kills+" KILLS";
+ $("info").textContent=crew?.id==="armor"?
+  "75MM CANNON · "+(crew.shellType||"ap").toUpperCase()+" · "+Math.ceil(crew.hp)+" ARMOR HP · "+game.kills+" KILLS":
+  crew?.id==="jeep"?"WILLYS MB · WHEEL-STEERED TRANSPORT":
+  WEAPONS[player.weapon].name+" · "+(player.crouch?"CROUCHED":player.aim?"ADS":"HIP FIRE")+" · "+game.kills+" KILLS";
+ if($("fire"))$("fire").textContent=crew?.id==="armor"?"CANNON":"FIRE";
+ if($("reload"))$("reload").textContent=crew?.id==="armor"?"SHELL":"RLD";
+ if($("reload"))$("reload").setAttribute?.("aria-label",crew?.id==="armor"?"Switch AP and HE tank shells":"Reload firearm");
  $("squadstate").textContent="FIRETEAM "+game.allies.filter(a=>a.hp>0).length+"/2 · "+game.order.toUpperCase();
  $("supportstate").textContent="ARTILLERY × "+game.support;
  if($("vehicle-state")){
   const driving=window.WPArmoredFleet?.current();
+  const nearby=window.WPArmoredFleet?.nearest?.(player);
   $("vehicle-state").textContent=driving?
-   "DRIVING "+driving.name+" · "+Math.round(Math.abs(driving.speed)*3.6)+" KM/H":
-   "E / VEHICLE: ENTER NEARBY TRANSPORT";
+   "CREWING "+driving.name+" · "+Math.round(Math.abs(driving.speed)*3.6)+" KM/H"+
+    (driving.id==="armor"?" · "+Math.ceil(driving.hp)+" HP · "+(driving.shellType||"ap").toUpperCase()+
+    " · "+(driving.reload>0?driving.reload.toFixed(1)+"S RELOAD":"CANNON READY"):""):
+   nearby?"E / VEHICLE: "+nearby.name+" · "+Math.round(nearby.distance)+"M AWAY":
+   "E / VEHICLE: FIND A FRIENDLY JEEP OR SHERMAN";
  }
  $("capture-fill").style.width=Math.floor(game.capture*100)+"%";
  if(flag){
@@ -800,8 +819,27 @@ function shoot(){
   if(fleet.current()?.id==="armor"){
    const fired=fleet.fire(player,game.enemies,lineHit,victim=>{
     if(victim.hp<=0){game.kills++;msg("ARMOR: TARGET DOWN",1);}
-   },addTracer,(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type));
-   if(fired)window.WPBattleSound?.explosion(player.x,player.z,player);
+   },addTracer,(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type),{
+    heightAt:worldHeight,
+    blocked,
+    traversable:(sx,sz,nx,nz,r)=>terrainPassable(sx,sz,nx,nz,r,"vehicle"),
+    obstacles:[
+     ...boxes.map(b=>[...b,6.3,worldHeight(b[0],b[1])]),
+     ...covers.map(b=>[...b,1.03,worldHeight(b[0],b[1])]),
+     ...artStructures.map(b=>[...b,3.8,worldHeight(b[0],b[1])]),
+     ...solidProps.map(b=>[...b.slice(0,4),b[4]??1.5,b[5]??worldHeight(b[0],b[1])]),
+     ...coreSolids.map(b=>[...b.slice(0,4),b[4]??1.2,b[5]??worldHeight(b[0],b[1])])
+    ]
+   });
+   if(fired){
+    window.WP3DProbe?.event("shot");
+    window.WPBattleSound?.explosion(player.x,player.z,player);
+    const strike=fleet.current()?.lastImpact;
+    msg(strike?.type==="armor"?"ARMOR HIT · PANZER "+strike.armorHp+" HP":
+      strike?.type==="infantry"?"TANK SHELL · INFANTRY HIT":
+      strike?.type==="cover"||strike?.type==="terrain"?"SHELL IMPACT · COVER":
+      "75MM CANNON FIRED",.9);
+   }
   }
   return;
  }
@@ -924,11 +962,19 @@ function enterVehicle(){
  if(!game.playing||!window.WPArmoredFleet)return;
  if(window.WPArmoredFleet.toggle(player,blocked)){
   const v=window.WPArmoredFleet.current();
-  msg(v?"DRIVING "+v.name+" · E TO DISEMBARK":"DISEMBARKED · FIRETEAM ON FOOT",1.6);
+  msg(v?"CREWING "+v.name+" · E TO DISEMBARK":"DISEMBARKED · FIRETEAM ON FOOT",1.6);
+  const hint=$("movement-hint");
+  if(hint)hint.textContent=v?"WASD / THUMB DRIVE · MOUSE / RIGHT THUMB AIM · FIRE CANNON · R SHELL · E EXIT":
+   "WASD TO MOVE · MOUSE TO AIM · E TO ENTER VEHICLE";
  }else msg("NO SAFE VEHICLE ENTRY / EXIT NEARBY",1);
 }
 function swap(){
  if(!game.playing)return;
+ if(window.WPArmoredFleet?.isDriving()){
+  const selected=window.WPArmoredFleet.selectShell();
+  if(selected)msg("SHERMAN · "+selected.toUpperCase()+" ROUND SELECTED",1.2);
+  return;
+ }
  const names=Object.keys(WEAPONS),idx=names.indexOf(player.weapon);
  game.loadouts[player.weapon]={ammo:player.ammo,reserve:player.reserve};
  player.weapon=names[(idx+1)%names.length];
@@ -1008,7 +1054,11 @@ function simulate(dt){
  if(window.WPArmoredFleet)window.WPArmoredFleet.tick(dt,player,lineHit,damage=>{
   player.hurt=.7;msg("ENEMY ARMOR · SEEK COVER",1);
   if(player.hp<=0)end(false);
- },(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type));
+ },(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type),{
+  blocked,
+  heightAt:worldHeight,
+  traversable:(sx,sz,nx,nz,r)=>terrainPassable(sx,sz,nx,nz,r,"vehicle")
+ });
  player.concussion=Math.max(0,(player.concussion||0)-dt*.7);
  player.cd=Math.max(0,player.cd-dt);player.hurt=Math.max(0,player.hurt-dt*2);
  window.WPWeaponHandling?.tick(player,dt);
@@ -1391,7 +1441,8 @@ document.addEventListener("keydown",e=>{
  if(game.playing&&["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","KeyW","KeyA","KeyS","KeyD"].includes(e.code))e.preventDefault();
  if(e.code==="F3"){e.preventDefault();if(window.WP3DProbe)window.WP3DProbe.toggle();return;}
  if(e.repeat)return;
- if(e.code==="KeyR")reload();
+ if(e.code==="KeyR"&&window.WPArmoredFleet?.current()?.id==="armor")swap();
+ else if(e.code==="KeyR")reload();
  if(e.code==="KeyV")heal();
  if(e.code==="KeyE")enterVehicle();
  if(e.code==="KeyG")grenade();
@@ -1467,9 +1518,9 @@ function button(id,on,off){
   el.addEventListener("pointerup",off);el.addEventListener("pointercancel",off);
  }
 }
-button("fire",()=>{input.fire=true;},()=>{input.fire=false;});
+button("fire",()=>{input.fire=true;shoot();},()=>{input.fire=false;});
 button("aim",()=>setAim(true),()=>setAim(false));
-button("reload",reload);button("grenade",grenade);button("heal",heal);button("swap",swap);
+button("reload",()=>window.WPArmoredFleet?.current()?.id==="armor"?swap():reload());button("grenade",grenade);button("heal",heal);button("swap",swap);
 button("orders",orderSquad);button("support",callArtillery);
  button("vehicle",enterVehicle);
 button("crouch",()=>{player.crouch=!player.crouch;});
