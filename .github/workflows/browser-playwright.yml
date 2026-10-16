@@ -46,6 +46,8 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1
           npx playwright install --with-deps chromium
+      - name: Validate optional High graphics budgets and GL state restoration
+        run: node tools/tests/browser_graphics_fidelity_smoke.js
       - name: Serve the same static browser files as Cloudflare Pages
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 --directory browser >/tmp/wp-server.log 2>&1 &

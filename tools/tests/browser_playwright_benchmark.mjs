@@ -46,6 +46,10 @@ async function run(name,viewport,quality,mobile){
    "Medium must use cost-bounded photographic albedo atlas");
   if(quality==="high"){
    assert(initial.highShaderReady,"High dedicated normal shader did not compile");
+   assert(initial.atmosphericSky?.ready&&initial.atmosphericSky?.draws>0,
+    "High atmospheric sky shader did not compile/render");
+   assert(initial.architecturalTiles>=600&&initial.architecturalTriangles<=1280,
+    "High roof tiling did not enter the static scene");
    assert(initial.realPBRMaps&&initial.materialMode==="detailed",
     name+": artist-authored normals/roughness missing: "+initial.photoMaterialsError);
   }

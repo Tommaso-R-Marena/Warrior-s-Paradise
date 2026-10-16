@@ -14,6 +14,7 @@ if(!gl){
 }
 const gpuProfiler=window.WPDeviceGpuProfiler?.create(gl)||null;
 window.WPDeviceGpuCaptureController=gpuProfiler;
+const skyRenderer=window.WPAtmosphericSky?.create(gl)||null;
 const VS=[
  "#version 300 es","precision highp float;",
  "layout(location=0) in vec3 aPos;layout(location=1) in vec3 aNormal;",
@@ -114,6 +115,15 @@ const highSource=FS.replace(
 ).replace(
  "vec3 rgb=vColor*exposure;",
  "vec3 rgb=vColor*exposure*mix(vec3(.76,.85,.96),vec3(1.13,1.05,.89),smoothstep(.08,.88,sun));"
+).replace(
+ "rgb=mix(rgb,vec3(.58,.66,.64),min(.81,fog));",
+ [
+  "float lowMist=.16*(1.-smoothstep(.3,4.5,vPos.y))*smoothstep(22.,95.,distanceToEye);",
+  "vec3 lookRay=normalize(vPos-uEye);",
+  "float towardSun=pow(max(0.,dot(lookRay,normalize(vec3(.53,.88,-.36)))),8.);",
+  "vec3 fogTint=mix(vec3(.66,.73,.70),vec3(.77,.70,.61),towardSun*.48);",
+  "rgb=mix(rgb,fogTint,min(.83,fog*.86+lowMist));"
+ ].join("\n")
 );
 function shader(type,source){
  const o=gl.createShader(type);gl.shaderSource(o,source);gl.compileShader(o);
@@ -563,6 +573,14 @@ function loadLicensedScenery(){
      currentWorldData=hills.data;upload(staticMesh,currentWorldData);
      scenery.terrainTriangles=terrain.triangles;
      scenery.shadowedTerrainCells=terrain.shadowedCells;
+    }
+    // High-only pitched roofing mesh: shares the existing static buffer/draw call.
+    if(window.WPArchitecturalDetail){
+     const detail=new Geometry();detail.data=currentWorldData.slice();
+     const roofing=window.WPArchitecturalDetail.append(detail,boxes);
+     currentWorldData=detail.data;upload(staticMesh,currentWorldData);
+     scenery.architecturalTiles=roofing.tiles;
+     scenery.architecturalTriangles=roofing.triangles;
     }
     mediumSolids.push(...(result.mediumColliders||[]));
     highSolids.push(...result.colliders);
@@ -1246,6 +1264,12 @@ function render(){
   Math.cos(player.yaw)*Math.cos(player.pitch)];
  const proj=perspective((player.aim?42:73)*Math.PI/180,lastWidth/lastHeight,.065,120);
  const view=lookAt(eye,[eye[0]+forward[0],eye[1]+forward[1],eye[2]+forward[2]]);
+ if(game.quality==="high"&&game.scaler>.62&&skyRenderer){
+  const yaw=player.yaw,pitch=player.pitch,tanHalf=Math.tan((player.aim?42:73)*Math.PI/360);
+  skyRenderer.render(forward,[-Math.cos(yaw),0,-Math.sin(yaw)],
+   [Math.sin(yaw)*Math.sin(pitch),Math.cos(pitch),-Math.cos(yaw)*Math.sin(pitch)],
+   tanHalf*lastWidth/lastHeight,tanHalf);
+ }
  const isHigh=game.quality==="high"&&!!highProgram&&!!highUniforms;
  gl.useProgram(isHigh?highProgram:program);
  const uniforms=isHigh?highUniforms:{
@@ -1434,6 +1458,9 @@ window.WP3DDiagnostics=()=>({
   mediumDressingTriangles:scenery.mediumDressingTriangles||0,
   ww2EnvironmentTriangles:scenery.ww2EnvironmentTriangles||0,
   ww2EnvironmentProps:scenery.ww2EnvironmentProps||0,
+  atmosphericSky:skyRenderer?.stats()||{ready:false,draws:0},
+  architecturalTiles:scenery.architecturalTiles||0,
+  architecturalTriangles:scenery.architecturalTriangles||0,
   terrainTriangles:scenery.terrainTriangles||0,
   physicalTerrainTriangles:window.WPWW2Terrain?.baseTriangles||0,
   terrainAtPlayer:worldHeight(player.x,player.z),
