@@ -787,6 +787,7 @@ function hud(){
  $("fps").textContent="3D · "+game.quality.toUpperCase()+" · "+Math.round(game.fps)+" FPS";
  $("hurt").style.opacity=player.hurt>.02?String(Math.min(.42,player.hurt*.22)):"0";
  $("crosshair").classList.toggle("aiming",player.aim);
+ $("crosshair").style.opacity=crew?.id==="armor"?"0":"";
  const sight=$("tank-sight");
  if(sight){
   const tank=crew?.id==="armor"?crew:null;
