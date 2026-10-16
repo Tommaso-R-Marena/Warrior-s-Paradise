@@ -74,7 +74,15 @@ function move(dt,input,player,blocked){
  const footprint=Math.max(v.width*.48,.65);
  const other=records.some(o=>o!==v&&o.alive&&Math.hypot(o.x-nx,o.z-nz)<
   Math.max(v.width,o.width)*.72);
- if(!other&&!blocked(nx,nz,footprint)){v.x=nx;v.z=nz;}
+ // Sweep the vehicle footprint along its entire trajectory: endpoint-only
+ // checks can tunnel through rock faces and fence posts at driving speed.
+ const steps=Math.max(1,Math.ceil(Math.hypot(nx-v.x,nz-v.z)/.20));
+ let traversable=!other;
+ for(let i=1;traversable&&i<=steps;i++){
+  const t=i/steps;
+  if(blocked(v.x+(nx-v.x)*t,v.z+(nz-v.z)*t,footprint))traversable=false;
+ }
+ if(traversable){v.x=nx;v.z=nz;}
  else v.speed=0;
  player.x=v.x;player.z=v.z;
  // Keep independent aiming direction for cannon turret/mouse camera.
