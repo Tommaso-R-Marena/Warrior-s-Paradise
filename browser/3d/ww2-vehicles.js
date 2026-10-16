@@ -216,7 +216,7 @@ function fire(player,enemies,visible,onHit,onTracer,onBlast,world){
   const armor=impact.target;
   const incoming=player.yaw;
   const alignment=Math.cos(angleDelta(incoming,armor.yaw));
-  const damage=type==="ap"?(alignment>.48?92:alignment<-.48?170:126):39;
+  const damage=type==="ap"?(alignment>.48?170:alignment<-.48?92:126):39;
   armor.hp=Math.max(0,armor.hp-damage);
   if(armor.hp===0){armor.alive=false;armor.speed=0;}
   hit++;
