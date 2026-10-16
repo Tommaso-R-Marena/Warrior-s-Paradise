@@ -50,6 +50,10 @@ async function run(name,viewport,quality,mobile){
     "High atmospheric sky shader did not compile/render");
    assert(initial.architecturalTiles>=600&&initial.architecturalTriangles<=1280,
     "High roof tiling did not enter the static scene");
+   assert(initial.botanicalClumps>50&&initial.botanicalTriangles<=1750,
+    "High terrain flora missing or over geometry budget");
+   assert(initial.directionalShadows?.ready&&initial.directionalShadows.staticPasses>=1,
+    "GPU depth shadow map not ready for High scene");
    assert(initial.realPBRMaps&&initial.materialMode==="detailed",
     name+": artist-authored normals/roughness missing: "+initial.photoMaterialsError);
   }
