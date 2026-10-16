@@ -393,6 +393,27 @@ const high=quality==="high",med=quality==="medium";
    box(side*1.0,1.18,-2.05,.19,.16,.26,accent);
    box(side*.66,1.72,-1.68,.33,.24,.43,accent);
   }
+  // Faceted, hubbed road-wheel silhouettes in the YZ plane, aligned with the
+  // actual tracked chassis. Fixed 6x2 wheels and 8 sectors per side; no meshes
+  // loaded at runtime or extra draw calls.
+  for(const side of [-1,1])for(let station=0;station<6;station++){
+   const stationZ=-1.95+station*.77;
+   const wheelCenterY=.52,outer=.285,inner=.128;
+   const axle=side*1.755;
+   const vertex=(a,r)=>{
+    const lx=axle,ly=wheelCenterY+Math.cos(a)*r,lz=stationZ+Math.sin(a)*r;
+    return [v.x+cs*lx+sn*lz,(v.groundY||0)+ly,v.z-sn*lx+cs*lz];
+   };
+   const spin=(v.treadPhase||0)*.62/outer+station*.23;
+   for(let facet=0;facet<8;facet++){
+    const a=spin+facet*Math.PI/4,b=a+Math.PI/4;
+    // The dark rubber rim and weathered steel inner face are distinct.
+    g.tri(vertex(a,outer),vertex(b,outer),vertex(b,inner),track);n++;
+    g.tri(vertex(a,outer),vertex(b,inner),vertex(a,inner),accent);n++;
+    g.tri(vertex(a,inner),vertex(b,inner),vertex(a,0),
+     facet%2===0?metal:accent);n++;
+   }
+  }
   for(let j=0;j<5;j++){
    box(-.66+j*.33,1.82,-1.44,.065,.05,.75,track);
    box(-.71+j*.35,1.54,1.33,.07,.04,.49,metal);
