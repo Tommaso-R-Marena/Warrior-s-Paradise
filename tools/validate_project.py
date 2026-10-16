@@ -33,6 +33,7 @@ REQUIRED = [
     "tools/tests/browser_firefight_sophistication_smoke.js",
     "tools/tests/browser_infantry_ballistics_smoke.js",
     "tools/tests/browser_playwright_ballistics.mjs",
+    "tools/tests/browser_playwright_topography.mjs",
     "browser/3d/normandy-dressing.js",
     "browser/3d/ww2-vehicles.js",
     "browser/3d/device-gpu-profiler.js",
