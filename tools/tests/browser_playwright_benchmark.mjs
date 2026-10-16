@@ -50,8 +50,16 @@ async function run(name,viewport,quality,mobile){
     "High atmospheric sky shader did not compile/render");
    assert(initial.architecturalTiles>=600&&initial.architecturalTriangles<=1280,
     "High roof tiling did not enter the static scene");
+   console.log("HIGH_SCENE_ACCEPTANCE",JSON.stringify({
+    flora:initial.botanicalClumps,floraTriangles:initial.botanicalTriangles,
+    dressingInstances:initial.dressingInstances,dressingError:initial.dressingError,
+    terrainTriangles:initial.terrainTriangles,architecturalTiles:initial.architecturalTiles,
+    shadowMap:initial.directionalShadows,ww2Environment:initial.ww2EnvironmentProps
+   }));
    assert(initial.botanicalClumps>50&&initial.botanicalTriangles<=1750,
-    "High terrain flora missing or over geometry budget");
+    "High terrain flora missing or over geometry budget: "+JSON.stringify({
+     clumps:initial.botanicalClumps,triangles:initial.botanicalTriangles,
+     dressingError:initial.dressingError}));
    assert(initial.directionalShadows?.ready&&initial.directionalShadows.staticPasses>=1,
     "GPU depth shadow map not ready for High scene");
    assert(initial.realPBRMaps&&initial.materialMode==="detailed",
