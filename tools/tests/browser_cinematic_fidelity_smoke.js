@@ -61,7 +61,8 @@ assert(Math.abs(slerp(q,to,.5).reduce((s,v)=>s+v*v,0)-1)<1e-6);
 assert(Math.abs(slerp(q,to,0)[3]-1)<1e-6);
 assert(Math.abs(slerp(q,to,1)[1]-1)<1e-6);
 assert(Math.abs(slerp(q,q.map(x=>-x),.5)[3]-1)<1e-6);
-const g=()=>({triangles:0,box(){this.triangles+=12;},cone(){this.triangles+=7;}});
+const g=()=>({triangles:0,box(){this.triangles+=12;},cone(){this.triangles+=7;},
+ tri(a,b,c,col){this.triangles++;}});
 const veh={x:-40,z:-23,yaw:0};
 const low=g(),high=g();
 root.WPArmoredFleet.draw(low,null,"medium",veh,0);
