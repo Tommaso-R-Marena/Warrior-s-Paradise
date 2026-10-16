@@ -79,7 +79,8 @@ const FS=[
  "float terrain=step(.65,n.y)*(1.-smoothstep(.25,.9,vPos.y));",
  "float masonry=vertical*step(.10,vColor.r-vColor.g)*step(.9,vPos.y);",
  "float tile=terrain>.5?(grass>.5?0.:1.):(masonry>.5?3.:2.);",
- "float intensity=max(terrain,masonry)*uDetailLevel;",
+ "float contactShadow=1.-step(.10,vColor.r);",
+ "float intensity=max(terrain,masonry)*uDetailLevel*(1.-contactShadow);",
  "vec2 uv=(fract(surface*.26)*.968+.016+vec2(tile,0.))/vec2(4.,1.);",
  "vec4 pbr=texture(uDiffuse,uv);vec3 bump=texture(uBump,uv).rgb;",
  "float roughness=clamp(pbr.a,.3,1.);",
@@ -1253,6 +1254,13 @@ function simulate(dt){
 function dynamicGeometry(){
  player.groundY=worldHeight(player.x,player.z);
  const m=new Geometry();
+ // High and Medium use one existing VBO for grounded character and tank shade.
+ // Contact polygons never modify gameplay collision or AI line of sight.
+ if(game.quality!=="low"&&window.WPContactShadows){
+  const contact=window.WPContactShadows.render(m,worldHeight,player,game.quality,
+   [...game.allies,...game.enemies],window.WPArmoredFleet?.info()?.vehicles||[]);
+  game.contactShadowTriangles=contact.triangles;
+ }else game.contactShadowTriangles=0;
  const art=window.WPBattleArt,skinner=window.WPSkinning;
  let skinnedActors=0,skinnedTriangles=0;
  // Save low-end phones: limit both shading work and CPU-skinned scene actors.
@@ -1613,6 +1621,7 @@ window.WP3DDiagnostics=()=>({
    projectileRockCover:terrainRocks.length,
   activeDressingColliders:tierSolids().length,collisionQuality,
   shadowedTerrainCells:scenery.shadowedTerrainCells||0,
+  contactShadowTriangles:game.contactShadowTriangles||0,
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
