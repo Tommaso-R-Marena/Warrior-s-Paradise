@@ -32,15 +32,16 @@ function render(g,ground,player,quality,soldiers=[],vehicles=[]){
   }
   actors++;
  }
+ // Prioritize large armor occlusion even in large battles with many infantry.
+ for(const v of vehicles){
+  // Wrecks still cast contact shadows: the hull remains on the battlefield.
+  patch(v,v.width*.55,v.length*.55,1.4);
+ }
  if(quality==="high"){
   for(const a of soldiers){
    if((a.hp??100)<=0)continue;
    patch(a,.35,.24,1.10);
   }
- }
- for(const v of vehicles){
-  // Wrecks still cast contact shadows: the hull remains on the battlefield.
-  patch(v,v.width*.55,v.length*.55,1.4);
  }
  return {triangles,actors,budget:MAX};
 }
