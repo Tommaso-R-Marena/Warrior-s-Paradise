@@ -64,6 +64,7 @@ function hitEnemy(eye,dx,dz,pitch,velocity,e,maxRange){
 }
 function firstCover(eye,dx,dz,pitch,velocity,obstacles,maxRange){
  let best=null;
+ const terrain=typeof obstacles?.terrain==="function"?obstacles.terrain:null;
  function record(t,type){
   if(t<.2||t>maxRange||(best&&t>=best.distance))return;
   best={distance:t,type,y:projectileY(eye.y,pitch,t,velocity)};
@@ -82,17 +83,30 @@ function firstCover(eye,dx,dz,pitch,velocity,obstacles,maxRange){
   // If the trajectory passes over the wall, don't pretend the obstacle blocks.
   const a=projectileY(eye.y,pitch,tMin,velocity);
   const b=projectileY(eye.y,pitch,tMax,velocity);
-  if((a>=.03&&a<=height)||(b>=.03&&b<=height))record(tMin,type);
+  const localGround=terrain?terrain(cx,cz):0;
+  if((a>=localGround+.03&&a<=localGround+height)||
+     (b>=localGround+.03&&b<=localGround+height))record(tMin,type);
  }
  for(const tr of obstacles?.trunks||[]){
   const area=cylinderInterval(eye.x,eye.z,dx,dz,tr.x,tr.z,tr.radius||.45,maxRange);
   if(!area)continue;
   const y=projectileY(eye.y,pitch,area[0],velocity);
-  if(y>=0&&y<=5.5)record(area[0],"tree");
+  const base=terrain?terrain(tr.x,tr.z):0;
+  if(y>=base&&y<=base+5.5)record(area[0],"tree");
  }
- // Ground impact for steeply descending shots; skip flat grazing shots.
- if(pitch<-.006){
-  for(let t=.5;t<=Math.min(maxRange,best?.distance??maxRange);t+=.50){
+ // The SAME topological surface used to draw the ground and walk on it must
+ // stop shots. Terrain sample checks are only made when firing, not per frame.
+ if(terrain){
+  const limit=Math.min(maxRange,best?.distance??maxRange);
+  for(let t=.28;t<=limit+.001;t+=.28){
+   const px=eye.x+dx*t,pz=eye.z+dz*t;
+   if(projectileY(eye.y,pitch,t,velocity)<terrain(px,pz)+.035){
+    record(t,"terrain");break;
+   }
+  }
+ }else if(pitch<-.006){
+  // Backward compatible level-ground fallback for standalone API users.
+  for(let t=.5;t<=Math.min(maxRange,best?.distance??maxRange);t+=.5){
    if(projectileY(eye.y,pitch,t,velocity)<0){record(t,"ground");break;}
   }
  }
@@ -124,7 +138,7 @@ function trace({source,weapon,yaw,pitch=0,targets=[],obstacles=null,
    const rx=e.x-source.x,rz=e.z-source.z,t=rx*dx+rz*dz;
    if(t<.5||t>=distance||t>w.maxRange)continue;
    const lateral=Math.abs(rx*dz-rz*dx);
-   const vertical=Math.abs(projectileY(source.y,tilt,t,w.muzzleVelocity)-1.45);
+   const vertical=Math.abs(projectileY(source.y,tilt,t,w.muzzleVelocity)-(e.groundY||0)-1.45);
    if(lateral<1.25&&vertical<1.2)nearMisses.push(e);
   }
  }
