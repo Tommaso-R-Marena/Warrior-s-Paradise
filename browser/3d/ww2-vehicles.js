@@ -139,7 +139,7 @@ function move(dt,input,player,blocked,traversable){
    collisionRejected++;v.speed=0;break;
   }
   v.x=nx;v.z=nz;v.yaw=nextYaw;
-  v.treadPhase+=Math.hypot(nx-v.x+Math.sin(nextYaw)*travel/steps,nz-v.z-Math.cos(nextYaw)*travel/steps);
+  v.treadPhase+=Math.abs(travel)/steps;
  }
  player.x=v.x;player.z=v.z;
 // The gun turret slews in tick(), independently of the hull heading.
@@ -305,7 +305,8 @@ const targetTurret=Math.atan2(enemy.x-player.x,player.z-enemy.z);
   }
   if(world.heightAt)enemy.groundY=world.heightAt(enemy.x,enemy.z);
  }else enemy.speed=0;
- if(enemy.reload>0||d>27||d<7||!hasLOS(enemy.x,enemy.z,player.x,player.z))return;
+if(enemy.reload>0||d>27||d<7||Math.abs(angleDelta(targetTurret,enemy.turretYaw))>.12||
+    !hasLOS(enemy.x,enemy.z,player.x,player.z))return;
  enemy.reload=5.1;enemy.shotFlash=.22;
  const damage=isDriving()&&current()?.id==="armor"?9:12;
  if(isDriving()&&current()){
