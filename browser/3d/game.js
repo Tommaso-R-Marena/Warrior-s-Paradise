@@ -532,6 +532,42 @@ function loadSkinnedCharacters(){
  });
 }
 
+function activateBakedArt(){
+ if(scenery.bakedStarted)return;
+ scenery.bakedStarted=true;
+ if(!window.WPBakedArt){scenery.bakedError="Baked art module unavailable";return;}
+ // The hosting machine only serves bytes. All baking happens before upload,
+ // and the mesh contributes to the pre-existing ONE world draw call.
+ window.WPBakedArt.load().then(baked=>{
+  const physicallyAnchored=baked.groups.every(g=>g.placements.every(q=>{
+   const min=g.bounds.min,max=g.bounds.max;
+   const cx=(min[0]+max[0])*.5*q.scale,cz=(min[2]+max[2])*.5*q.scale;
+   const dx=(max[0]-min[0])*.5*q.scale,dz=(max[2]-min[2])*.5*q.scale;
+   const cs=Math.cos(q.yaw),sn=Math.sin(q.yaw);
+   const x=q.x+cx*cs+cz*sn,z=q.z-cx*sn+cz*cs;
+   const rx=Math.abs(cs)*dx+Math.abs(sn)*dz;
+   const rz=Math.abs(sn)*dx+Math.abs(cs)*dz;
+   // The visual overlay cannot invent a brand-new building or blocking cover.
+   return boxes.some(b=>Math.abs(x-b[0])+rx<=b[2]*.5+.8&&
+    Math.abs(z-b[1])+rz<=b[3]*.5+.8);
+  }));
+  if(!physicallyAnchored)throw Error("Unanchored cosmetic mesh would disagree with collisions");
+  const staged=window.WPBakedArt.spliceTier(currentWorldData,lowVertexCount,mediumVertexCount,baked);
+  if(staged.highCount>440000)throw Error("Static vertex budget exceeded");
+  // Atomic publish: never expose partially decoded or unverified scene data.
+  currentWorldData=staged.data;
+  mediumVertexCount=staged.mediumCount;
+  upload(staticMesh,currentWorldData);
+  scenery.bakedHighTriangles=baked.highTriangles;
+  scenery.bakedMediumTriangles=baked.mediumTriangles;
+  scenery.bakedInstances=baked.instances;
+  scenery.bakedSources=baked.sources;
+  scenery.bakedReady=true;
+  if($("assetstatus"))$("assetstatus").textContent=
+   "CC0 ENVIRONMENT + VERIFIED OFFLINE-BAKED ART · "+baked.instances+" FACADES";
+ }).catch(error=>{scenery.bakedError=String(error);})
+  .finally(()=>{scenery.bakedComplete=true;});
+}
 function loadLicensedScenery(){
  const kit=window.WPAssetKit;
  if(!kit||typeof fetch!=="function"){scenery.error="GLB loader or fetch unavailable";return;}
@@ -622,7 +658,7 @@ function loadLicensedScenery(){
    const decoration=window.WPNormandyDressing;
    if(!decoration){
     scenery.dressingError="Optional CC0 decoration module unavailable";
-    scenery.dressingReady=true;return;
+    scenery.dressingReady=true;activateBakedArt();return;
    }
    decoration.load(kit,Geometry,currentWorldData,placementBlocked,flags,boxes).then(result=>{
     currentWorldData=result.data;
@@ -673,7 +709,7 @@ function loadLicensedScenery(){
     if($("assetstatus"))$("assetstatus").textContent=
      "VERIFIED KENNEY + QUATERNIUS CC0 · "+scenery.instances+" WORLD OBJECTS";
    }).catch(err=>{scenery.dressingError=String(err);})
-    .finally(()=>{scenery.dressingReady=true;});
+    .finally(()=>{scenery.dressingReady=true;activateBakedArt();});
   });
   
   if($("assetstatus"))$("assetstatus").textContent="KENNEY CC0 SCENERY READY · "+copies+" PLACED ASSETS";
@@ -684,6 +720,7 @@ function loadLicensedScenery(){
   solidProps.length=0;
   terrainRocks.length=0;
   terrainRocks.push(...coreSolids.filter(b=>b.length>=6));
+  activateBakedArt();
  });
 }
 
@@ -1655,6 +1692,10 @@ window.WP3DDiagnostics=()=>({
   activeDressingColliders:tierSolids().length,collisionQuality,
   shadowedTerrainCells:scenery.shadowedTerrainCells||0,
   contactShadowTriangles:game.contactShadowTriangles||0,
+  bakedArt:{ready:!!scenery.bakedReady,complete:!!scenery.bakedComplete,
+   error:scenery.bakedError||"",instances:scenery.bakedInstances||0,
+   mediumTriangles:scenery.bakedMediumTriangles||0,
+   highTriangles:scenery.bakedHighTriangles||0,sources:scenery.bakedSources||[]},
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,
