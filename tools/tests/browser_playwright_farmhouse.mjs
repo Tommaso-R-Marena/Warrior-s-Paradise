@@ -34,6 +34,21 @@ try{
    rearBalanced:window.WPActorVisibility.visible(actor,player,"medium")};
  });
  check(!computed.rearHigh&&computed.rearBalanced,"High actor culling must not affect Balanced rendering");
+ // Inject two real live AI entities: only their rendering is eligible for
+ // culling, never the entity list, hit registration, health or simulation.
+ await page.evaluate(()=>window.WP3DQA.combatScenario({
+  x:0,z:0,yaw:0,pitch:0,aim:false,
+  enemies:[{x:0,z:-28,hp:100},{x:0,z:28,hp:100}]
+ }));
+ await page.waitForFunction(()=>{
+  const state=window.WP3DDiagnostics();
+  return state.culledActors>=1&&state.defenders?.length===2;
+ },null,{timeout:30000});
+ const culled=await page.evaluate(()=>window.WP3DDiagnostics());
+ check(culled.defenders.length===2&&culled.defenders.every(e=>e.hp>0),
+  "Off-camera enemy disappeared from actual gameplay simulation");
+ check(culled.culledActors>=1&&culled.visibleActors>=1,
+  "Real engine did not render-cull the rear soldier");
  check(!errors.length,"Runtime page errors: "+errors.join(";"));
  const glError=await page.evaluate(()=>document.querySelector("#viewport").getContext("webgl2").getError());
  check(glError===0,"GL errors: "+glError);
