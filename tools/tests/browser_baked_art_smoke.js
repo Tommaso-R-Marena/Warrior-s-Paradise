@@ -50,7 +50,8 @@ const fetcher=async url=>{
  const result=lib.spliceTier(base,low,medium,scene);
  assert(result.mediumCount>medium);
  assert(result.highCount>base.length/9);
- assert.deepEqual(result.data.slice(0,low*9),base.slice(0,low*9));
+ assert(result.data.slice(0,low*9).every((x,i)=>x===base[i]),
+  "Low scene prefix changed when importing baked LODs");
  assert(result.data[medium*9]<0,"baked art marker must survive transformations");
  assert(Number.isFinite(result.data.at(-1)));
  const shader=fs.readFileSync(path.join(dir,"game.js"),"utf8");
