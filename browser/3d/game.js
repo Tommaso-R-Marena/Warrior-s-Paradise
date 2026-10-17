@@ -1429,7 +1429,10 @@ function dynamicGeometry(){
   actor.groundY=worldHeight(actor.x,actor.z);
   if(rig.ready&&skinner&&distance<viewDist&&selected.has(actor)){
    const chosen=rig.historical[team]||rig.model;
-   const drawn=skinner.append(m,chosen,actor,team,game.elapsed);
+   // Near inspection keeps every historical triangle; middle-distance
+   // soldiers remain skinned but skip source faces progressively.
+   const skinLod=distance>18?3:distance>11?2:1;
+   const drawn=skinner.append(m,chosen,actor,team,game.elapsed,skinLod);
    if(!rig.historical[team]&&art?.fieldEquipment)art.fieldEquipment(m,actor,team);
    skinnedActors++;skinnedTriangles+=drawn.triangles;
    uvFabricTriangles+=drawn.uvTexturedTriangles||0;
