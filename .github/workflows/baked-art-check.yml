@@ -1,0 +1,39 @@
+name: Offline baked art integrity
+on:
+  pull_request:
+    paths:
+      - "browser/3d/assets/baked/**"
+      - "browser/3d/baked-art.js"
+      - "browser/3d/game.js"
+      - "tools/assets/compile_baked_art.py"
+      - "tools/assets/generate_baked_facade.py"
+      - "tools/assets/blender_bake_browser_art.py"
+      - "tools/tests/test_baked_art_pipeline.py"
+      - "tools/tests/browser_baked_art_smoke.js"
+      - ".github/workflows/baked-art-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - "browser/3d/assets/baked/**"
+      - "tools/assets/compile_baked_art.py"
+      - "tools/assets/generate_baked_facade.py"
+      - ".github/workflows/baked-art-check.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: python3 -m unittest discover -s tools/tests -p test_baked_art_pipeline.py -v
+      - run: python3 tools/assets/generate_baked_facade.py --check
+      - run: python3 tools/assets/compile_baked_art.py --verify browser/3d/assets/baked/normandy-stonework.wpmesh.json
+      - run: node tools/tests/browser_baked_art_smoke.js
