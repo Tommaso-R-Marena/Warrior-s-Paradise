@@ -33,6 +33,12 @@ try{
  const impact=await page.evaluate(()=>window.WP3DDiagnostics().combatSurface);
  assert(impact.marks>=1&&impact.renderedTriangles>0&&
   impact.renderedTriangles<=impact.maxTriangles,"Wall impact not rendered or over-budget");
+ // Move only the QA enemy away from the artillery target; the test is
+ // verifying that cosmetic effects cannot apply damage of their own.
+ await page.evaluate(()=>window.WP3DQA.combatScenario({
+  x:-24,z:-25,yaw:0,pitch:0,aim:true,weapon:"rifle",
+  enemies:[{x:35,z:35,hp:100,alert:0,facing:Math.PI}]
+ }));
  await page.locator("#support").click();
  const blast=await page.evaluate(()=>{
   window.WP3DQA.step(147);
