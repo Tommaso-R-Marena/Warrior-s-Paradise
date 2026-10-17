@@ -31,7 +31,7 @@ const highVS=VS.replace(
  "void main(){vColor=aColor;vPos=aPos;vNorm=aNormal;gl_Position=uVP*vec4(aPos,1.);}",
  "uniform float uWindTime;"+
  "void main(){"+
- "float leaf=step(aColor.r+.055,aColor.g)*step(aColor.b,aColor.g+.10)*step(0.,aColor.b);"+
+ "float leaf=step(0.,aColor.r)*step(aColor.r+.055,aColor.g)*step(aColor.b,aColor.g+.10)*step(0.,aColor.b);"+
  "float strength=leaf*smoothstep(1.7,5.5,aPos.y)*.09;"+
  "vec3 p=aPos+vec3(sin(uWindTime*.82+aPos.x*.25+aPos.z*.31),0.,cos(uWindTime*.68+aPos.z*.32))*strength;"+
  "vColor=aColor;vPos=p;vNorm=aNormal;gl_Position=uVP*vec4(p,1.);}"
@@ -731,6 +731,17 @@ function loadLicensedScenery(){
      currentWorldData=detail.data;upload(staticMesh,currentWorldData);
      scenery.architecturalTiles=roofing.tiles;
      scenery.architecturalTriangles=roofing.triangles;
+    }
+    // Finite weathered plaster, ivy, drainpipes and mortar directly overlay
+    // existing collidable Normandy houses. High-only and no new draw calls.
+    if(window.WPArchitecturalWeathering){
+     const facade=new Geometry();facade.data=currentWorldData.slice();
+     const facadeStats=window.WPArchitecturalWeathering.append(facade,boxes);
+     currentWorldData=facade.data;upload(staticMesh,currentWorldData);
+     scenery.weatheredBuildings=facadeStats.buildings;
+     scenery.weatheringTriangles=facadeStats.triangles;
+     scenery.weatheringLeaves=facadeStats.ivyLeaves;
+     scenery.weatheringPatches=facadeStats.patches;
     }
     if(window.WPBotanicalDetail){
      const botanical=new Geometry();botanical.data=currentWorldData.slice();
@@ -1735,6 +1746,10 @@ window.WP3DDiagnostics=()=>({
   atmosphericSky:skyRenderer?.stats()||{ready:false,draws:0},
   architecturalTiles:scenery.architecturalTiles||0,
   architecturalTriangles:scenery.architecturalTriangles||0,
+  weatheredBuildings:scenery.weatheredBuildings||0,
+  weatheringTriangles:scenery.weatheringTriangles||0,
+  weatheringLeaves:scenery.weatheringLeaves||0,
+  weatheringPatches:scenery.weatheringPatches||0,
   botanicalClumps:scenery.botanicalClumps||0,botanicalTriangles:scenery.botanicalTriangles||0,
   directionalShadows:directionalShadows?.stats()||{ready:false,staticPasses:0},
   shadowsSuspended,
