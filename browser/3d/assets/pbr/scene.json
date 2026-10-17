@@ -1,0 +1,40 @@
+{
+  "schema": "wp-pbr-scene-v2",
+  "groups": [
+    {
+      "mesh": "normandy-brick-face",
+      "textures": {
+        "albedo": "./assets/materials/brick_photo.jpg.b64",
+        "normal": "./assets/materials/brick_normal.jpg.b64",
+        "roughness": "./assets/materials/brick_roughness.jpg.b64",
+        "lightmap": "./assets/pbr/normandy-brick-irradiance.wptex.json"
+      },
+      "instances": [
+        {
+          "x": -24,
+          "y": 0,
+          "z": -7.5,
+          "yaw": 0,
+          "scale": 1,
+          "collider": "existing-building"
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "z": -21,
+          "yaw": 0,
+          "scale": 0.91,
+          "collider": "existing-building"
+        },
+        {
+          "x": 18,
+          "y": 0,
+          "z": -6.5,
+          "yaw": 0,
+          "scale": 1,
+          "collider": "existing-building"
+        }
+      ]
+    }
+  ]
+}
