@@ -124,6 +124,10 @@ jobs:
         run: node tools/tests/browser_playwright_farmhouse.mjs
         env:
           WP_TEST_URL: http://127.0.0.1:8765/3d/
+      - name: Verify real UV cloth uniforms and animated historical skeletons in WebGL2
+        run: node tools/tests/browser_playwright_uv_infantry.mjs
+        env:
+          WP_TEST_URL: http://127.0.0.1:8765/3d/
       - name: Test movement, firefights, assets, and capture actual frame times
         run: node tools/tests/browser_playwright_benchmark.mjs
         env:
