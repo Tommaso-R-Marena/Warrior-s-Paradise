@@ -12,6 +12,7 @@ const C={hole:[.105,.102,.092],char:[.156,.136,.113],
  edge:[.365,.339,.289],chip:[.54,.508,.436],sparks:[.77,.605,.35],
  darkSoil:[.195,.175,.146],dust:[.39,.353,.306]};
 const finite=(v)=>Number.isFinite(v);
+const signed=c=>[-Math.abs(c[0]),c[1],c[2]];
 function checkPoint(x,y,z){
  return [x,y,z].every(finite)&&Math.abs(x)<48&&Math.abs(z)<48&&y>-2&&y<16;
 }
@@ -106,14 +107,14 @@ function wallScar(g,m){
   const a=j*Math.PI/3,b=(j+1)*Math.PI/3;
   const point=t=>wallPoint(m,Math.cos(t)*spread,Math.sin(t)*spread,.062);
   const inner=t=>wallPoint(m,Math.cos(t)*spread*.39,Math.sin(t)*spread*.39,.069);
-  g.tri(center,inner(a),inner(b),C.hole);n++;
+  g.tri(center,inner(a),inner(b),signed(C.hole));n++;
   g.quad(inner(a),point(a),point(b),inner(b),
-   j%2?C.char:C.edge);n+=2;
+   signed(j%2?C.char:C.edge));n+=2;
  }
  // Two pale broken chips adjacent to the darker, recessed-looking mark.
  g.tri(wallPoint(m,-spread*.9,-spread*.30,.074),
   wallPoint(m,-spread*.55,-spread*.76,.074),
-  wallPoint(m,-spread*.25,-spread*.50,.074),C.chip);n++;
+  wallPoint(m,-spread*.25,-spread*.50,.074),signed(C.chip));n++;
  return n;
 }
 function groundScar(g,x,z,r,heightAt,color){
@@ -123,7 +124,7 @@ function groundScar(g,x,z,r,heightAt,color){
   const a=j*Math.PI/4,b=(j+1)*Math.PI/4;
   const edge=t=>{const px=x+Math.cos(t)*r,pz=z+Math.sin(t)*r;
    return [px,heightAt(px,pz)+.091,pz];};
-  g.tri(center,edge(b),edge(a),j%3?color:C.edge);n++;
+  g.tri(center,edge(b),edge(a),signed(j%3?color:C.edge));n++;
  }
  return n;
 }
@@ -147,7 +148,7 @@ function render(g,tier,eyeX,eyeZ,heightAt=()=>0){
   const width=d.size*(1-t/d.life*.45);
   const a=[px-width,py,pz],b=[px+width,py+.018,pz],
    c=[px,py+width*1.8,pz+width*.4];
-  g.tri(a,b,c,d.kind==="spark"?C.sparks:C.chip);
+  g.tri(a,b,c,signed(d.kind==="spark"?C.sparks:C.chip));
   renderedTriangles++;
  }
  return renderedTriangles;
