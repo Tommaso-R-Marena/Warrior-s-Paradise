@@ -63,6 +63,8 @@ jobs:
           python3 tools/assets/generate_baked_facade.py --check
           python3 tools/assets/compile_baked_art.py --verify browser/3d/assets/baked/normandy-stonework.wpmesh.json
           node tools/tests/browser_baked_art_smoke.js
+      - name: Verify continuous grounded field road and physically sampled tank tracks
+        run: node tools/tests/browser_ground_surface_smoke.js
       - name: Verify contact shadows, armored wheels and correctly tagged steel PBR
         run: node tools/tests/browser_grounding_materials_smoke.js
       - name: Verify shadow, foliage, animation and armored model budgets
@@ -87,6 +89,10 @@ jobs:
           WP_TEST_URL: http://127.0.0.1:8765/3d/
       - name: Verify offline-baked LOD scene in actual WebGL2 Chromium
         run: node tools/tests/browser_playwright_baked_art.mjs
+        env:
+          WP_TEST_URL: http://127.0.0.1:8765/3d/
+      - name: Drive an actual Sherman over terrain-conformal Normandy road and wet ruts
+        run: node tools/tests/browser_playwright_ground.mjs
         env:
           WP_TEST_URL: http://127.0.0.1:8765/3d/
       - name: Test the deployed Sherman in real Chromium

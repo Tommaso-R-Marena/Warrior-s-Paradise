@@ -25,7 +25,7 @@ function update(dt){
   clouds.splice(i,1);retired++;
  }
 }
-function render(g,quality,eyeX=0,eyeZ=0){
+function render(g,quality,eyeX=0,eyeZ=0,heightAt=()=>0){
  if(!g||typeof g.tri!=="function")return {scars:0,plumes:0,triangles:0};
  let scars=0,plumes=0,triangles=0;
  const low=quality==="low",high=quality==="high";
@@ -37,9 +37,10 @@ function render(g,quality,eyeX=0,eyeZ=0){
   for(let i=0;i<count;i++){
    const a=i*2*Math.PI/count,b=(i+1)*2*Math.PI/count;
    const variation=1+.10*Math.sin(c.seed*80+i*4.7);
-   g.tri([c.x,-.016,c.z],
-    [c.x+Math.cos(a)*c.radius*variation,.004,c.z+Math.sin(a)*c.radius*variation],
-    [c.x+Math.cos(b)*c.radius,.004,c.z+Math.sin(b)*c.radius],COLOR.scar);
+   const ax=c.x+Math.cos(a)*c.radius*variation,az=c.z+Math.sin(a)*c.radius*variation;
+   const bx=c.x+Math.cos(b)*c.radius,bz=c.z+Math.sin(b)*c.radius;
+   g.tri([c.x,heightAt(c.x,c.z)+.078,c.z],
+    [ax,heightAt(ax,az)+.079,az],[bx,heightAt(bx,bz)+.079,bz],COLOR.scar);
    triangles++;
   }
   scars++;
@@ -53,7 +54,7 @@ function render(g,quality,eyeX=0,eyeZ=0){
    const height=(.33+i*.19+c.age*.27)*(c.kind==="artillery"?1.3:1);
    const width=(.16+i*.06+.11*c.age)*Math.max(.18,visibility);
    const facets=high?6:4;
-   g.cone(px,.05+height*.28,pz,width,height,
+   g.cone(px,heightAt(px,pz)+.05+height*.28,pz,width,height,
     i%3===0?COLOR.ash:i%3===1?COLOR.dust:COLOR.smoke,facets);
    plumes++;triangles+=facets;
   }
