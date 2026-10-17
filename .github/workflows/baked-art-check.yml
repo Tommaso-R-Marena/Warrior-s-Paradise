@@ -37,3 +37,6 @@ jobs:
       - run: python3 tools/assets/generate_baked_facade.py --check
       - run: python3 tools/assets/compile_baked_art.py --verify browser/3d/assets/baked/normandy-stonework.wpmesh.json
       - run: node tools/tests/browser_baked_art_smoke.js
+      - run: node tools/tests/browser_grounding_materials_smoke.js
+      - run: node tools/tests/browser_graphics_fidelity_smoke.js
+      - run: node tools/tests/browser_cinematic_fidelity_smoke.js
