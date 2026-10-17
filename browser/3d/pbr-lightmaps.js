@@ -200,7 +200,7 @@ async function prepare(gl,fetcher=fetch){
   }textures.forEach(tx=>gl.deleteTexture(tx));gl.deleteProgram(p);};
   return Object.freeze({
    render(vp,eye,tier){
-    if(tier==="low")return 0;
+    if(tier!=="high")return 0;
     gl.useProgram(p);gl.uniformMatrix4fv(loc.uVP,false,vp);gl.uniform3fv(loc.uEye,eye);
     let total=0;
     for(const g of groups){
