@@ -18,15 +18,17 @@ jobs:
       - name: Install offline Blender (CPU Cycles test)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y blender
+          sudo apt-get install -y blender python3-numpy
           blender --version | head -3
       - name: Create authentic Blender GLB file with a UV-mapped PBR material
         run: |
           mkdir -p artifacts
           blender -b -t 2 --python tools/tests/create_blender_pbr_source.py
+          test -s artifacts/blender_pbr_source.glb
       - name: Bake material and direct/indirect irradiance with real Cycles
         run: |
           blender -b -t 2 --python tools/assets/blender_export_pbr_lightmaps.py -- --input artifacts/blender_pbr_source.glb --id cycles-test --author "Warrior's Paradise original" --license original --texture-size 128 --lightmap-size 64 --cycles-samples 2 --medium-ratio 0.55 --output artifacts/baked-pbr
+          test -s artifacts/baked-pbr/cycles-test.wppbr.json
       - name: Verify all real Blender-generated output files and packed normals/UVs
         run: |
           python3 tools/assets/compile_pbr_lightmaps.py --verify artifacts/baked-pbr/cycles-test.wppbr.json
