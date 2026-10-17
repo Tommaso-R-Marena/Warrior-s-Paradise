@@ -10,33 +10,49 @@ const TEAM={
 };
 const SKIN=[.70,.56,.43],STEEL=[.19,.22,.21],OAK=[.36,.26,.18],
  BOOT=[.17,.16,.13],DARK=[.10,.115,.105],CANVAS=[.40,.38,.29],METAL=[.27,.30,.29];
-function soldier(g,actor,team,t,distMoved=0){
+function soldier(g,actor,team,t,distMoved=0,quality="medium"){
  const colors=TEAM[team]||TEAM.axis;
  const {x,z}=actor;
  const target=actor.facing===undefined?0:actor.facing;
  const yaw=target;
  const s=Math.sin(yaw),c=Math.cos(yaw);
+ const clothColors=[colors.coat,colors.trousers,colors.webbing,CANVAS];
+ // High-only diffuse cloth weave: model-space mottling is tied to the
+ // soldier, never pinned to the world as the avatar walks or turns.
+ const fabric=(col,px,py,pz)=>{
+  if(quality!=="high"||!clothColors.includes(col))return col;
+  const dye=1+Math.sin(px*29+py*19+pz*37)*.035+
+   Math.cos(px*17-pz*41+py*13)*.032;
+  return col.map(v=>Math.max(.03,Math.min(.95,v*dye)));
+ };
  const part=(px,py,pz,w,h,d,col,rotation=0)=>{
   const X=x+px*c+pz*s,Z=z-px*s+pz*c;
-  g.box(X,py+(actor.groundY||0),Z,w,h,d,col,yaw+rotation);
+  g.box(X,py+(actor.groundY||0),Z,w,h,d,fabric(col,px,py,pz),yaw+rotation);
  };
- const stride=Math.min(1,Math.max(0,distMoved*1.8));
- const cadence=t*9+(actor.phase||0);
- const gait=Math.sin(cadence)*.27*stride;
+ const speed=Math.max(0,Number.isFinite(distMoved)?distMoved:0);
  const crouched=!!actor.crouch||(actor.suppression||0)>1.0;
+ const running=speed>3.4&&!crouched;
+ const stride=Math.min(1,Math.max(0,speed/2.2));
+ const cadence=t*(running?12.5:crouched?6.1:8.3)+(actor.phase||0);
+ const gait=Math.sin(cadence)*(running?.39:crouched?.145:.27)*stride;
  const duck=crouched?.42:0;
- const hitFlinch=Math.min(1,(actor.reaction||0)*2.4);
+ const hitFlinch=Math.min(1,Math.max((actor.reaction||0)*2.4,(actor.hit||0)*1.8));
  const damaged=(actor.hit||0)>.05,coat=damaged?[.39,.30,.25]:colors.coat;
- const bob=Math.sin(cadence*2)*.027*stride-hitFlinch*.11;
+ const bob=Math.sin(cadence*2)*(running?.050:.027)*stride-hitFlinch*.11;
+ const lean=running?.10:crouched?-.04:speed>.2?.028:0;
  // Layered trousers, boots, calf gaiters, soldier tunic and belt.
  for(const side of [-1,1]){
   const fore=side*gait;
   part(side*.18,.52-duck*.52+Math.max(0,fore)*.07,fore*.42,
    .27,.82,.32,colors.trousers,fore*.4);
+  // Opposing knee lift and boot follow-through distinguish sprinting,
+  // crouch-walking and normal marching without adding collision surfaces.
+  if(quality==="high")part(side*.18,.37-duck*.44+Math.max(0,-fore)*.11,
+   fore*.38+.07,.29,.21,.31,colors.trousers);
   part(side*.18,.19-duck*.25,fore*.6+.08,.29,.35,.37,BOOT);
   part(side*.18,.78-duck*.50,0,.28,.17,.32,colors.webbing);
  }
- part(0,1.35+bob-duck,0,.67,1.03,.39,coat);
+ part(0,1.35+bob-duck,lean,.67,1.03,.39,coat);
  part(0,.93-duck,0,.72,.15,.44,colors.webbing);
  part(0,1.59-duck,.21,.62,.08,.08,colors.webbing);
  // Ammunition pouches, canteen, soldier backpack and shovel.
@@ -44,7 +60,16 @@ function soldier(g,actor,team,t,distMoved=0){
   part(side*.26,.96-duck,.28,.18,.26,.14,CANVAS);
   part(side*.21,1.26-duck,-.34,.19,.36,.17,colors.webbing);
  }
- part(0,1.34-duck,-.34,.55,.65,.20,CANVAS);
+ part(0,1.34-duck,-.34+lean*.4,.55,.65,.20,CANVAS);
+ if(quality==="high"){
+  // Equipment-only silhouette detail avoids one giant plain tunic:
+  // button placket, strap stitching, satchel flap and gaiter edges.
+  part(0,1.37+bob-duck,.255,.047,.62,.045,colors.webbing);
+  part(-.26,1.32-duck,.255,.09,.65,.044,colors.webbing);
+  part(.24,1.18-duck,.267,.21,.10,.07,CANVAS);
+  for(const side of [-1,1])
+   part(side*.19,.40-duck*.50,.20+side*gait*.16,.24,.07,.07,BOOT);
+ }
  part(-.28,1.13-duck,-.48,.13,.66,.11,STEEL);
  part(.31,1.02-duck,-.34,.17,.30,.17,CANVAS);
  // Neck, collar and head.
@@ -69,7 +94,8 @@ function soldier(g,actor,team,t,distMoved=0){
  part(.04,1.47+bob-duck,.96,.10,.11,.56,STEEL);
  part(.04,1.51+bob-duck,1.24,.08,.08,.25,DARK);
  part(.04,1.28+bob-duck,.52,.12,.25,.20,STEEL);
- return {pose:crouched?"crouch":stride>.08?"walk":"aim"};
+ return {pose:crouched?"crouch":running?"run":stride>.08?"walk":"aim",
+  stride,cadence,flinch:hitFlinch};
 }
 function fieldEquipment(g,actor,team){
  // Overlay period-inspired kit on the real deforming character, never another full body.
