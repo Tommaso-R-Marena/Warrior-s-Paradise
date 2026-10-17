@@ -273,6 +273,7 @@ function clothAlbedo(uv,team){
 }
 function append(g,model,actor,team="axis",time=0,lod=1){
  check(model&&model.mesh&&actor,"missing model or actor");
+ check(Number.isInteger(lod)&&lod>=1&&lod<=4,"LOD must be integer 1..4");
  const velocity=actor.moveSpeed||0;
  const mode=actor.crouch?"crouch":velocity>3.5?"run":velocity>.22?"walk":"aim";
  const palette=team==="ally"?[.34,.39,.29]:[.32,.34,.29],
@@ -319,17 +320,17 @@ function append(g,model,actor,team="axis",time=0,lod=1){
      (vertex[k]*tint*.6+palette[k]*.4)*
      (baseTint&&Number.isFinite(baseTint[k])?(.75+.25*baseTint[k]):1)*cloth)));
   }
-  for(let j=0;j<mesh.indices.length;j+=3*lod){
-   const indices=mesh.indices;
-   for(let t=j;t<Math.min(j+3*lod,indices.length);t+=3){
-    const [a,b,c]=[indices[t],indices[t+1],indices[t+2]];
-    const col=[0,1,2].map(k=>(colors[a][k]+colors[b][k]+colors[c][k])/3);
-    g.tri(transformed[a],transformed[b],transformed[c],col);added++;
-   }
+  const indices=mesh.indices;
+  // True index decimation: old LOD loop grouped triangles but emitted
+  // every triangle anyway. Distance LOD now actually reduces CPU/GPU work.
+  for(let j=0;j<indices.length;j+=3*lod){
+   const [a,b,c]=[indices[j],indices[j+1],indices[j+2]];
+   const col=[0,1,2].map(k=>(colors[a][k]+colors[b][k]+colors[c][k])/3);
+   g.tri(transformed[a],transformed[b],transformed[c],col);added++;
   }
  }
  return {triangles:added,mode,jointCount:model.joints.length,
-  uvTexturedTriangles:model.mesh.reduce((n,m)=>n+(m.uv?m.indices.length/3:0),0),
+  uvTexturedTriangles:model.mesh.reduce((n,m)=>n+(m.uv?Math.ceil(m.indices.length/(3*lod)):0),0),
   blended:!!motion.transition};
 }
 async function load(name="character_medium"){
