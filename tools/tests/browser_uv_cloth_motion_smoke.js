@@ -13,7 +13,7 @@ function realModel(name){
  const ab=b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);
  const m=sk.parse(ab);m.isHistorical=true;return m;
 }
-function triangles(model,actor,team,t){
+function triangles(model,actor,team,t,lod=1){
  let n=0,ok=true,checksum=0,colors=0;
  const g={tri(a,b,c,color){
   n++;
@@ -21,7 +21,7 @@ function triangles(model,actor,team,t){
   checksum+=a[0]+b[1]*.27+c[2]*.13;
   colors+=color[0]*.14+color[1]*.23+color[2]*.30;
  }};
- const result=sk.append(g,model,actor,team,t);
+ const result=sk.append(g,model,actor,team,t,lod);
  assert(ok,"nonfinite skin vertex");
  assert.equal(n,result.triangles,"rendered skinned triangles disagree");
  return {...result,checksum,colors};
@@ -60,6 +60,17 @@ axisActor.moveSpeed=0;
 const axisAim=triangles(axis,axisActor,"axis",.34);
 assert(axisAim.blended,"unanimated Axis glTF fallback action transition missing");
 assert(axisWalk.uvTexturedTriangles>0,"Axis cloth UV not attached");
+// Unlike the old placeholder LOD argument, real source index decimation
+// now strictly reduces emitted triangles while preserving UV color output.
+const half=triangles(ally,actor,"ally",1.25,2),third=triangles(ally,actor,"ally",1.25,3);
+assert(half.triangles<=Math.ceil(idle.triangles/2)+ally.mesh.length,
+ "2x skinned LOD did not reduce geometry");
+assert(third.triangles<=Math.ceil(idle.triangles/3)+ally.mesh.length,
+ "3x skinned LOD did not reduce geometry");
+assert(half.uvTexturedTriangles===half.triangles&&third.uvTexturedTriangles===third.triangles,
+ "LOD vertex colors lost artist UV attachment");
+assert.throws(()=>sk.append({tri(){}},ally,actor,"ally",0,0),/LOD/,
+ "illegal LOD must fail closed");
 const cached=ally.mesh.filter(m=>m.uv);
 assert(cached.every(m=>m.uvClothCache?.ally?.length===m.positions.length/3),
  "UV weave must be cached per mesh vertex, not recomputed for each frame");
