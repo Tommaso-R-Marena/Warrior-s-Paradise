@@ -20,6 +20,13 @@ class BakedArt(unittest.TestCase):
                 "medium":generate(False),"high":generate(True)}
         exact=compile_mesh(source)
         published=json.loads(DEST.read_text(encoding="utf-8"))
+        if exact != published:
+            import base64
+            for tier in ("medium","high"):
+                a=base64.b64decode(exact["lods"][tier]["data"])
+                b=base64.b64decode(published["lods"][tier]["data"])
+                diffs=[(i,a[i],b[i]) for i in range(min(len(a),len(b))) if a[i]!=b[i]]
+                print("BAKED_REPRO_DIFF",tier,len(a),len(b),"first=",diffs[:12])
         self.assertEqual(exact,published,"checked-in source and published art diverge")
         report=verify_pack(published)
         self.assertEqual(report["tiers"]["medium"]["triangles"],108)
