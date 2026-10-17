@@ -68,17 +68,21 @@ def compile_mesh(doc: dict) -> dict:
     upper = [max(p[axis] for p in all_pos) for axis in range(3)]
     if any(not -250 < p < 250 for p in lower + upper):
         fail("invalid bounds")
+    # Match the browser/initial JavaScript authoring path. Python's round()
+    # uses half-to-even, whereas JS Math.round rounds exact positive .5 up.
+    # Geometry release bytes must regenerate identically across runtimes.
+    quant_round = lambda value: math.floor(value + .5)
     lods = {}
     for tier, values in raw.items():
         buf = bytearray()
         for i in range(0, len(values), 9):
             p, n, rgb = values[i:i+3], values[i+3:i+6], values[i+6:i+9]
-            q = [round(65535 * (p[axis] - lower[axis]) /
-                       (upper[axis] - lower[axis])) if upper[axis] != lower[axis] else 0
+            q = [quant_round((p[axis] - lower[axis]) /
+                       (upper[axis] - lower[axis]) * 65535) if upper[axis] != lower[axis] else 0
                  for axis in range(3)]
             nrm = math.sqrt(sum(v*v for v in n))
-            ni = [max(-127, min(127, round(v / nrm * 127))) for v in n]
-            ci = [max(0, min(255, round(v * 255))) for v in rgb]
+            ni = [max(-127, min(127, quant_round(v / nrm * 127))) for v in n]
+            ci = [max(0, min(255, quant_round(v * 255))) for v in rgb]
             buf.extend(struct.pack("<3H3b3B", *q, *ni, *ci))
         if len(buf) != len(values) // 9 * 12 or len(buf) > MAX_BYTES:
             fail("packed mesh exceeds 4 MiB")
