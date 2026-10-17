@@ -32,7 +32,8 @@ try{
  check(glError===0,"WebGL error with UV-animated infantry: "+glError);
  check(!errors.length,"Browser errors: "+errors.join("; "));
  await fs.mkdir("artifacts/benchmarks",{recursive:true});
- await page.screenshot({path:"artifacts/benchmarks/high-uv-uniform-skeletal-animation.png"});
+ await page.screenshot({path:"artifacts/benchmarks/high-uv-uniform-skeletal-animation.png",
+  timeout:90000,animations:"disabled"});
  console.log("PASS REAL GLTF UV UNIFORM AND SKELETAL WEBGL",JSON.stringify({
   skinActors:d.skinActors,triangles:d.skinTriangles,uvTriangles:d.skinUVFabricTriangles,
   historical:d.ww2Rigs,glError}));
