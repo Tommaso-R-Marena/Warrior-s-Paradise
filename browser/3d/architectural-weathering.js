@@ -69,12 +69,12 @@ function append(g,buildings){
       const px=x+sway,pz=z+side*Math.sin(k*.7)*.033;
       const point=[px,yy,pz];
       if(quad([prev[0]-.018,prev[1],prev[2]],[prev[0]+.019,prev[1],prev[2]],
-       [px+.016,yy,pz],[px-.017,yy,pz],pigment(DAMP[0]))mortar++;
+       [px+.016,yy,pz],[px-.017,yy,pz],pigment(DAMP[0])))mortar++;
       prev=point;
       // Leaf silhouettes stand off the masonry just enough to prevent flicker.
       for(const flip of [-1,1]){
        const spread=flip*(.11+.075*rng());
-       const tip=[px+spread,yy+.15+rng()*.12,pz+side*(.055+.08*rng())];
+       const tip=[px+spread,yy+.15+rng()*.12,pz+side*(.055+.035*rng())];
        const leaf=IVY[(k+j+(flip===1?1:0))%IVY.length];
        if(tri([px,yy,pz+side*.039],
         [px+spread*.43,yy-.065,pz+side*.045],tip,leaf))ivyLeaves++;
