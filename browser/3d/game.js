@@ -386,6 +386,7 @@ function openLOS(ax,az,bx,bz){
  }
  return true;
 }
+let gameGroundStatic=null;
 function buildWorld(){
  const m=new Geometry();
  // The first mesh is the exact same triangulation used by ground collision.
@@ -399,12 +400,19 @@ function buildWorld(){
    [x+.18,worldHeight(x+.18,z+r)+.018,z+r],
    [x+r,worldHeight(x+r,z)+.018,z],col);
  }
- // Country road with diagonal segments; no dynamic tessellation required.
- for(let i=-8;i<8;i++){
-  const a=i*6;
-  m.quad([a-2.2,.015,a-1],[a-2.2,.015,a+5],[a+2.2,.015,a+5],
-    [a+2.2,.015,a-1],COLORS.road);
-  m.box(a+1.7,.025,a+2,.17,.02,2.8,COLORS.mud);
+ // A single terrain-conformal Normandy farm track replaces floating road
+ // slabs. Existing terrain height/collision remains the physical authority.
+ if(window.WPBattlefieldGround){
+  const surface=window.WPBattlefieldGround.appendBase(m,worldHeight,blocked);
+  gameGroundStatic=surface;
+ }else{
+  for(let i=-8;i<8;i++){
+   const a=i*6;
+   m.quad([a-2.2,worldHeight(a-2.2,a-1)+.035,a-1],
+    [a-2.2,worldHeight(a-2.2,a+5)+.035,a+5],
+    [a+2.2,worldHeight(a+2.2,a+5)+.035,a+5],
+    [a+2.2,worldHeight(a+2.2,a-1)+.035,a-1],COLORS.road);
+  }
  }
  for(const [j,b] of boxes.entries()){
   const [x,z,w,d]=b;
@@ -486,15 +494,8 @@ function buildWorld(){
   m.box(x,ground+.72,z,.12,1.44,.12,COLORS.timber);
   m.box(x,ground+1.03,z+1.2,.09,.09,2.5,COLORS.wood);
  }
- for(let i=0;i<35;i++){
-  const x=-42+rnd()*84,z=-41+rnd()*82,r=.45+rnd()*.8;
-  if(blocked(x,z,1.8))continue;
-  for(let n=0;n<10;n++){
-   const t=n*Math.PI/5,nt=(n+1)*Math.PI/5;
-   m.tri([x,-.04,z],[x+Math.cos(t)*r,.006,z+Math.sin(t)*r],
-    [x+Math.cos(nt)*r,.006,z+Math.sin(nt)*r],COLORS.mud);
-  }
- }
+ // Road, wear, and shell-darkened earth are already generated above,
+ // explicitly following the shared collision heightfield.
  for(const f of flags){
   m.box(f.x,2.65,f.z,.10,5.3,.10,COLORS.metal);
   m.quad([f.x+.05,4.9,f.z],[f.x+.05,4.9,f.z+1.5],
@@ -709,6 +710,13 @@ function loadLicensedScenery(){
      scenery.terrainTriangles=terrain.triangles;
      scenery.shadowedTerrainCells=terrain.shadowedCells;
     }
+    // High-only terrain-bound ruts, worn gravel and shallow water. This is
+    // decorative overlay, not a new physics obstacle or a second draw pass.
+    if(window.WPBattlefieldGround){
+     const detailed=new Geometry();detailed.data=currentWorldData.slice();
+     scenery.highGround=window.WPBattlefieldGround.appendHigh(detailed,worldHeight,blocked);
+     currentWorldData=detailed.data;upload(staticMesh,currentWorldData);
+    }
     // High-only pitched roofing mesh: shares the existing static buffer/draw call.
     if(window.WPArchitecturalDetail){
      const detail=new Geometry();detail.data=currentWorldData.slice();
@@ -821,6 +829,7 @@ function reset(){
  if(window.WPTacticalNav)window.WPTacticalNav.reset();
  window.WPBattleTactics?.reset();
  if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.reset();
+ window.WPBattlefieldGround?.reset();
  if(window.WPArmoredFleet){
   window.WPArmoredFleet.reset();
   window.WPArmoredFleet.setGround(worldHeight);
@@ -1211,6 +1220,9 @@ function simulate(dt){
   [player.x,player.z]=move(player.x,player.z,x*pace*dt,z*pace*dt);
  else window.WPArmoredFleet.move(dt,input,player,blocked,(sx,sz,nx,nz,r)=>
   terrainPassable(sx,sz,nx,nz,r,"vehicle"));
+ if(window.WPBattlefieldGround)
+  window.WPBattlefieldGround.markTracks(window.WPArmoredFleet?.info()?.vehicles||[],
+   dt,worldHeight,game.quality);
  const traveled=Math.hypot(player.x-oldX,player.z-oldZ);
  player.stepPhase=(player.stepPhase||0)+traveled*9;
  player.stepStrength=Math.max(0,Math.min(1,
@@ -1425,7 +1437,9 @@ function dynamicGeometry(){
   }else m.box(g.x,g.y,g.z,.22,.22,.22,COLORS.metal);
  }
  if(window.WPBattleAtmosphere)
-  window.WPBattleAtmosphere.render(m,game.quality,player.x,player.z);
+  window.WPBattleAtmosphere.render(m,game.quality,player.x,player.z,worldHeight);
+ game.imprintTriangles=window.WPBattlefieldGround?.drawTracks(m,game.quality,player.x,player.z,
+  worldHeight)||0;
  if(window.WPArmoredFleet){
   window.WPArmoredFleet.setGround(worldHeight);
   window.WPArmoredFleet.draw(m,window.WPAssetKit,game.quality,player,game.elapsed);
@@ -1726,6 +1740,9 @@ window.WP3DDiagnostics=()=>({
   activeDressingColliders:tierSolids().length,collisionQuality,
   shadowedTerrainCells:scenery.shadowedTerrainCells||0,
   contactShadowTriangles:game.contactShadowTriangles||0,
+  groundedRoad:gameGroundStatic||null,
+  highSurface:scenery.highGround||null,
+  trackImprints:{...window.WPBattlefieldGround?.stats(),renderedTriangles:game.imprintTriangles||0},
   uvPBR:{ready:!!pbrRenderer,complete:pbrStatus.complete,error:pbrStatus.error,
    renderedTriangles:pbrStatus.lastDrawn,...(pbrRenderer?.stats()||{})},
   bakedArt:{ready:!!scenery.bakedReady,complete:!!scenery.bakedComplete,
