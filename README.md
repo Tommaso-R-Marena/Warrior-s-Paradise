@@ -24,6 +24,23 @@ Cloudflare has confirmed deployment and browser initialization/deployment of the
 
 See [Cloudflare 3D deployment architecture](docs/CLOUDFLARE_3D_DEPLOYMENT.md) for why Pages can host the web game completely but **Unreal Pixel Streaming requires a separately GPU-equipped server**.
 
+## Offline-baked 3D art for permanently free Cloudflare hosting
+
+The 3D Cloudflare build now accepts **offline-baked static scene assets** made
+with Blender on a temporary powerful workstation and exported to compact
+self-hosted WebGL2 geometry. The current working demonstration ships original
+Nor­mandy farmhouse stonework with Medium and High geometric LOD, precomputed
+vertex ambient occlusion, license/provenance metadata, checksum validation,
+bounded geometry, and physically anchored placements. The rendering workstation
+**does not** have to stay running: players' browsers render the static files.
+
+Run `python tools/assets/generate_baked_facade.py --check` for exact sample
+reproducibility or follow the optional Blender/GLB import instructions at
+[Offline baked Cloudflare art](docs/OFFLINE_BAKED_CLOUDFLARE_ART.md).
+This is *not* Unreal browser export, streamed game rendering, full baked GI,
+or a claim that the sample art meets Enlisted fidelity. Integrated GPUs still
+have to render the real-time battlefield and require Low/Medium graphics.
+
 ## Native 3D Android development — commercial-quality target
 
 The real Unreal Engine 5.8 project now includes a **native multitouch HUD and input controller** for infantry, tanks, light vehicles and gun emplacements. It has 13 context-sensitive infantry actions, twin-thumb movement/look, tank turret and cannon/MG controls, an Android ARM64 landscape setup, mobile-specific rendering profile handling and a dedicated Android packaging/preflight script.

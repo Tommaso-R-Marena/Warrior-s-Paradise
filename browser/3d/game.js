@@ -44,7 +44,7 @@ const FS=[
  "return mix(mix(hash21(i),hash21(i+vec2(1.,0.)),f.x),",
  "mix(hash21(i+vec2(0.,1.)),hash21(i+vec2(1.,1.)),f.x),f.y);}",
  "void main(){",
- "vec3 n=normalize(vNorm);",
+ "vec3 n=normalize(vNorm);float bakedTagged=1.-step(0.,vColor.r);",
  "float sun=max(dot(n,normalize(vec3(.53,.88,-.36))),0.);",
  "float exposure=.38+.69*sun;",
  "float distanceToEye=distance(vPos,uEye);",
@@ -59,9 +59,9 @@ const FS=[
  "float large=.5,fine=.5;",
  "if(uDetailLevel>.02&&uUseAtlas<.5){large=valnoise(surface*1.3);fine=valnoise(surface*13.);}",
  "float mottled=(large-.5)*.23+(fine-.5)*.13;",
- "float grass=step(vColor.r+.035,vColor.g)*step(vColor.b,vColor.g+.08);",
+ "float grass=(1.-bakedTagged)*step(vColor.r+.035,vColor.g)*step(vColor.b,vColor.g+.08);",
  "float earth=1.-grass;",
- "vec3 rgb=vColor*exposure;",
+ "vec3 rgb=abs(vColor)*exposure;",
  "rgb*=1.+mottled*nearby*uDetailLevel;",
  "float grassFibers=.5;",
  "if(uDetailLevel>.02&&uUseAtlas<.5)grassFibers=hash21(floor(surface*19.));",
@@ -76,8 +76,8 @@ const FS=[
  "if(uDetailLevel>.02&&uUseAtlas<.5)rough=earth*vertical*hash21(floor(surface*23.));",
  "rgb*=1.+.07*(rough-.5)*nearby*uDetailLevel;",
  "if(uUseAtlas>.5&&uDetailLevel>.02){",
- "float terrain=step(.65,n.y)*(1.-smoothstep(.25,.9,vPos.y));",
- "float masonry=vertical*step(.10,vColor.r-vColor.g)*step(.9,vPos.y);",
+ "float terrain=(1.-bakedTagged)*step(.65,n.y)*(1.-smoothstep(.25,.9,vPos.y));",
+ "float masonry=(1.-bakedTagged)*vertical*step(.10,vColor.r-vColor.g)*step(.9,vPos.y);",
  "float tile=terrain>.5?(grass>.5?0.:1.):(masonry>.5?3.:2.);",
  "float contactShadow=1.-step(.10,vColor.r);",
  "float intensity=max(terrain,masonry)*uDetailLevel*(1.-contactShadow);",
@@ -123,8 +123,8 @@ const highSource=FS.replace(
  "float exposure=.38+.69*sun;",
  "float exposure=(.38+.69*sun)*shadowVisibility(vPos,n);"
 ).replace(
- "float terrain=step(.65,n.y)*(1.-smoothstep(.25,.9,vPos.y));",
- "float terrain=step(.68,n.y)*(1.-smoothstep(6.4,7.5,vPos.y));"
+ "float terrain=(1.-bakedTagged)*step(.65,n.y)*(1.-smoothstep(.25,.9,vPos.y));",
+ "float terrain=(1.-bakedTagged)*step(.68,n.y)*(1.-smoothstep(6.4,7.5,vPos.y));"
 ).replace(
  "rgb=mix(rgb,textured,intensity*.78);",
  "rgb=mix(rgb,textured*(.61+.39*sun)*shadowVisibility(vPos,shadedN),intensity*.78);"
@@ -144,8 +144,8 @@ const highSource=FS.replace(
  "float highlight=pow(max(0.,dot(n,halfDir)),mix(92.,8.,roughness));",
  "float highlight=pow(max(0.,dot(shadedN,halfDir)),mix(92.,8.,roughness));"
 ).replace(
- "vec3 rgb=vColor*exposure;",
- "vec3 rgb=vColor*exposure*mix(vec3(.76,.85,.96),vec3(1.13,1.05,.89),smoothstep(.08,.88,sun));"
+ "vec3 rgb=abs(vColor)*exposure;",
+ "vec3 rgb=abs(vColor)*exposure*mix(vec3(.76,.85,.96),vec3(1.13,1.05,.89),smoothstep(.08,.88,sun));"
 ).replace(
  "rgb=mix(rgb,vec3(.58,.66,.64),min(.81,fog));",
  [
@@ -156,19 +156,19 @@ const highSource=FS.replace(
   "rgb=mix(rgb,fogTint,min(.83,fog*.86+lowMist));"
  ].join("\n")
 ).replace(
- "vec3 n=normalize(vNorm);",
- "vec3 n=normalize(vNorm);float metalTagged=1.-step(0.,vColor.b);"
+ "vec3 n=normalize(vNorm);float bakedTagged=1.-step(0.,vColor.r);",
+ "vec3 n=normalize(vNorm);float bakedTagged=1.-step(0.,vColor.r);float metalTagged=(1.-step(0.,vColor.b))*(1.-bakedTagged);"
 ).replace(
- "float grass=step(vColor.r+.035,vColor.g)*step(vColor.b,vColor.g+.08);",
- "float grass=(1.-metalTagged)*step(vColor.r+.035,vColor.g)*step(vColor.b,vColor.g+.08);"
+ "float grass=(1.-bakedTagged)*step(vColor.r+.035,vColor.g)*step(vColor.b,vColor.g+.08);",
+ "float grass=(1.-metalTagged)*(1.-bakedTagged)*step(vColor.r+.035,vColor.g)*step(vColor.b,vColor.g+.08);"
 ).replace(
- "float terrain=step(.68,n.y)*(1.-smoothstep(6.4,7.5,vPos.y));",
- "float terrain=(1.-metalTagged)*step(.68,n.y)*(1.-smoothstep(6.4,7.5,vPos.y));"
+ "float terrain=(1.-bakedTagged)*step(.68,n.y)*(1.-smoothstep(6.4,7.5,vPos.y));",
+ "float terrain=(1.-metalTagged)*(1.-bakedTagged)*step(.68,n.y)*(1.-smoothstep(6.4,7.5,vPos.y));"
 ).replace(
- "float masonry=vertical*step(.10,vColor.r-vColor.g)*step(.9,vPos.y);",
- "float masonry=(1.-metalTagged)*vertical*step(.10,vColor.r-vColor.g)*step(.9,vPos.y);"
+ "float masonry=(1.-bakedTagged)*vertical*step(.10,vColor.r-vColor.g)*step(.9,vPos.y);",
+ "float masonry=(1.-metalTagged)*(1.-bakedTagged)*vertical*step(.10,vColor.r-vColor.g)*step(.9,vPos.y);"
 ).replace(
- "vec3 rgb=vColor*exposure*mix",
+ "vec3 rgb=abs(vColor)*exposure*mix",
  "vec3 rgb=abs(vColor)*exposure*mix"
 ).replace(
  "float fog=1.-exp(-pow(max(0.,distanceToEye-18.)/78.,1.45));",
@@ -532,6 +532,42 @@ function loadSkinnedCharacters(){
  });
 }
 
+function activateBakedArt(){
+ if(scenery.bakedStarted)return;
+ scenery.bakedStarted=true;
+ if(!window.WPBakedArt){scenery.bakedError="Baked art module unavailable";return;}
+ // The hosting machine only serves bytes. All baking happens before upload,
+ // and the mesh contributes to the pre-existing ONE world draw call.
+ window.WPBakedArt.load().then(baked=>{
+  const physicallyAnchored=baked.groups.every(g=>g.placements.every(q=>{
+   const min=g.bounds.min,max=g.bounds.max;
+   const cx=(min[0]+max[0])*.5*q.scale,cz=(min[2]+max[2])*.5*q.scale;
+   const dx=(max[0]-min[0])*.5*q.scale,dz=(max[2]-min[2])*.5*q.scale;
+   const cs=Math.cos(q.yaw),sn=Math.sin(q.yaw);
+   const x=q.x+cx*cs+cz*sn,z=q.z-cx*sn+cz*cs;
+   const rx=Math.abs(cs)*dx+Math.abs(sn)*dz;
+   const rz=Math.abs(sn)*dx+Math.abs(cs)*dz;
+   // The visual overlay cannot invent a brand-new building or blocking cover.
+   return boxes.some(b=>Math.abs(x-b[0])+rx<=b[2]*.5+.8&&
+    Math.abs(z-b[1])+rz<=b[3]*.5+.8);
+  }));
+  if(!physicallyAnchored)throw Error("Unanchored cosmetic mesh would disagree with collisions");
+  const staged=window.WPBakedArt.spliceTier(currentWorldData,lowVertexCount,mediumVertexCount,baked);
+  if(staged.highCount>440000)throw Error("Static vertex budget exceeded");
+  // Atomic publish: never expose partially decoded or unverified scene data.
+  currentWorldData=staged.data;
+  mediumVertexCount=staged.mediumCount;
+  upload(staticMesh,currentWorldData);
+  scenery.bakedHighTriangles=baked.highTriangles;
+  scenery.bakedMediumTriangles=baked.mediumTriangles;
+  scenery.bakedInstances=baked.instances;
+  scenery.bakedSources=baked.sources;
+  scenery.bakedReady=true;
+  if($("assetstatus"))$("assetstatus").textContent=
+   "CC0 ENVIRONMENT + VERIFIED OFFLINE-BAKED ART · "+baked.instances+" FACADES";
+ }).catch(error=>{scenery.bakedError=String(error);})
+  .finally(()=>{scenery.bakedComplete=true;});
+}
 function loadLicensedScenery(){
  const kit=window.WPAssetKit;
  if(!kit||typeof fetch!=="function"){scenery.error="GLB loader or fetch unavailable";return;}
@@ -622,7 +658,7 @@ function loadLicensedScenery(){
    const decoration=window.WPNormandyDressing;
    if(!decoration){
     scenery.dressingError="Optional CC0 decoration module unavailable";
-    scenery.dressingReady=true;return;
+    scenery.dressingReady=true;activateBakedArt();return;
    }
    decoration.load(kit,Geometry,currentWorldData,placementBlocked,flags,boxes).then(result=>{
     currentWorldData=result.data;
@@ -673,7 +709,7 @@ function loadLicensedScenery(){
     if($("assetstatus"))$("assetstatus").textContent=
      "VERIFIED KENNEY + QUATERNIUS CC0 · "+scenery.instances+" WORLD OBJECTS";
    }).catch(err=>{scenery.dressingError=String(err);})
-    .finally(()=>{scenery.dressingReady=true;});
+    .finally(()=>{scenery.dressingReady=true;activateBakedArt();});
   });
   
   if($("assetstatus"))$("assetstatus").textContent="KENNEY CC0 SCENERY READY · "+copies+" PLACED ASSETS";
@@ -684,6 +720,7 @@ function loadLicensedScenery(){
   solidProps.length=0;
   terrainRocks.length=0;
   terrainRocks.push(...coreSolids.filter(b=>b.length>=6));
+  activateBakedArt();
  });
 }
 
@@ -1655,6 +1692,10 @@ window.WP3DDiagnostics=()=>({
   activeDressingColliders:tierSolids().length,collisionQuality,
   shadowedTerrainCells:scenery.shadowedTerrainCells||0,
   contactShadowTriangles:game.contactShadowTriangles||0,
+  bakedArt:{ready:!!scenery.bakedReady,complete:!!scenery.bakedComplete,
+   error:scenery.bakedError||"",instances:scenery.bakedInstances||0,
+   mediumTriangles:scenery.bakedMediumTriangles||0,
+   highTriangles:scenery.bakedHighTriangles||0,sources:scenery.bakedSources||[]},
   alliesAlive:game.allies.filter(a=>a.hp>0).length,
   difficulty:game.difficulty,squadOrder:game.order,support:game.support,
   activeTracers:game.tracers.length,

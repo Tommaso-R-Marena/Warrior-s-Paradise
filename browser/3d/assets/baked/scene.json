@@ -1,0 +1,34 @@
+{
+  "schema": "wp-baked-scene-v1",
+  "groups": [
+    {
+      "mesh": "normandy-stonework",
+      "instances": [
+        {
+          "x": -24,
+          "y": 0,
+          "z": -7.5,
+          "yaw": 0,
+          "scale": 1,
+          "collider": "existing-building"
+        },
+        {
+          "x": -2,
+          "y": 0,
+          "z": -21,
+          "yaw": 0,
+          "scale": 0.91,
+          "collider": "existing-building"
+        },
+        {
+          "x": 18,
+          "y": 0,
+          "z": -6.5,
+          "yaw": 0,
+          "scale": 1,
+          "collider": "existing-building"
+        }
+      ]
+    }
+  ]
+}

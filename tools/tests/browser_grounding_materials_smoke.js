@@ -42,7 +42,7 @@ assert(highModel.tagged>150,"Armor PBR metal tagging missing");
 const game=fs.readFileSync(path.join(dir,"game.js"),"utf8");
 const html=fs.readFileSync(path.join(dir,"index.html"),"utf8");
 assert(html.includes('contact-shadows.js'));
-for(const value of ["contactShadowTriangles","float metalTagged=1.-step(0.,vColor.b)","float contactShadow=1.-step(.10,vColor.r)"])
+for(const value of ["contactShadowTriangles","float metalTagged=(1.-step(0.,vColor.b))*(1.-bakedTagged)","float contactShadow=1.-step(.10,vColor.r)"])
  assert(game.includes(value),"missing renderer contract "+value);
 console.log("PASS high-fidelity grounding",JSON.stringify({mediumShadows:medium.triangles,
  highShadows:high.triangles,modelExtraTriangles:highModel.triangles-mediumModel.triangles,
