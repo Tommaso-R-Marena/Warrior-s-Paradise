@@ -25,7 +25,7 @@ assert(effects.bullet(ground,buildings,terrain),"terrain intersection creates di
 assert(effects.explosion(12,9,"artillery",terrain));
 assert(effects.explosion(-8,21,"frag",terrain));
 let data=scene(),triangles=effects.render(data,"high",13,9,terrain);
-assert(triangles===data.triangles.length&&triangles>60,"actual scar triangle count");
+assert(triangles===data.triangles.length&&triangles===60,"actual scar triangle count must equal 19 wall + 8 dirt + 16 crater + 17 debris");
 assert(data.triangles.some(t=>t.some(p=>Math.abs(p[0]-5.065)<.03)),
  "masonry impact must be offset near wall collision face");
 assert(data.triangles.every(t=>t.every(v=>v.every(Number.isFinite))),"nonfinite debris vertices");
