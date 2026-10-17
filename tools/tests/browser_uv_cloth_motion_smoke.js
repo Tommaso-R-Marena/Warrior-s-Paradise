@@ -67,6 +67,17 @@ const pose0=sk.pose(ally,.25,"walk",ally.animations.findIndex(a=>/walk/i.test(a.
 const pose1=sk.pose(ally,.25,"aim",ally.animations.findIndex(a=>/aim/i.test(a.name)));
 const middle=sk.pose(ally,.25,"aim",ally.animations.findIndex(a=>/aim/i.test(a.name)),
  {fromMode:"walk",fromClip:ally.animations.findIndex(a=>/walk/i.test(a.name)),alpha:.5});
+// Check real named Allied joints: crouch must genuinely bend hips/knees,
+// not merely translate the entire body downward as before this change.
+const crouchPose=sk.pose(ally,.25,"crouch",-1);
+const idlePose=sk.pose(ally,.25,"aim",ally.animations.findIndex(a=>/aim/i.test(a.name)));
+let bentJoints=0;
+for(const name of ["thigh.L","thigh.R","shin.L","shin.R","spine.001"]){
+ const joint=ally.joints.indexOf(ally.names.get(name));
+ if(joint<0)continue;
+ if(crouchPose[joint].some((v,k)=>Math.abs(v-idlePose[joint][k])>.005))bentJoints++;
+}
+assert(bentJoints>=3,"Allied crouch must deform real skeleton joints");
 let middleValid=0;
 for(let i=0;i<middle.length;i++)for(let j=0;j<16;j++){
  assert(Number.isFinite(middle[i][j]),"blended joint nonfinite");
