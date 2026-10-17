@@ -212,7 +212,7 @@ function pose(model,time=0,mode="walk",animIndex=-1,transition=null){
  // Composes with historical authored clips instead of replacing locomotion.
  const breathing=Math.sin(time*2.15)*.012;
  const lean=mode==="run"?.023:mode==="walk"?.009:0;
- for(const name of ["Spine","Spine1","Chest","mixamorig:Spine","mixamorig:Spine1"]){
+ for(const name of ["Spine","Spine1","Chest","spine","spine.001","mixamorig:Spine","mixamorig:Spine1"]){
   const id=model.names.get(name);if(id===undefined)continue;
   const node=model.nodes[id],ov=override.get(id)||{};
   const base=ov.rotation||node.rotation||[0,0,0,1];
