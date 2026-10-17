@@ -1,0 +1,56 @@
+name: Real Blender Cycles PBR export
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "tools/assets/blender_export_pbr_lightmaps.py"
+      - "tools/assets/compile_pbr_lightmaps.py"
+      - "tools/tests/create_blender_pbr_source.py"
+      - ".github/workflows/blender-pbr-smoke.yml"
+permissions:
+  contents: read
+jobs:
+  cycles-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install offline Blender (CPU Cycles test)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy
+          blender --version | head -3
+      - name: Create authentic Blender GLB file with a UV-mapped PBR material
+        run: |
+          mkdir -p artifacts
+          blender -b -t 2 --python tools/tests/create_blender_pbr_source.py
+          test -s artifacts/blender_pbr_source.glb
+      - name: Bake material and direct/indirect irradiance with real Cycles
+        run: |
+          blender -b -t 2 --python tools/assets/blender_export_pbr_lightmaps.py -- --input artifacts/blender_pbr_source.glb --id cycles-test --author "Warrior's Paradise original" --license original --texture-size 128 --lightmap-size 64 --cycles-samples 2 --medium-ratio 0.55 --output artifacts/baked-pbr
+          test -s artifacts/baked-pbr/cycles-test.wppbr.json
+      - name: Verify all real Blender-generated output files and packed normals/UVs
+        run: |
+          python3 tools/assets/compile_pbr_lightmaps.py --verify artifacts/baked-pbr/cycles-test.wppbr.json
+          python3 - <<'PY'
+          import base64,json
+          from pathlib import Path
+          folder=Path("artifacts/baked-pbr")
+          pack=json.loads((folder/"cycles-test.wppbr.json").read_text())
+          assert pack["source"]["author"]=="Warrior's Paradise original"
+          for layer in ("albedo","normal","roughness","metallic"):
+              data=base64.b64decode((folder/("cycles-test-"+layer+".png.b64")).read_text())
+              assert data[:8]==b"\x89PNG\r\n\x1a\n",layer
+          light=json.loads((folder/"cycles-test-lightmap.wptex.json").read_text())
+          assert light["schema"]=="wp-linear-texture-v1"
+          assert light["width"]==64 and light["height"]==64
+          assert len(base64.b64decode(light["rgba"]))==64*64*4
+          print("PASS REAL BLENDER CYCLES PBR EXPORT",{
+              q:pack["lods"][q]["vertices"]//3 for q in ("medium","high")})
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-blender-cycles-pbr-smoke
+          path: artifacts/baked-pbr/
+          retention-days: 7

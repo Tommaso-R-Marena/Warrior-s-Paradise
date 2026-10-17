@@ -16,6 +16,8 @@ const gpuProfiler=window.WPDeviceGpuProfiler?.create(gl)||null;
 window.WPDeviceGpuCaptureController=gpuProfiler;
 let skyRenderer=null; // Defer optional shader compilation until High is actually selected.
 let directionalShadows=null; // Never allocate shadow resources for Low/Medium.
+let pbrRenderer=null;
+const pbrStatus={started:false,complete:false,error:"",lastDrawn:0};
 let shadowsSuspended=false; // Hysteresis for slow hardware.
 const VS=[
  "#version 300 es","precision highp float;",
@@ -567,6 +569,31 @@ function activateBakedArt(){
    "CC0 ENVIRONMENT + VERIFIED OFFLINE-BAKED ART · "+baked.instances+" FACADES";
  }).catch(error=>{scenery.bakedError=String(error);})
   .finally(()=>{scenery.bakedComplete=true;});
+}
+function loadPhysicalPBRArt(){
+ if(pbrStatus.started)return;
+ pbrStatus.started=true;
+ if(!window.WPPBRLightmaps){pbrStatus.error="UV/PBR importer unavailable";pbrStatus.complete=true;return;}
+ const physicallyAnchored=(group)=>{
+  const min=group.bounds.min,max=group.bounds.max;
+  return group.instances.every(q=>{
+   const center=[(max[0]+min[0])*.5*q.scale,(max[2]+min[2])*.5*q.scale];
+   const half=[(max[0]-min[0])*.5*q.scale,(max[2]-min[2])*.5*q.scale];
+   const c=Math.cos(q.yaw),s=Math.sin(q.yaw);
+   const x=q.x+c*center[0]+s*center[1],z=q.z-s*center[0]+c*center[1];
+   const rx=Math.abs(c)*half[0]+Math.abs(s)*half[1];
+   const rz=Math.abs(s)*half[0]+Math.abs(c)*half[1];
+   return boxes.some(b=>Math.abs(x-b[0])+rx<=b[2]*.5+.8&&
+    Math.abs(z-b[1])+rz<=b[3]*.5+.8);
+  });
+ };
+ // Decode, verify and prove all placements before committing GPU resources.
+ window.WPPBRLightmaps.loadScene().then(scene=>{
+  if(!scene.groups.every(physicallyAnchored))throw Error("UV/PBR art creates invisible or nonphysical world cover");
+  return window.WPPBRLightmaps.prepare(gl);
+ }).then(renderer=>{pbrRenderer=renderer;})
+  .catch(e=>{pbrStatus.error=String(e);})
+  .finally(()=>{pbrStatus.complete=true;});
 }
 function loadLicensedScenery(){
  const kit=window.WPAssetKit;
@@ -1449,6 +1476,9 @@ function resize(){
 }
 function render(){
  if(!lastWidth||!lastHeight)return;
+ // New photo-real PBR layer is deliberately High-only. Otherwise texture
+ // decoding and extra shader draws can starve software/mobile renderers.
+ if(game.quality==="high"&&!pbrStatus.started)loadPhysicalPBRArt();
  gpuProfiler?.begin();
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  const stepBob=Math.sin(player.stepPhase||0)*(player.stepStrength||0)*
@@ -1506,6 +1536,10 @@ function render(){
  draw(staticMesh,game.quality==="low"?lowVertexCount:game.quality==="medium"?mediumVertexCount:staticMesh.count);
  upload(liveMesh,dynamicGeometry());
  draw(liveMesh);
+ if(pbrRenderer&&game.quality==="high"){
+  try{pbrStatus.lastDrawn=pbrRenderer.render(mul(proj,view),new Float32Array(eye),game.quality);}
+  catch(error){pbrStatus.error=String(error);pbrRenderer.dispose();pbrRenderer=null;}
+ }else pbrStatus.lastDrawn=0;
  gpuProfiler?.end();
 }
 let previous=0,adaptTime=0;
@@ -1692,6 +1726,8 @@ window.WP3DDiagnostics=()=>({
   activeDressingColliders:tierSolids().length,collisionQuality,
   shadowedTerrainCells:scenery.shadowedTerrainCells||0,
   contactShadowTriangles:game.contactShadowTriangles||0,
+  uvPBR:{ready:!!pbrRenderer,complete:pbrStatus.complete,error:pbrStatus.error,
+   renderedTriangles:pbrStatus.lastDrawn,...(pbrRenderer?.stats()||{})},
   bakedArt:{ready:!!scenery.bakedReady,complete:!!scenery.bakedComplete,
    error:scenery.bakedError||"",instances:scenery.bakedInstances||0,
    mediumTriangles:scenery.bakedMediumTriangles||0,
