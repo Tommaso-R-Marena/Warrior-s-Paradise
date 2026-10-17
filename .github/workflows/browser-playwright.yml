@@ -63,6 +63,8 @@ jobs:
           python3 tools/assets/generate_baked_facade.py --check
           python3 tools/assets/compile_baked_art.py --verify browser/3d/assets/baked/normandy-stonework.wpmesh.json
           node tools/tests/browser_baked_art_smoke.js
+      - name: Verify physical bullet holes, finite smoke-rubble and crater budgets
+        run: node tools/tests/browser_combat_surface_smoke.js
       - name: Verify continuous grounded field road and physically sampled tank tracks
         run: node tools/tests/browser_ground_surface_smoke.js
       - name: Verify contact shadows, armored wheels and correctly tagged steel PBR
@@ -107,6 +109,10 @@ jobs:
           WP_TEST_URL: http://127.0.0.1:8765/3d/
       - name: Verify real Chromium High sky, weathered farmhouses and masonry rigidity
         run: node tools/tests/browser_playwright_weathering.mjs
+        env:
+          WP_TEST_URL: http://127.0.0.1:8765/3d/
+      - name: Verify real infantry wall hits, artillery scars and WebGL2 debris
+        run: node tools/tests/browser_playwright_surface_impacts.mjs
         env:
           WP_TEST_URL: http://127.0.0.1:8765/3d/
       - name: Verify High farm glazing and performance visibility in actual WebGL2 Chromium
