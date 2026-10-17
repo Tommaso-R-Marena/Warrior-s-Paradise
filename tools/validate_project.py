@@ -81,6 +81,8 @@ REQUIRED = [
     "browser/3d/battle-atmosphere.js",
     "browser/3d/battle-sky.js",
     "browser/3d/architectural-detail.js",
+    "browser/3d/architectural-weathering.js",
+    "tools/tests/browser_architectural_weathering_smoke.js",
     "browser/3d/botanical-detail.js",
     "browser/3d/contact-shadows.js",
     "browser/3d/battlefield-ground.js",
