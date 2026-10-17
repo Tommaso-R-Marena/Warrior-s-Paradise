@@ -167,6 +167,16 @@ function trackOverrides(model,time,mode,animIndex){
    ["LeftShoulder",[1,0,0],Math.sin(stride)*.15*move-.13],
    ["RightShoulder",[1,0,0],-Math.sin(stride)*.15*move-.13],
    ["Spine",[1,0,0],-.10*crouch],
+   // The real Allied asset uses Blender's thigh.L/shin.L naming, not
+   // Mixamo's LeftUpLeg/LeftLeg. Without aliases its crouch was only a
+   // whole-body drop instead of moving knees, hips and weapon-bearing arms.
+   ["thigh.L",[1,0,0],Math.sin(stride)*.45*move+crouch*.71],
+   ["thigh.R",[1,0,0],-Math.sin(stride)*.45*move+crouch*.71],
+   ["shin.L",[1,0,0],Math.max(0,-Math.sin(stride))*.38*move-crouch*.65],
+   ["shin.R",[1,0,0],Math.max(0,Math.sin(stride))*.38*move-crouch*.65],
+   ["upper_arm.L",[1,0,0],Math.sin(stride)*.15*move-.13-crouch*.18],
+   ["upper_arm.R",[1,0,0],-Math.sin(stride)*.15*move-.13-crouch*.18],
+   ["spine.001",[1,0,0],-.19*crouch],
   ];
   for(const [name,axis,angle] of animations){
    const ni=model.names.get(name);if(ni===undefined)continue;
