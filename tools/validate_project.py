@@ -124,6 +124,7 @@ REQUIRED = [
     "browser/3d/assets/kenney/CHARACTER_MANIFEST.json",
     "tools/tests/browser_skinning_smoke.js",
     "tools/tests/browser_uv_cloth_motion_smoke.js",
+    "tools/tests/browser_playwright_uv_infantry.mjs",
     "tools/tests/browser_material_atlas_smoke.js",
     "tools/tests/browser_recorded_audio_smoke.js",
     "browser/3d/assets/audio/cc0-gunshot.wav.b64",
