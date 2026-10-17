@@ -1405,7 +1405,7 @@ function dynamicGeometry(){
   game.contactShadowTriangles=contact.triangles;
  }else game.contactShadowTriangles=0;
  const art=window.WPBattleArt,skinner=window.WPSkinning;
- let skinnedActors=0,skinnedTriangles=0;
+ let skinnedActors=0,skinnedTriangles=0,uvFabricTriangles=0,blendedActors=0;
  // Save low-end phones: limit both shading work and CPU-skinned scene actors.
  const limit=game.quality==="high"?4:0;
  const maxActors=game.fps<24?Math.min(limit,1):game.fps<35?Math.min(limit,2):limit;
@@ -1432,7 +1432,9 @@ function dynamicGeometry(){
    const drawn=skinner.append(m,chosen,actor,team,game.elapsed);
    if(!rig.historical[team]&&art?.fieldEquipment)art.fieldEquipment(m,actor,team);
    skinnedActors++;skinnedTriangles+=drawn.triangles;
-  }else if(art)art.soldier(m,actor,team,game.elapsed,actor.moveSpeed||0);
+   uvFabricTriangles+=drawn.uvTexturedTriangles||0;
+   blendedActors+=drawn.blended?1:0;
+  }else if(art)art.soldier(m,actor,team,game.elapsed,actor.moveSpeed||0,game.quality);
   else{
    const color=team==="ally"?COLORS.blue:COLORS.dark;
    m.box(actor.x,1.4,actor.z,.7,1.5,.5,color);
@@ -1458,6 +1460,8 @@ function dynamicGeometry(){
  for(const a of game.allies)if(a.hp>0)present(a,"ally");
  rig.skinnedLastFrame=skinnedActors;
  rig.skinnedTriangles=skinnedTriangles;
+ rig.uvFabricTriangles=uvFabricTriangles;
+ rig.blendedActors=blendedActors;
  for(const t of game.tracers){
   if(Math.hypot(t.bx-t.ax,t.bz-t.az)<.1)continue;
   const color=t.team==="hostile"?COLORS.red:COLORS.gold;
@@ -1762,7 +1766,10 @@ window.WP3DDiagnostics=()=>({
   highShaderReady:!!highProgram,materialMode:photographicMaterials.mode,rigLoaded:rig.ready,rigError:rig.error,
   ww2Rigs:{ally:!!rig.historical.ally,axis:!!rig.historical.axis},
   armor:window.WPArmoredFleet?.info()||null,
-  skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,buildingsLoaded:scenery.buildings||0,
+  skinActors:rig.skinnedLastFrame,skinTriangles:rig.skinnedTriangles,
+  skinUVFabricTriangles:rig.uvFabricTriangles||0,
+  skinBlendedActors:rig.blendedActors||0,
+  buildingsLoaded:scenery.buildings||0,
   farmError:scenery.farmError||"",
   dressingReady:scenery.dressingReady,dressingError:scenery.dressingError,
   dressingInstances:scenery.dressings,dressingTriangles:scenery.dressingTriangles,
