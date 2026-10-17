@@ -853,6 +853,7 @@ function reset(){
  if(window.WPTacticalNav)window.WPTacticalNav.reset();
  window.WPBattleTactics?.reset();
  if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.reset();
+ window.WPCombatSurfaceEffects?.reset();
  window.WPBattlefieldGround?.reset();
  if(window.WPArmoredFleet){
   window.WPArmoredFleet.reset();
@@ -979,7 +980,10 @@ function shoot(){
    if(input.cannonLatched)return;
    const fired=fleet.fire(player,game.enemies,lineHit,victim=>{
     if(victim.hp<=0){game.kills++;msg("ARMOR: TARGET DOWN",1);}
-   },addTracer,(x,z,type)=>window.WPBattleAtmosphere?.blast(x,z,type),{
+   },addTracer,(x,z,type)=>{
+    window.WPBattleAtmosphere?.blast(x,z,type);
+    if(game.quality==="high")window.WPCombatSurfaceEffects?.explosion(x,z,type,worldHeight);
+   },{
     heightAt:worldHeight,
     blocked,
     traversable:(sx,sz,nx,nz,r)=>terrainPassable(sx,sz,nx,nz,r,"vehicle"),
@@ -1022,6 +1026,9 @@ function shoot(){
     rocks:terrainRocks,groundHeight:worldHeight}});
  const end=shot.endpoint;
  addTracer(player.x,player.z,end.x,end.z,"friendly",eyeY,end.y);
+ // Use the authoritative ballistic intersection, never a decorative ray
+ // that pretends a round struck a wall or target it actually missed.
+ if(game.quality==="high")window.WPCombatSurfaceEffects?.bullet(shot,boxes,worldHeight);
  game.lastShot={weapon:player.weapon,damage:shot.damage,zone:shot.zone,
   distance:Math.round(shot.distance*10)/10,reason:shot.reason,
   blockedBy:shot.blockedBy||null,hit:!!shot.hit,
@@ -1152,6 +1159,7 @@ function updateCombinedArms(dt){
   if(strike.life<=0&&!strike.detonated){
    strike.detonated=true;
    if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.blast(strike.x,strike.z,"artillery");
+   if(game.quality==="high")window.WPCombatSurfaceEffects?.explosion(strike.x,strike.z,"artillery",worldHeight);
    player.concussion=Math.max(player.concussion||0,
     Math.max(0,1-Math.hypot(player.x-strike.x,player.z-strike.z)/24)*.9);
    for(const e of game.enemies){
@@ -1213,6 +1221,7 @@ function simulate(dt){
  if(!game.playing)return;
  game.elapsed+=dt;
  if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.update(dt);
+ window.WPCombatSurfaceEffects?.update(dt);
  if(window.WPArmoredFleet)window.WPArmoredFleet.tick(dt,player,lineHit,damage=>{
   player.hurt=.7;msg("ENEMY ARMOR · SEEK COVER",1);
   if(player.hp<=0)end(false);
@@ -1279,6 +1288,7 @@ function simulate(dt){
   if(g.life<=0&&!g.detonated){
    g.detonated=true;
    if(window.WPBattleAtmosphere)window.WPBattleAtmosphere.blast(g.x,g.z,"frag");
+   if(game.quality==="high")window.WPCombatSurfaceEffects?.explosion(g.x,g.z,"frag",worldHeight);
    player.concussion=Math.max(player.concussion||0,
     Math.max(0,1-Math.hypot(player.x-g.x,player.z-g.z)/11)*.5);
    for(const e of game.enemies){
@@ -1471,6 +1481,8 @@ function dynamicGeometry(){
  }
  if(window.WPBattleAtmosphere)
   window.WPBattleAtmosphere.render(m,game.quality,player.x,player.z,worldHeight);
+ game.impactTriangles=window.WPCombatSurfaceEffects?.render(m,game.quality,
+  player.x,player.z,worldHeight)||0;
  game.imprintTriangles=window.WPBattlefieldGround?.drawTracks(m,game.quality,player.x,player.z,
   worldHeight)||0;
  if(window.WPArmoredFleet){
@@ -1779,6 +1791,7 @@ window.WP3DDiagnostics=()=>({
   activeDressingColliders:tierSolids().length,collisionQuality,
   shadowedTerrainCells:scenery.shadowedTerrainCells||0,
   contactShadowTriangles:game.contactShadowTriangles||0,
+  combatSurface:{...window.WPCombatSurfaceEffects?.stats(),renderedTriangles:game.impactTriangles||0},
   groundedRoad:gameGroundStatic||null,
   highSurface:scenery.highGround||null,
   trackImprints:{...window.WPBattlefieldGround?.stats(),renderedTriangles:game.imprintTriangles||0},
