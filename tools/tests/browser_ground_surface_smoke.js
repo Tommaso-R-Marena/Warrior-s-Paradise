@@ -59,7 +59,7 @@ ground.reset();assert.equal(ground.stats().marks,0);
 const html=fs.readFileSync(path.join(root,"index.html"),"utf8"),game=fs.readFileSync(path.join(root,"game.js"),"utf8");
 assert(html.includes("battlefield-ground.js"));
 for(const value of ["WPBattlefieldGround.appendBase(","WPBattlefieldGround.appendHigh(",
- "WPBattlefieldGround.markTracks(","WPBattlefieldGround.drawTracks(","wetTagged",
+ "WPBattlefieldGround.markTracks(","WPBattlefieldGround?.drawTracks(","wetTagged",
  "heightAt(c.x,c.z)"])
  assert((game+"\n"+fs.readFileSync(path.join(root,"battle-atmosphere.js"),"utf8")).includes(value),
   "Missing integration "+value);
