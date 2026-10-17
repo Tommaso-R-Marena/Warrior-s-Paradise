@@ -69,6 +69,10 @@ jobs:
         run: node tools/tests/browser_grounding_materials_smoke.js
       - name: Verify shadow, foliage, animation and armored model budgets
         run: node tools/tests/browser_cinematic_fidelity_smoke.js
+      - name: Test finite WWII farmhouse fittings and conservative visual-only actor culling
+        run: |
+          node tools/tests/browser_farmhouse_craft_smoke.js
+          node tools/tests/browser_actor_visibility_smoke.js
       - name: Validate terrain-anchored weathered WWII farmhouses and ivy geometry
         run: node tools/tests/browser_architectural_weathering_smoke.js
       - name: Validate optional High graphics budgets and GL state restoration
@@ -103,6 +107,10 @@ jobs:
           WP_TEST_URL: http://127.0.0.1:8765/3d/
       - name: Verify real Chromium High sky, weathered farmhouses and masonry rigidity
         run: node tools/tests/browser_playwright_weathering.mjs
+        env:
+          WP_TEST_URL: http://127.0.0.1:8765/3d/
+      - name: Verify High farm glazing and performance visibility in actual WebGL2 Chromium
+        run: node tools/tests/browser_playwright_farmhouse.mjs
         env:
           WP_TEST_URL: http://127.0.0.1:8765/3d/
       - name: Test movement, firefights, assets, and capture actual frame times
