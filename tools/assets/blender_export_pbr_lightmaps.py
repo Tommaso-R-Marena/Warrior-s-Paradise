@@ -76,7 +76,7 @@ def prepare_mesh(filename):
     if len(obj.data.materials)!=1 or not obj.data.materials[0]:
         raise ValueError("Export one authored material per pack; split multi-material sources into separate models first")
     mat=obj.data.materials[0]
-    if mat.blend_method!="OPAQUE":
+    if getattr(mat,"blend_method","OPAQUE")!="OPAQUE":
         raise ValueError("Alpha blending/transparency is unsupported by this opaque game renderer")
     mat.use_nodes=True
     if not obj.data.uv_layers:
@@ -190,7 +190,9 @@ def gather(obj):
         for loop_index in t.loops:
             loop=mesh.loops[loop_index]
             p=obj.matrix_world@mesh.vertices[loop.vertex_index].co
-            n=(inverse@loop.normal).normalized()
+            corners=getattr(mesh,"corner_normals",None)
+            original_normal=corners[loop_index].vector if corners else t.normal
+            n=(inverse@original_normal).normalized()
             texture=uv0[loop_index].uv
             light=uv1[loop_index].uv
             result.extend((p.x,p.z,-p.y,n.x,n.z,-n.y,
