@@ -90,7 +90,7 @@ function appendHigh(g,height,blocked=()=>false){
     cz+Math.cos(a)*rx-Math.sin(a)*rz*INV,.059);
    const f=heightpoint(height,cx+Math.cos(b)*rx+Math.sin(b)*rz*INV,
     cz+Math.cos(b)*rx-Math.sin(b)*rz*INV,.059);
-   g.tri(mid,e,f,i%3===0?C.damp:C.damp2);triangles++;
+   g.tri(mid,f,e,i%3===0?C.damp:C.damp2);triangles++;
   }puddles++;
  }
  return {ruts,puddles,gravel,triangles,maxTriangles:800};
