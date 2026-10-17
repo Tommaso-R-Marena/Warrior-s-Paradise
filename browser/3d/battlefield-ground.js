@@ -107,11 +107,14 @@ function markTracks(vehicles,dt,height,quality){
   if(!v||!v.alive||!finite(v.x)||!finite(v.z)||!finite(v.yaw)||
    !finite(v.width)||!finite(v.speed)||Math.abs(v.speed)<.55)continue;
   const last=positions.get(v.id);
-  positions.set(v.id,{x:v.x,z:v.z,yaw:v.yaw});
-  if(!last)continue;
+  if(!last){positions.set(v.id,{x:v.x,z:v.z,yaw:v.yaw});continue;}
   const travel=Math.hypot(v.x-last.x,v.z-last.z);
-  // Refuse teleports, excessive stamps and stationary jitter.
-  if(travel<.33||travel>3.8)continue;
+  // Accumulate real small physics steps until the tracks advance at least
+  // 33 cm. Updating the anchor every frame would suppress ALL real tracks.
+  if(travel<.33)continue;
+  positions.set(v.id,{x:v.x,z:v.z,yaw:v.yaw});
+  // Teleporting must never draw an enormous unnatural strip.
+  if(travel>3.8)continue;
   const segments=Math.min(5,Math.ceil(travel/.70));
   for(let k=0;k<segments;k++){
    const a=(k+.02)/segments,b=(k+.96)/segments;
