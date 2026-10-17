@@ -63,7 +63,8 @@ try{
  assert(glError===0,"GL errors after high-impact geometry "+glError);
  assert(!errors.length,"Browser exceptions: "+errors.join("; "));
  await fs.mkdir("artifacts/benchmarks",{recursive:true});
- await page.screenshot({path:"artifacts/benchmarks/grounded-ballistic-debris-high.png"});
+ await page.screenshot({path:"artifacts/benchmarks/grounded-ballistic-debris-high.png",
+  timeout:90000,animations:"disabled"});
  console.log("PASS REAL CHROMIUM COLLISION-BOUND IMPACTS",JSON.stringify({
   blockedBy:bullet.shot.blockedBy,marks:final.combatSurface.marks,
   activeDebris:final.combatSurface.debris,blastScars:final.combatSurface.blasts,
