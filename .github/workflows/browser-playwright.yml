@@ -69,6 +69,8 @@ jobs:
         run: node tools/tests/browser_grounding_materials_smoke.js
       - name: Verify shadow, foliage, animation and armored model budgets
         run: node tools/tests/browser_cinematic_fidelity_smoke.js
+      - name: Validate terrain-anchored weathered WWII farmhouses and ivy geometry
+        run: node tools/tests/browser_architectural_weathering_smoke.js
       - name: Validate optional High graphics budgets and GL state restoration
         run: node tools/tests/browser_graphics_fidelity_smoke.js
       - name: Serve the same static browser files as Cloudflare Pages
