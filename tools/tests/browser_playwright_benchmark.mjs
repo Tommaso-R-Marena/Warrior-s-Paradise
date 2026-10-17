@@ -48,6 +48,9 @@ async function run(name,viewport,quality,mobile){
    assert(initial.highShaderReady,"High dedicated normal shader did not compile");
    assert(initial.atmosphericSky?.ready&&initial.atmosphericSky?.draws>0,
     "High atmospheric sky shader did not compile/render");
+   assert(initial.weatheringTriangles>=1200&&initial.weatheringTriangles<=2350&&
+    initial.weatheredBuildings>=9&&initial.weatheringLeaves>100,
+    "High weathered Normandy farmhouses missing or over cost budget");
    assert(initial.architecturalTiles>=600&&initial.architecturalTriangles<=1280,
     "High roof tiling did not enter the static scene");
    console.log("HIGH_SCENE_ACCEPTANCE",JSON.stringify({
