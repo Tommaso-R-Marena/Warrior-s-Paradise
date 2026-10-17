@@ -743,6 +743,12 @@ function loadLicensedScenery(){
      scenery.weatheringLeaves=facadeStats.ivyLeaves;
      scenery.weatheringPatches=facadeStats.patches;
     }
+    if(window.WPFarmhouseCraft){
+     const detail=new Geometry();detail.data=currentWorldData.slice();
+     const fittings=window.WPFarmhouseCraft.append(detail,boxes);
+     currentWorldData=detail.data;upload(staticMesh,currentWorldData);
+     scenery.farmhouseCraft=fittings;
+    }
     if(window.WPBotanicalDetail){
      const botanical=new Geometry();botanical.data=currentWorldData.slice();
      const flora=window.WPBotanicalDetail.append(botanical,blocked,flags,boxes);
@@ -1394,12 +1400,21 @@ function dynamicGeometry(){
  const limit=game.quality==="high"?4:0;
  const maxActors=game.fps<24?Math.min(limit,1):game.fps<35?Math.min(limit,2):limit;
  const viewDist=game.quality==="low"?14:game.quality==="medium"?23:28;
- const candidates=[
+ const actors=[
   ...game.allies.filter(a=>a.hp>0),
   ...game.enemies.filter(e=>e.hp>0)
- ].sort((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)-Math.hypot(b.x-player.x,b.z-player.z));
+ ];
+ const visibility=window.WPActorVisibility;
+ const candidates=game.quality==="high"&&visibility?
+  visibility.sortVisible(actors,player,game.quality):
+  actors.sort((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)-Math.hypot(b.x-player.x,b.z-player.z));
+ game.culledActors=actors.length-candidates.length;
+ game.visibleActors=candidates.length;
  const selected=new Set(candidates.slice(0,maxActors));
  const present=(actor,team)=>{
+  // Culling is visual only. Even unseen infantry still simulate, shoot,
+  // collide, take damage and carry on with their cover/LOS decisions.
+  if(game.quality==="high"&&visibility&&!visibility.visible(actor,player,game.quality))return;
   const distance=Math.hypot(actor.x-player.x,actor.z-player.z);
   actor.groundY=worldHeight(actor.x,actor.z);
   if(rig.ready&&skinner&&distance<viewDist&&selected.has(actor)){
@@ -1750,6 +1765,8 @@ window.WP3DDiagnostics=()=>({
   weatheringTriangles:scenery.weatheringTriangles||0,
   weatheringLeaves:scenery.weatheringLeaves||0,
   weatheringPatches:scenery.weatheringPatches||0,
+  farmhouseCraft:scenery.farmhouseCraft||null,
+  culledActors:game.culledActors||0,visibleActors:game.visibleActors||0,
   botanicalClumps:scenery.botanicalClumps||0,botanicalTriangles:scenery.botanicalTriangles||0,
   directionalShadows:directionalShadows?.stats()||{ready:false,staticPasses:0},
   shadowsSuspended,
