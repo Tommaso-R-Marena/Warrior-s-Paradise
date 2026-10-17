@@ -159,13 +159,13 @@ const highSource=FS.replace(
  ].join("\n")
 ).replace(
  "vec3 n=normalize(vNorm);float bakedTagged=1.-step(0.,vColor.r);",
- "vec3 n=normalize(vNorm);float bakedTagged=1.-step(0.,vColor.r);float metalTagged=(1.-step(0.,vColor.b))*(1.-bakedTagged);"
+ "vec3 n=normalize(vNorm);float bakedTagged=1.-step(0.,vColor.r);float metalTagged=(1.-step(0.,vColor.b))*(1.-bakedTagged);float wetTagged=1.-step(0.,vColor.g);"
 ).replace(
  "float grass=(1.-bakedTagged)*step(vColor.r+.035,vColor.g)*step(vColor.b,vColor.g+.08);",
  "float grass=(1.-metalTagged)*(1.-bakedTagged)*step(vColor.r+.035,vColor.g)*step(vColor.b,vColor.g+.08);"
 ).replace(
  "float terrain=(1.-bakedTagged)*step(.68,n.y)*(1.-smoothstep(6.4,7.5,vPos.y));",
- "float terrain=(1.-metalTagged)*(1.-bakedTagged)*step(.68,n.y)*(1.-smoothstep(6.4,7.5,vPos.y));"
+ "float terrain=(1.-metalTagged)*(1.-bakedTagged)*(1.-wetTagged)*step(.68,n.y)*(1.-smoothstep(6.4,7.5,vPos.y));"
 ).replace(
  "float masonry=(1.-bakedTagged)*vertical*step(.10,vColor.r-vColor.g)*step(.9,vPos.y);",
  "float masonry=(1.-metalTagged)*(1.-bakedTagged)*vertical*step(.10,vColor.r-vColor.g)*step(.9,vPos.y);"
@@ -187,6 +187,13 @@ const highSource=FS.replace(
   " vec3 reflected=normalize(viewDir+normalize(vec3(.53,.88,-.36)));",
   " float metalGlint=pow(max(0.,dot(n,reflected)),37.);",
   " rgb+=vec3(.11,.098,.071)*metalGlint*(.68+.32*paintNoise);",
+  "}",
+  "if(wetTagged>.5){",
+  " vec3 toEye=normalize(uEye-vPos);",
+  " vec3 sunDir=normalize(vec3(.53,.88,-.36));",
+  " float glint=pow(max(0.,dot(n,normalize(toEye+sunDir))),59.);",
+  " float fresnel=pow(1.-max(0.,dot(n,toEye)),4.);",
+  " rgb=abs(vColor)*(.31+.18*sun)+vec3(.36,.37,.34)*glint*.80+vec3(.065,.095,.105)*fresnel;",
   "}",
   "float fog=1.-exp(-pow(max(0.,distanceToEye-18.)/78.,1.45));"
  ].join("\n")
