@@ -4,7 +4,7 @@
  * procedural geometry only, no extra collision, server, textures or draw passes.
  */
 (function(root){"use strict";
-const CAP=1850;
+const CAP=2400;
 const FRAME=[.29,.258,.203],SILL=[.46,.448,.404],
  GLASS=[.177,.229,.238],GLOSS=[.25,.298,.303],
  WOOD=[[.205,.257,.201],[.25,.273,.224],[.306,.248,.185]],
