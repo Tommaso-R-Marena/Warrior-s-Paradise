@@ -596,7 +596,6 @@ function loadPhysicalPBRArt(){
   .finally(()=>{pbrStatus.complete=true;});
 }
 function loadLicensedScenery(){
- loadPhysicalPBRArt();
  const kit=window.WPAssetKit;
  if(!kit||typeof fetch!=="function"){scenery.error="GLB loader or fetch unavailable";return;}
  const models=["tree-oak","tree-pinedefaulta","rock-largea","plant-bush","fence-simple"];
@@ -1477,6 +1476,9 @@ function resize(){
 }
 function render(){
  if(!lastWidth||!lastHeight)return;
+ // New photo-real PBR layer is deliberately High-only. Otherwise texture
+ // decoding and extra shader draws can starve software/mobile renderers.
+ if(game.quality==="high"&&!pbrStatus.started)loadPhysicalPBRArt();
  gpuProfiler?.begin();
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  const stepBob=Math.sin(player.stepPhase||0)*(player.stepStrength||0)*
@@ -1534,7 +1536,7 @@ function render(){
  draw(staticMesh,game.quality==="low"?lowVertexCount:game.quality==="medium"?mediumVertexCount:staticMesh.count);
  upload(liveMesh,dynamicGeometry());
  draw(liveMesh);
- if(pbrRenderer&&game.quality!=="low"){
+ if(pbrRenderer&&game.quality==="high"){
   try{pbrStatus.lastDrawn=pbrRenderer.render(mul(proj,view),new Float32Array(eye),game.quality);}
   catch(error){pbrStatus.error=String(error);pbrRenderer.dispose();pbrRenderer=null;}
  }else pbrStatus.lastDrawn=0;
