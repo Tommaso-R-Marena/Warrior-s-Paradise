@@ -26,6 +26,7 @@ REQUIRED = [
     "tools/assets/blender_bake_browser_art.py",
     "tools/tests/browser_baked_art_smoke.js",
     "tools/tests/test_baked_art_pipeline.py",
+    "tools/tests/browser_playwright_baked_art.mjs",
     "tools/tests/browser_cc0_glb_smoke.js",
     "tools/tests/browser_cc0_scene_smoke.js",
     "tools/tests/browser_quaternius_glb_smoke.js",
