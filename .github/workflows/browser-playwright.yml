@@ -52,6 +52,12 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1
           npx playwright install --with-deps chromium
+      - name: Verify deterministic offline-baked scene, provenance and geometry checksums
+        run: |
+          python3 -m unittest discover -s tools/tests -p test_baked_art_pipeline.py -v
+          python3 tools/assets/generate_baked_facade.py --check
+          python3 tools/assets/compile_baked_art.py --verify browser/3d/assets/baked/normandy-stonework.wpmesh.json
+          node tools/tests/browser_baked_art_smoke.js
       - name: Verify contact shadows, armored wheels and correctly tagged steel PBR
         run: node tools/tests/browser_grounding_materials_smoke.js
       - name: Verify shadow, foliage, animation and armored model budgets
@@ -70,6 +76,10 @@ jobs:
           fi
       - name: Verify tank engine, cannon rounds and Panzer AI in Node
         run: node tools/tests/browser_tank_combat_smoke.js
+      - name: Verify offline-baked LOD scene in actual WebGL2 Chromium
+        run: node tools/tests/browser_playwright_baked_art.mjs
+        env:
+          WP_TEST_URL: http://127.0.0.1:8765/3d/
       - name: Test the deployed Sherman in real Chromium
         run: node tools/tests/browser_playwright_tanks.mjs
         env:
