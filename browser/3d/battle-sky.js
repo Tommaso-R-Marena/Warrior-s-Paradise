@@ -16,30 +16,45 @@ in vec2 vUv;
 uniform vec3 uForward,uRight,uUp;
 uniform vec2 uScale;
 out vec4 outColor;
+// Fully analytic daylight/stratocumulus model: no sky texture or alpha
+// overdraw. Three bounded harmonics approximate large, middle and broken
+// cloud scales in directional sky space, then warm sunlit cloud edges.
 void main(){
  vec2 q=vUv*2.-1.;
  vec3 ray=normalize(uForward+uRight*q.x*uScale.x+uUp*q.y*uScale.y);
- float altitude=clamp(ray.y,0.,1.);
- vec3 horizon=vec3(.69,.755,.745);
- vec3 zenith=vec3(.235,.42,.625);
- float gradient=pow(altitude,.69);
- vec3 sky=mix(horizon,zenith,gradient);
- // A bounded, soft stratocumulus layer; no texture fetches or translucent overdraw.
- if(ray.y>.045){
-  vec2 uv=ray.xz/max(.18,ray.y+.18);
-  float a=sin(uv.x*1.8+uv.y*.38);
-  float b=sin(uv.y*2.35-uv.x*.62);
-  float cloud=smoothstep(.64,1.05,.64*a+.36*b);
-  cloud*=smoothstep(.06,.21,ray.y)*(1.-smoothstep(.71,.92,ray.y));
-  sky=mix(sky,vec3(.80,.81,.79),cloud*.39);
- }
  vec3 sun=normalize(vec3(.53,.88,-.36));
- float facing=max(0.,dot(ray,sun));
- float glow=pow(facing,40.);
- float core=smoothstep(.99925,.99986,facing);
- sky+=vec3(.22,.145,.065)*glow+vec3(.72,.55,.32)*core;
- float mist=1.-smoothstep(-.12,.13,ray.y);
- sky=mix(sky,vec3(.68,.73,.70),mist*.24);
+ float elevation=clamp(ray.y,0.,1.);
+ float towardSun=max(0.,dot(ray,sun));
+ float nearHorizon=pow(1.-elevation,2.4);
+ vec3 zenith=vec3(.217,.390,.602);
+ vec3 lower=vec3(.675,.751,.751);
+ // Rayleigh blue skylight attenuates close to the physical horizon,
+ // while near-solar Mie forward scatter creates a warm atmospheric veil.
+ vec3 sky=mix(lower,zenith,pow(elevation,.70));
+ float mie=pow(towardSun,16.)*(.11+.24*nearHorizon);
+ sky+=vec3(.89,.69,.42)*mie;
+ if(ray.y>.035){
+  vec2 s=ray.xz/max(.16,ray.y+.18);
+  // Broad cumulus decks plus mid-altitude broken clouds. Analytical
+  // harmonics are intentionally cheaper than multi-step volumetric rays.
+  float broad=sin(s.x*1.44+sin(s.y*.53)*.76)+cos(s.y*1.79-s.x*.41);
+  float middle=sin(s.x*3.33+s.y*.91)*cos(s.y*2.63-s.x*.63);
+  float wisps=sin(s.y*.67-s.x*.15);
+  float coverage=broad*.31+middle*.22+wisps*.27;
+  float cloud=smoothstep(.13,.74,coverage);
+  cloud*=smoothstep(.065,.18,ray.y)*(1.-smoothstep(.71,.92,ray.y));
+  float thick=smoothstep(.43,.88,coverage);
+  vec3 underside=vec3(.595,.634,.635);
+  vec3 bright=vec3(.862,.864,.838);
+  vec3 cloudColor=mix(bright,underside,thick*.56);
+  cloudColor+=vec3(.072,.052,.025)*pow(towardSun,12.)*(1.-thick);
+  sky=mix(sky,cloudColor,cloud*.68);
+ }
+ float sunCore=smoothstep(.99942,.99984,towardSun);
+ float aureole=pow(towardSun,128.);
+ sky+=vec3(.22,.156,.089)*aureole+vec3(.73,.59,.39)*sunCore;
+ float aerosol=1.-smoothstep(-.16,.11,ray.y);
+ sky=mix(sky,vec3(.666,.723,.702),aerosol*.24);
  outColor=vec4(clamp(sky,0.,1.),1.);
 }`;
 function compile(gl,type,source){
