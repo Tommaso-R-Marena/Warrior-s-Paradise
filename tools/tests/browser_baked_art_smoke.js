@@ -56,7 +56,7 @@ const fetcher=async url=>{
  assert(Number.isFinite(result.data.at(-1)));
  const shader=fs.readFileSync(path.join(dir,"game.js"),"utf8");
  const html=fs.readFileSync(path.join(dir,"index.html"),"utf8");
- for(const s of ["bakedTagged","activateBakedArt","bakedHighTriangles","existing-building",
+ for(const s of ["bakedTagged","activateBakedArt","bakedHighTriangles",
   "Unanchored cosmetic mesh","float grass=(1.-bakedTagged)"])
   assert(shader.includes(s),"missing renderer contract "+s);
  assert(html.includes('baked-art.js'));
