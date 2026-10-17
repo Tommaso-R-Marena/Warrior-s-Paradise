@@ -64,6 +64,9 @@ function transform(base,instances){
    const nx=base.data[s+3],nz=base.data[s+5];
    out[d+3]=nx*cs+nz*sn;out[d+4]=base.data[s+4];out[d+5]=-nx*sn+nz*cs;
    out.set(base.data.subarray(s+6,s+9),d+6);
+   // Negative red is an explicit baked-vertex-color marker, not a metal tag.
+   // Both WebGL shaders remove this sign before lighting and atlas routing.
+   out[d+6]=-Math.abs(out[d+6]);
   }
  }
  return out;
@@ -98,7 +101,7 @@ async function load(fetcher=fetch){
   check(mesh.id===group.mesh,"mesh identity mismatch");
   const medium=transform(decode(mesh,"medium"),group.instances);
   const high=transform(decode(mesh,"high"),group.instances);
-  return {medium,high,instances:group.instances.length,
+  return {medium,high,instances:group.instances.length,bounds:mesh.bounds,placements:group.instances,
    mediumTriangles:medium.length/27,highTriangles:high.length/27,
    source:mesh.source,mesh:group.mesh};
  }));
