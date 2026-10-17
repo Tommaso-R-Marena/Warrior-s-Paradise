@@ -83,6 +83,7 @@ REQUIRED = [
     "browser/3d/architectural-detail.js",
     "browser/3d/architectural-weathering.js",
     "tools/tests/browser_architectural_weathering_smoke.js",
+    "tools/tests/browser_playwright_weathering.mjs",
     "browser/3d/botanical-detail.js",
     "browser/3d/contact-shadows.js",
     "browser/3d/battlefield-ground.js",
