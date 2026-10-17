@@ -277,6 +277,16 @@ function append(g,model,actor,team="axis",time=0,lod=1){
  let added=0;
  for(const mesh of model.mesh){
   const n=mesh.positions.length/3,transformed=new Array(n),colors=new Array(n);
+  // Trigonometric textile detail is computed once per source UV mesh/team,
+  // never during repeated CPU skinning frames on low-power hardware.
+  if(mesh.uv&&!mesh.uvClothCache)mesh.uvClothCache={};
+  if(mesh.uv&&!mesh.uvClothCache[team]){
+   const a=new Float32Array(n);
+   for(let i=0;i<n;i++)a[i]=clothAlbedo([mesh.uv[i*2],mesh.uv[i*2+1]],team);
+   mesh.uvClothCache[team]=a;
+  }
+  const clothFactor=mesh.uv?mesh.uvClothCache[team]:null;
+  const baseTint=model.materials?.[mesh.material]?.pbrMetallicRoughness?.baseColorFactor;
   for(let i=0;i<n;i++){
    const x=mesh.positions[i*3],y=mesh.positions[i*3+1],z=mesh.positions[i*3+2];
    let px=0,py=0,pz=0,sum=0;
@@ -294,8 +304,7 @@ function append(g,model,actor,team="axis",time=0,lod=1){
     actor.z+(-pos[0]*sin+pos[2]*cos)*scale];
    const vertex=mesh.colors&&mesh.colorStride>=3?
     Array.from(mesh.colors.slice(i*mesh.colorStride,i*mesh.colorStride+3)):palette;
-   const cloth=mesh.uv?clothAlbedo([mesh.uv[i*2],mesh.uv[i*2+1]],team):1;
-   const baseTint=model.materials?.[mesh.material]?.pbrMetallicRoughness?.baseColorFactor;
+   const cloth=clothFactor?clothFactor[i]:1;
    colors[i]=[0,1,2].map(k=>Math.min(1,Math.max(.018,
      (vertex[k]*tint*.6+palette[k]*.4)*
      (baseTint&&Number.isFinite(baseTint[k])?(.75+.25*baseTint[k]):1)*cloth)));
