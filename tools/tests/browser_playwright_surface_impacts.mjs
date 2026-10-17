@@ -39,9 +39,9 @@ try{
   x:-24,z:-25,yaw:0,pitch:0,aim:true,weapon:"rifle",
   enemies:[{x:35,z:35,hp:100,alert:0,facing:Math.PI}]
  }));
- // The ARTY control is hidden in the desktop touch UI; invoke its actual
- // DOM click handler to exercise the same gameplay action without CSS layout.
- await page.evaluate(()=>document.getElementById("support").click());
+ // The real desktop artillery shortcut calls the exact same
+ // callArtillery() handler as the touch-only pointerdown button.
+ await page.keyboard.press("t");
  const blast=await page.evaluate(()=>{
   window.WP3DQA.step(147);
   return window.WP3DDiagnostics();
