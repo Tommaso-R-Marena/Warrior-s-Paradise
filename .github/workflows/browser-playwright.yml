@@ -71,6 +71,11 @@ jobs:
         run: node tools/tests/browser_grounding_materials_smoke.js
       - name: Verify shadow, foliage, animation and armored model budgets
         run: node tools/tests/browser_cinematic_fidelity_smoke.js
+      - name: Validate real Allied/Axis rig UV0 cloth and smooth run/crouch/walk/aim transitions
+        run: |
+          node tools/tests/browser_skinning_smoke.js
+          node tools/tests/browser_allied_rig_animation_smoke.js
+          node tools/tests/browser_uv_cloth_motion_smoke.js
       - name: Test finite WWII farmhouse fittings and conservative visual-only actor culling
         run: |
           node tools/tests/browser_farmhouse_craft_smoke.js
